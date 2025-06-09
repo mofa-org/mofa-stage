@@ -1,11 +1,5 @@
 # .gitignore for mofa-stage project
 
-# Dependencies
-# Node.js dependencies specifically in frontend
-frontend/node_modules/
-# Potential backend vendor dependencies (if any)
-vendor/
-
 # Byte-code files for Python, specifically in backend
 backend/*.pyc
 backend/__pycache__/
@@ -24,8 +18,12 @@ backend/__pycache__/
 # Build and distribution directories
 build/
 dist/
+node_modules/
 *.egg-info/
 .cache/
+frontend/node_modules/
+frontend/dist/
+vendor/
 
 # Temporary files
 *~
@@ -61,3 +59,6 @@ downloads/
 # package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
+
+# Sensitive files
+backend/config/ssh_config.json
