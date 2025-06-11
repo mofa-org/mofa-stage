@@ -99,7 +99,7 @@
             />
           </div>
           
-          <div class="file-tree-wrapper">
+          <div class="file-tree-wrapper" ref="fileTreeWrapper" @scroll="rememberFileTreeScroll">
             <el-tree
               :data="fileTreeData"
               :props="defaultProps"
@@ -200,7 +200,7 @@
                 </div>
                 <div v-show="showTerminal" class="terminal-panel">
                   <keep-alive>
-                    <TtydTerminal :embedded="true" :key="'embedded-terminal'" />
+                    <TtydTerminal :embedded="true" />
                   </keep-alive>
                 </div>
               </div>
@@ -225,9 +225,23 @@
         <div v-if="!useNewEditor && showMermaidSidebar" class="mermaid-preview-sidebar">
                      <div class="mermaid-sidebar-header">
              <h4>HTML 预览</h4>
-             <el-button size="small" text @click="toggleMermaidSidebar">
-               <el-icon><Close /></el-icon>
-             </el-button>
+             <div class="mermaid-toolbar">
+               <el-tooltip content="放大" placement="top">
+                 <el-button size="small" text @click="zoomIn"><el-icon><Plus /></el-icon></el-button>
+               </el-tooltip>
+               <el-tooltip content="缩小" placement="top">
+                 <el-button size="small" text @click="zoomOut"><el-icon><Minus /></el-icon></el-button>
+               </el-tooltip>
+               <el-tooltip content="重置" placement="top">
+                 <el-button size="small" text @click="resetZoom"><el-icon><Refresh /></el-icon></el-button>
+               </el-tooltip>
+               <el-tooltip content="新标签页打开" placement="top">
+                 <el-button size="small" text @click="openMermaidInNewTab"><el-icon><Document /></el-icon></el-button>
+               </el-tooltip>
+               <el-tooltip content="关闭" placement="top">
+                 <el-button size="small" text @click="toggleMermaidSidebar"><el-icon><Close /></el-icon></el-button>
+               </el-tooltip>
+             </div>
            </div>
           
           <div v-if="mermaidHtmlFiles.length > 1" class="mermaid-file-selector">
@@ -245,11 +259,11 @@
             <div v-if="loadingMermaidContent" v-loading="true" class="mermaid-loading">
               加载中...
             </div>
-            <iframe 
-              v-else-if="mermaidHtmlContent" 
-              class="mermaid-content-iframe" 
-              :srcdoc="mermaidHtmlContent"
-            />
+            <div v-else-if="mermaidHtmlContent"
+                 class="mermaid-zoom-wrapper"
+                 :style="{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }">
+              <iframe class="mermaid-content-iframe" :srcdoc="mermaidHtmlContent" />
+            </div>
                          <div v-else class="mermaid-empty">
                <el-empty description="未找到 HTML 文件" size="small" />
              </div>
@@ -282,12 +296,12 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAgentStore } from '../store/agent'
 import { useSettingsStore } from '../store/settings'
 import CodeEditor from '../components/editor/CodeEditor.vue'
-import { Document, ArrowLeft, VideoPlay, VideoPause, Search, Plus, Download, Setting, ArrowUp, Promotion, Close } from '@element-plus/icons-vue'
+import { Document, ArrowLeft, VideoPlay, VideoPause, Search, Plus, Minus, Refresh, Download, Setting, ArrowUp, Promotion, Close } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MarkdownIt from 'markdown-it'
 import MermaidViewer from '../components/MermaidViewer.vue'
@@ -305,6 +319,8 @@ export default {
     VideoPause,
     Search,
     Plus,
+    Minus,
+    Refresh,
     Download,
     Setting,
     ArrowUp,
@@ -637,6 +653,23 @@ export default {
       fileTreeData.value = treeData
     }
 
+    const fileTreeWrapper = ref(null)
+    const fileTreeScrollTop = ref(0)
+
+    const rememberFileTreeScroll = () => {
+      if (fileTreeWrapper.value) {
+        fileTreeScrollTop.value = fileTreeWrapper.value.scrollTop
+      }
+    }
+
+    const restoreFileTreeScroll = () => {
+      nextTick(() => {
+        if (fileTreeWrapper.value) {
+          fileTreeWrapper.value.scrollTop = fileTreeScrollTop.value
+        }
+      })
+    }
+
     const handleFileClick = async (data) => {
       if (data.isDirectory) return
       
@@ -658,7 +691,8 @@ export default {
         }
       }
       
-      loadFileContent(data.path)
+      await loadFileContent(data.path)
+      restoreFileTreeScroll()
     }
 
     const loadFileContent = async (filePath) => {
@@ -861,6 +895,30 @@ export default {
     const selectedMermaidHtml = ref('')
     const mermaidHtmlContent = ref('')
     const loadingMermaidContent = ref(false)
+    const zoomLevel = ref(1)
+
+    const zoomIn = () => {
+      zoomLevel.value = Math.min(zoomLevel.value + 0.1, 3)
+    }
+
+    const zoomOut = () => {
+      zoomLevel.value = Math.max(zoomLevel.value - 0.1, 0.3)
+    }
+
+    const resetZoom = () => {
+      zoomLevel.value = 1
+    }
+
+    const openMermaidInNewTab = () => {
+      if (!mermaidHtmlContent.value) return
+      try {
+        const blob = new Blob([mermaidHtmlContent.value], { type: 'text/html' })
+        const url = URL.createObjectURL(blob)
+        window.open(url, '_blank')
+      } catch (e) {
+        console.error('Failed to open Mermaid HTML in new tab', e)
+      }
+    }
 
     // 切换 Mermaid 侧边栏
     const toggleMermaidSidebar = async () => {
@@ -972,7 +1030,15 @@ export default {
       toggleMermaidSidebar,
       loadMermaidContent,
       activeYamlTab,
-      showYamlTabs
+      showYamlTabs,
+      zoomLevel,
+      zoomIn,
+      zoomOut,
+      resetZoom,
+      openMermaidInNewTab,
+      fileTreeWrapper,
+      rememberFileTreeScroll,
+      restoreFileTreeScroll
     }
   }
 }
@@ -1269,7 +1335,7 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .mermaid-content-iframe {
@@ -1299,5 +1365,14 @@ export default {
 
 .yaml-preview-tabs .el-tab-pane {
   padding: 0;
+}
+
+.mermaid-toolbar .el-button {
+  margin-left: 4px;
+}
+
+.mermaid-zoom-wrapper {
+  overflow: auto;
+  height: 100%;
 }
 </style>
