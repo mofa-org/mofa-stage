@@ -19,6 +19,8 @@ export const useSettingsStore = defineStore('settings', {
       settings: {
         mofa_env_path: '',
         mofa_dir: defaultPaths.mofa_dir,
+        mofa_mode: 'system',
+        docker_container_name: '',
         use_system_mofa: true,
         use_default_agent_hub_path: true,
         use_default_examples_path: true,
@@ -125,6 +127,21 @@ export const useSettingsStore = defineStore('settings', {
               password: '',
               auto_connect: true
             }
+          }
+          
+          // 确保新字段mofa_mode存在
+          if (!this.settings.mofa_mode) {
+            // 根据旧字段use_system_mofa推断
+            this.settings.mofa_mode = this.settings.use_system_mofa ? 'system' : 'venv'
+          }
+          
+          // 如果mofa_mode存在，但use_system_mofa丢失，做向后兼容
+          if (this.settings.use_system_mofa === undefined) {
+            this.settings.use_system_mofa = this.settings.mofa_mode === 'system'
+          }
+          
+          if (this.settings.docker_container_name === undefined) {
+            this.settings.docker_container_name = ''
           }
           
           return this.settings

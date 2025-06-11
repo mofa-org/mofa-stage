@@ -1,15 +1,15 @@
 {
   "mofa_env_path": "",
-  "mofa_dir": "",
+  "mofa_dir": "/app/mofa",
   "theme": "light",
   "editor_font_size": 14,
   "editor_tab_size": 4,
-  "use_system_mofa": true,
+  "use_system_mofa": false,
   "use_default_agent_hub_path": true,
   "use_default_examples_path": true,
   "use_relative_paths": true,
-  "agent_hub_path": "",
-  "examples_path": "",
+  "agent_hub_path": "/Users/liyao/Code/python/agent-hub",
+  "examples_path": "/Users/liyao/Code/python/examples",
   "custom_agent_hub_path": "",
   "custom_examples_path": "",
   "language": "en",
@@ -21,5 +21,7 @@
     "username": "test"
   },
   "terminal_display_mode": "ttyd",
-  "ttyd_port": 7681
+  "ttyd_port": 7681,
+  "mofa_mode": "docker",
+  "docker_container_name": "0bfdf2580246"
 }

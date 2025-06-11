@@ -19,13 +19,30 @@ class MofaCLI:
             DEFAULT_MOFA_ENV, DEFAULT_MOFA_DIR, USE_SYSTEM_MOFA,
             DEFAULT_AGENT_HUB_PATH, DEFAULT_EXAMPLES_PATH,
             CUSTOM_AGENT_HUB_PATH, CUSTOM_EXAMPLES_PATH,
-            AGENT_HUB_PATH, EXAMPLES_PATH
+            AGENT_HUB_PATH, EXAMPLES_PATH,
+            DEFAULT_MOFA_MODE, DEFAULT_DOCKER_CONTAINER
         )
         
         self.settings = settings or {}
         self.mofa_env_path = self.settings.get('mofa_env_path', DEFAULT_MOFA_ENV)
+        # 先取 mofa_mode，之后才能根据它设置 mofa_dir 默认值
+        self.mofa_mode = self.settings.get('mofa_mode', DEFAULT_MOFA_MODE)
         self.mofa_dir = self.settings.get('mofa_dir', DEFAULT_MOFA_DIR)
-        self.use_system_mofa = self.settings.get('use_system_mofa', USE_SYSTEM_MOFA)
+        if self.mofa_mode == 'docker' and not self.mofa_dir:
+            # 默认容器内MoFA根目录
+            self.mofa_dir = "/app/mofa"
+        
+        # 兼容旧字段 use_system_mofa（布尔）
+        if 'use_system_mofa' in self.settings:
+            legacy_system = self.settings.get('use_system_mofa', USE_SYSTEM_MOFA)
+            if self.mofa_mode == DEFAULT_MOFA_MODE and legacy_system is not None:
+                # 如果用户只设置了旧字段，则推断 mode
+                self.mofa_mode = 'system' if legacy_system else 'venv'
+
+        self.use_system_mofa = True if self.mofa_mode == 'system' else False
+        # docker模式时，也把use_system_mofa设为True 以复用原有系统分支，但后续会替换 mofa_cmd
+        if self.mofa_mode == 'docker':
+            self.use_system_mofa = True
         
         # 设置原子化Agent（agent-hub）存储路径
         use_default_agent_hub = self.settings.get('use_default_agent_hub_path', True)
@@ -45,42 +62,36 @@ class MofaCLI:
             custom_examples = self.settings.get('custom_examples_path', '')
             self.examples_dir = custom_examples if custom_examples else DEFAULT_EXAMPLES_PATH
             
-        # 创建目录如果不存在
-        try:
-            # 首先检查目录的父目录是否存在
-            agent_hub_parent = os.path.dirname(self.agent_hub_dir)
-            examples_parent = os.path.dirname(self.examples_dir)
-            
-            # 尝试创建父目录（如果是默认路径的情况）
-            if use_default_agent_hub or use_default_examples:
-                python_dir = os.path.join(self.mofa_dir, 'python')
-                if not os.path.exists(python_dir):
-                    os.makedirs(python_dir, exist_ok=True)
-                
-            if os.path.exists(agent_hub_parent):
+        if self.mofa_mode != 'docker':
+            try:
+                agent_hub_parent = os.path.dirname(self.agent_hub_dir)
+                examples_parent = os.path.dirname(self.examples_dir)
+                if use_default_agent_hub or use_default_examples:
+                    python_dir = os.path.join(self.mofa_dir, 'python')
+                    if not os.path.exists(python_dir):
+                        os.makedirs(python_dir, exist_ok=True)
+
+                if os.path.exists(agent_hub_parent):
+                    os.makedirs(self.agent_hub_dir, exist_ok=True)
+                else:
+                    print(f"Warning: Parent directory for agent_hub_dir does not exist: {agent_hub_parent}")
+                    self.agent_hub_dir = os.path.join(os.path.dirname(__file__), '../temp/agent-hub')
+                    os.makedirs(self.agent_hub_dir, exist_ok=True)
+
+                if os.path.exists(examples_parent):
+                    os.makedirs(self.examples_dir, exist_ok=True)
+                else:
+                    print(f"Warning: Parent directory for examples_dir does not exist: {examples_parent}")
+                    self.examples_dir = os.path.join(os.path.dirname(__file__), '../temp/examples')
+                    os.makedirs(self.examples_dir, exist_ok=True)
+            except Exception as e:
+                print(f"Error creating directories: {e}")
+                temp_dir = os.path.join(os.path.dirname(__file__), '../temp')
+                os.makedirs(temp_dir, exist_ok=True)
+                self.agent_hub_dir = os.path.join(temp_dir, 'agent-hub')
+                self.examples_dir = os.path.join(temp_dir, 'examples')
                 os.makedirs(self.agent_hub_dir, exist_ok=True)
-            else:
-                print(f"Warning: Parent directory for agent_hub_dir does not exist: {agent_hub_parent}")
-                # 创建一个临时目录作为备用
-                self.agent_hub_dir = os.path.join(os.path.dirname(__file__), '../temp/agent-hub')
-                os.makedirs(self.agent_hub_dir, exist_ok=True)
-            
-            if os.path.exists(examples_parent):
                 os.makedirs(self.examples_dir, exist_ok=True)
-            else:
-                print(f"Warning: Parent directory for examples_dir does not exist: {examples_parent}")
-                # 创建一个临时目录作为备用
-                self.examples_dir = os.path.join(os.path.dirname(__file__), '../temp/examples')
-                os.makedirs(self.examples_dir, exist_ok=True)
-        except Exception as e:
-            print(f"Error creating directories: {e}")
-            # 如果无法创建目录，使用临时目录
-            temp_dir = os.path.join(os.path.dirname(__file__), '../temp')
-            os.makedirs(temp_dir, exist_ok=True)
-            self.agent_hub_dir = os.path.join(temp_dir, 'agent-hub')
-            self.examples_dir = os.path.join(temp_dir, 'examples')
-            os.makedirs(self.agent_hub_dir, exist_ok=True)
-            os.makedirs(self.examples_dir, exist_ok=True)
         
         # 存储正在运行的进程信息
         self._running_processes = {}
@@ -93,25 +104,29 @@ class MofaCLI:
         self.agents_dir = self.agent_hub_dir
         self.possible_agent_dirs = [self.agent_hub_dir, self.examples_dir]
         
-        # 根据设置决定是否使用系统命令或虚拟环境
-        if self.use_system_mofa:
-            # 使用系统安装的mofa
+        # 根据运行模式设置命令
+        if self.mofa_mode == 'system':
             self.mofa_cmd = "mofa"
             self.activate_cmd = ""
-        else:
-            # 使用虚拟环境
+        elif self.mofa_mode == 'venv':
             self.activate_cmd = f"source {self.mofa_env_path}/bin/activate"
             self.mofa_cmd = "mofa"
+        elif self.mofa_mode == 'docker':
+            # Docker执行：docker exec -i -w <workdir> <container> mofa
+            self.docker_container = self.settings.get('docker_container_name', DEFAULT_DOCKER_CONTAINER)
+            if not self.docker_container:
+                print("警告: docker模式但未指定container name, 将使用'mofa'")
+                self.docker_container = 'mofa'
+            # 使用双引号包裹工作目录，避免空格问题
+            workdir_flag = f"-w \"{self.mofa_dir}\"" if self.mofa_dir else ""
+            self.mofa_cmd = f"docker exec -i {workdir_flag} {self.docker_container} mofa"
+            self.activate_cmd = ""
             
-            # 检查MOFA环境是否存在
-            if not os.path.exists(self.mofa_env_path):
-                print(f"警告: 指定的MoFA环境路径不存在: {self.mofa_env_path}")
-                
         if not os.path.exists(self.mofa_dir):
             print(f"警告: 指定的MoFA目录不存在: {self.mofa_dir}")
             
         # 检查mofa命令是否可用
-        if self.use_system_mofa:
+        if self.mofa_mode == 'system':
             if not shutil.which("mofa"):
                 print("警告: 系统中找不到mofa命令，请确保已安装")
     
@@ -119,6 +134,29 @@ class MofaCLI:
         """运行shell命令并返回输出"""
         # 替换命令中的mofa为正确的命令
         command = command.replace("mofa", self.mofa_cmd)
+        
+        # docker模式直接执行并返回，避免进入后续system/venv逻辑
+        if self.mofa_mode == 'docker':
+            try:
+                print(f"使用 Docker 执行: {command}")
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    executable="/bin/bash",
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                    cwd=None  # 不指定cwd，避免本地主机路径不存在
+                )
+                if result.returncode == 0:
+                    return result.stdout.strip()
+                else:
+                    print(f"docker exec 命令失败，返回码: {result.returncode}")
+                    print(f"错误输出: {result.stderr}")
+                    return ""
+            except Exception as e:
+                print(f"执行docker命令时出错: {e}")
+                return ""
         
         try:
             # 使用系统安装的MOFA
@@ -131,7 +169,7 @@ class MofaCLI:
                     check=False,
                     text=True,
                     capture_output=True,
-                    cwd=cwd or self.mofa_dir
+                    cwd=cwd if cwd else (self.mofa_dir if self.mofa_dir else None)
                 )
                 
                 if result.returncode == 0:
@@ -153,7 +191,7 @@ class MofaCLI:
                     check=False,
                     text=True,
                     capture_output=True,
-                    cwd=cwd or self.mofa_dir
+                    cwd=cwd if cwd else (self.mofa_dir if self.mofa_dir else None)
                 )
                 
                 if venv_result.returncode == 0:
@@ -175,7 +213,7 @@ class MofaCLI:
                             check=False,
                             text=True, 
                             capture_output=True,
-                            cwd=cwd or self.mofa_dir
+                            cwd=cwd if cwd else (self.mofa_dir if self.mofa_dir else None)
                         )
                         
                         if py_result.returncode == 0:
@@ -194,7 +232,16 @@ class MofaCLI:
     def list_agents(self):
         """获取所有 agent 列表，分别从 agent-hub 和 examples 目录扫描"""
         try:
-            # 输出当前使用的目录和设置
+            # Docker 模式：直接列举容器内目录并返回，跳过宿主机扫描
+            if self.mofa_mode == 'docker':
+                hub_agents_list = sorted(self._docker_ls(self.agent_hub_dir))
+                example_agents_list = sorted(self._docker_ls(self.examples_dir))
+                return {
+                    "hub_agents": hub_agents_list,
+                    "example_agents": example_agents_list
+                }
+
+            # 非 docker 模式继续原有流程
             print(f"Current agent_hub_dir = {self.agent_hub_dir}")
             print(f"Current examples_dir = {self.examples_dir}")
             print(f"Current settings: use_system_mofa = {self.use_system_mofa}, mofa_dir = {self.mofa_dir}")
@@ -246,19 +293,25 @@ class MofaCLI:
             else:
                 print(f"examples 目录不存在或无法访问: {self.examples_dir}")
             
-            # 将集合转为列表并排序
-            hub_agents_list = sorted(list(hub_agents))
-            example_agents_list = sorted(list(example_agents))
-            print(f"最终找到 {len(hub_agents_list)} 个原子化Agent和 {len(example_agents_list)} 个dataflow示例")
-            
-            # 如果没有找到任何agent，返回一些默认示例
+            if self.mofa_mode == 'docker':
+                # 分别列举 container 内的两级目录
+                hub_agents_list = sorted(self._docker_ls(self.agent_hub_dir))
+                example_agents_list = sorted(self._docker_ls(self.examples_dir))
+                print(f"Docker 模式列出 {len(hub_agents_list)} 个hub agents, {len(example_agents_list)} 个dataflows")
+            else:
+                # 将集合转为列表并排序
+                hub_agents_list = sorted(list(hub_agents))
+                example_agents_list = sorted(list(example_agents))
+                print(f"最终找到 {len(hub_agents_list)} 个原子化Agent和 {len(example_agents_list)} 个dataflow示例")
+
+            # 如果都没有找到，提供占位示例
             if not hub_agents_list and not example_agents_list:
-                print(f"未找到任何 agent，返回默认示例")
+                print("未找到任何 agent，返回默认示例")
                 return {
                     "hub_agents": ["hello_world", "reasoner"],
                     "example_agents": ["memory", "rag"]
                 }
-                
+            
             return {
                 "hub_agents": hub_agents_list,
                 "example_agents": example_agents_list
@@ -275,49 +328,79 @@ class MofaCLI:
             }
     
     def get_agent_details(self, agent_name):
-        """获取特定 agent 的详细信息"""
-        # 首先尝试在当前配置的agent目录中查找
-        agent_path = os.path.join(self.agents_dir, agent_name)
-        
-        # 如果在当前配置的目录中找不到，则尝试在所有可能的目录中查找
-        if not os.path.exists(agent_path):
-            for possible_dir in self.possible_agent_dirs:
-                possible_path = os.path.join(possible_dir, agent_name)
-                if os.path.exists(possible_path):
-                    agent_path = possible_path
-                    break
-        
-        if not os.path.exists(agent_path):
+        """获取 agent 的详细信息"""
+        try:
+            if self.mofa_mode == 'docker':
+                # Determine agent root inside container
+                candidate_paths = [
+                    os.path.join(self.agent_hub_dir, agent_name),
+                    os.path.join(self.examples_dir, agent_name)
+                ]
+                agent_path = None
+                for p in candidate_paths:
+                    test_cmd = f"docker exec -i {self.docker_container} bash -c 'test -d \"{p}\"'"
+                    if subprocess.run(test_cmd, shell=True, executable="/bin/bash").returncode == 0:
+                        agent_path = p
+                        break
+                if not agent_path:
+                    return None
+
+                files = self._docker_find(agent_path)
+                return {
+                    "name": agent_name,
+                    "path": agent_path,
+                    "files": self._file_dict_list(agent_path, files)
+                }
+
+            # 原有本地模式
+            agent_path = os.path.join(self.agents_dir, agent_name)
+            
+            # 如果在当前配置的目录中找不到，则尝试在所有可能的目录中查找
+            if not os.path.exists(agent_path):
+                for possible_dir in self.possible_agent_dirs:
+                    possible_path = os.path.join(possible_dir, agent_name)
+                    if os.path.exists(possible_path):
+                        agent_path = possible_path
+                        break
+            
+            if not os.path.exists(agent_path):
+                return None
+            
+            # 获取 agent 的基本信息
+            details = {
+                "name": agent_name,
+                "path": agent_path,
+                "files": self._get_agent_files(agent_path),
+            }
+            
+            # 尝试读取 README.md 获取描述
+            readme_path = os.path.join(agent_path, "README.md")
+            if os.path.exists(readme_path):
+                with open(readme_path, "r") as f:
+                    details["description"] = f.read()
+            
+            return details
+        except Exception as e:
+            import traceback
+            print(f"Error getting agent details: {e}")
+            print(traceback.format_exc())
             return None
-        
-        # 获取 agent 的基本信息
-        details = {
-            "name": agent_name,
-            "path": agent_path,
-            "files": self._get_agent_files(agent_path),
-        }
-        
-        # 尝试读取 README.md 获取描述
-        readme_path = os.path.join(agent_path, "README.md")
-        if os.path.exists(readme_path):
-            with open(readme_path, "r") as f:
-                details["description"] = f.read()
-        
-        return details
     
     def _get_agent_files(self, agent_path):
-        """获取 agent 目录下的所有文件"""
-        files = []
+        """递归获取 agent 目录下的所有文件"""
+        if self.mofa_mode == 'docker':
+            return self._file_dict_list(agent_path, self._docker_find(agent_path))
+        files_list = []
         for root, _, filenames in os.walk(agent_path):
             for filename in filenames:
                 file_path = os.path.join(root, filename)
                 rel_path = os.path.relpath(file_path, agent_path)
-                files.append({
+                files_list.append({
                     "name": filename,
                     "path": rel_path,
                     "type": os.path.splitext(filename)[1][1:] or "txt"
                 })
-        return files
+        return files_list
     
     def create_agent(self, agent_name, version="0.0.1", authors="MoFA_Stage User", agent_type="agent-hub"):
         """创建一个新的 agent
@@ -1022,20 +1105,34 @@ class MofaCLI:
     
     def read_file(self, agent_name, file_path):
         """读取 agent 文件内容"""
-        # 首先尝试在当前配置的agent目录中查找
+        if self.mofa_mode == 'docker':
+            # 尝试 hub 目录
+            candidate_paths = [
+                os.path.join(self.agent_hub_dir, agent_name, file_path),
+                os.path.join(self.examples_dir, agent_name, file_path)
+            ]
+            for p in candidate_paths:
+                cmd = f"docker exec -i {self.docker_container} bash -c 'test -f \"{p}\"'"
+                if subprocess.run(cmd, shell=True, executable="/bin/bash").returncode == 0:
+                    # 文件存在，读取
+                    cat_cmd = f"docker exec -i {self.docker_container} bash -c 'cat \"{p}\"'"
+                    result = subprocess.run(cat_cmd, shell=True, executable="/bin/bash", text=True, capture_output=True)
+                    if result.returncode == 0:
+                        return {"success": True, "content": result.stdout}
+                    else:
+                        return {"success": False, "message": result.stderr}
+            return {"success": False, "message": f"File {file_path} not found in container"}
+
+        # ---- 本地模式 ----
         full_path = os.path.join(self.agents_dir, agent_name, file_path)
-        
-        # 如果在当前配置的目录中找不到，则尝试在所有可能的目录中查找
         if not os.path.exists(full_path):
             for possible_dir in self.possible_agent_dirs:
                 possible_path = os.path.join(possible_dir, agent_name, file_path)
                 if os.path.exists(possible_path):
                     full_path = possible_path
                     break
-        
         if not os.path.exists(full_path):
             return {"success": False, "message": f"File {file_path} not found"}
-        
         try:
             with open(full_path, 'r') as f:
                 content = f.read()
@@ -1045,31 +1142,81 @@ class MofaCLI:
     
     def write_file(self, agent_name, file_path, content):
         """写入 agent 文件内容"""
-        # 首先尝试在当前配置的agent目录中查找agent
+        if self.mofa_mode == 'docker':
+            # 选择写入到 agent-hub 目录（若存在），否则 examples
+            base_path = os.path.join(self.agent_hub_dir, agent_name)
+            test_cmd = f"docker exec -i {self.docker_container} bash -c 'test -d \"{base_path}\"'"
+            if subprocess.run(test_cmd, shell=True, executable="/bin/bash").returncode != 0:
+                base_path = os.path.join(self.examples_dir, agent_name)
+
+            full_path = os.path.join(base_path, file_path)
+            dir_path = os.path.dirname(full_path)
+
+            # 确保目录存在
+            mkdir_cmd = f"docker exec -i {self.docker_container} bash -c 'mkdir -p \"{dir_path}\"'"
+            subprocess.run(mkdir_cmd, shell=True, executable="/bin/bash")
+
+            # 通过 stdin 写入文件
+            write_cmd = f"docker exec -i {self.docker_container} bash -c 'cat > \"{full_path}\"'"
+            result = subprocess.run(write_cmd, shell=True, executable="/bin/bash", text=True, input=content)
+            if result.returncode == 0:
+                return {"success": True, "message": f"File {file_path} saved"}
+            else:
+                return {"success": False, "message": result.stderr}
+
+        # ---- 本地模式 ----
         agent_path = os.path.join(self.agents_dir, agent_name)
-        
-        # 如果在当前配置的目录中找不到，则尝试在所有可能的目录中查找
         if not os.path.exists(agent_path):
             for possible_dir in self.possible_agent_dirs:
                 possible_path = os.path.join(possible_dir, agent_name)
                 if os.path.exists(possible_path):
                     agent_path = possible_path
                     break
-        
-        # 如果仍然找不到，则使用当前配置的目录创建新的agent
         if not os.path.exists(agent_path):
             agent_path = os.path.join(self.agents_dir, agent_name)
             os.makedirs(agent_path, exist_ok=True)
-        
+
         full_path = os.path.join(agent_path, file_path)
         dir_path = os.path.dirname(full_path)
-        
         try:
-            # 确保目录存在
             os.makedirs(dir_path, exist_ok=True)
-            
             with open(full_path, 'w') as f:
                 f.write(content)
             return {"success": True, "message": f"File {file_path} saved"}
         except Exception as e:
             return {"success": False, "message": str(e)}
+
+    # ------------------------------ Docker Helpers ------------------------------
+    def _docker_ls(self, directory):
+        """Return list of subdirectories (one level) inside given directory of container."""
+        try:
+            cmd = f"docker exec -i {self.docker_container} bash -c 'ls -1 {directory} 2>/dev/null'"
+            result = subprocess.run(cmd, shell=True, executable="/bin/bash", text=True, capture_output=True)
+            if result.returncode == 0:
+                items = [item.strip() for item in result.stdout.split("\n") if item.strip()]
+                return items
+            else:
+                return []
+        except Exception:
+            return []
+
+    def _docker_find(self, directory):
+        """Return list of all files (relative paths) under directory inside container."""
+        try:
+            cmd = f"docker exec -i {self.docker_container} bash -c 'cd \"{directory}\" 2>/dev/null && find . -type f'"
+            result = subprocess.run(cmd, shell=True, executable="/bin/bash", text=True, capture_output=True)
+            if result.returncode == 0:
+                files = [line.lstrip('./') for line in result.stdout.split("\n") if line.strip()]
+                return files
+            return []
+        except Exception:
+            return []
+
+    def _file_dict_list(self, base_path, rel_paths):
+        """Helper: given list of relative paths, return list of dicts like original."""
+        result = []
+        for rel in rel_paths:
+            name = os.path.basename(rel)
+            ext = os.path.splitext(name)[1][1:] or "txt"
+            result.append({"name": name, "path": rel, "type": ext})
+        return result

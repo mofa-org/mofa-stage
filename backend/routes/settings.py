@@ -17,7 +17,9 @@ from config import (DEFAULT_MOFA_ENV, DEFAULT_MOFA_DIR, USE_SYSTEM_MOFA,
                    DEFAULT_AGENT_HUB_PATH, DEFAULT_EXAMPLES_PATH,
                    CUSTOM_AGENT_HUB_PATH, CUSTOM_EXAMPLES_PATH,
                    MOFA_STAGE_DIR, REL_MOFA_DIR, 
-                   REL_DEFAULT_AGENT_HUB_PATH, REL_DEFAULT_EXAMPLES_PATH)
+                   REL_DEFAULT_AGENT_HUB_PATH, REL_DEFAULT_EXAMPLES_PATH,
+                   DEFAULT_MOFA_MODE, DEFAULT_DOCKER_CONTAINER,
+                   AGENT_HUB_PATH, EXAMPLES_PATH)
 
 # Configure logging
 logger = logging.getLogger('settings_routes')
@@ -31,7 +33,9 @@ SETTINGS_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'settin
 DEFAULT_SETTINGS = {
     "mofa_env_path": DEFAULT_MOFA_ENV,
     "mofa_dir": DEFAULT_MOFA_DIR,
-    "use_system_mofa": USE_SYSTEM_MOFA,
+    "mofa_mode": DEFAULT_MOFA_MODE,  # 'system', 'venv', or 'docker'
+    "docker_container_name": DEFAULT_DOCKER_CONTAINER,  # name or id of docker container
+    "use_system_mofa": USE_SYSTEM_MOFA,  # deprecated, kept for backward compatibility
     # 分开存储agent-hub和examples的路径
     "use_default_agent_hub_path": True,  # 是否使用默认agent-hub路径
     "use_default_examples_path": True,  # 是否使用默认examples路径

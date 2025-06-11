@@ -22,14 +22,15 @@
 
         <el-form :model="settingsForm" label-position="top">
           <el-form-item :label="$t('settings.mofaCommandSource')">
-            <el-radio-group v-model="settingsForm.use_system_mofa">
-              <el-radio :label="true">{{ $t('settings.useSystemMofa') }}</el-radio>
-              <el-radio :label="false">{{ $t('settings.useVirtualEnv') }}</el-radio>
+            <el-radio-group v-model="settingsForm.mofa_mode">
+              <el-radio label="system">{{ $t('settings.useSystemMofa') }}</el-radio>
+              <el-radio label="venv">{{ $t('settings.useVirtualEnv') }}</el-radio>
+              <el-radio label="docker">{{ $t('settings.useDocker') || 'Docker 容器' }}</el-radio>
             </el-radio-group>
             <div class="form-help"></div>
           </el-form-item>
 
-          <el-form-item :label="$t('settings.mofaEnvPath')" v-if="!settingsForm.use_system_mofa">
+          <el-form-item :label="$t('settings.mofaEnvPath')" v-if="settingsForm.mofa_mode === 'venv'">
             <el-input 
               v-model="settingsForm.mofa_env_path" 
               placeholder="/path/to/mofa_venv"
@@ -39,6 +40,14 @@
               </template>
             </el-input>
             <div class="form-help">{{ $t('settings.mofaEnvPathHelp') }}</div>
+          </el-form-item>
+
+          <el-form-item :label="$t('settings.dockerContainer') || 'Docker 容器名称'" v-if="settingsForm.mofa_mode === 'docker'">
+            <el-input 
+              v-model="settingsForm.docker_container_name" 
+              placeholder="mofa_container"
+            />
+            <div class="form-help">{{ $t('settings.dockerContainerHelp') || '已运行的含 MoFA 的容器名称或ID' }}</div>
           </el-form-item>
 
           <el-form-item :label="$t('settings.mofaDir')">
@@ -221,6 +230,7 @@ export default {
     const settingsForm = reactive({
       mofa_env_path: '',
       mofa_dir: '',
+      mofa_mode: 'system',
       use_system_mofa: true,
       use_default_agent_hub_path: true,
       use_default_examples_path: true,
@@ -240,7 +250,8 @@ export default {
         username: '',
         password: '',
         auto_connect: true
-      }
+      },
+      docker_container_name: ''
     })
     
     const isLoading = computed(() => settingsStore.isLoading)
@@ -401,6 +412,11 @@ export default {
     // Watch for theme changes in the form and apply them immediately
     watch(() => settingsForm.theme, (newTheme) => {
       applyTheme(newTheme)
+    })
+
+    // 同步mofa_mode和旧字段use_system_mofa，保持向后兼容
+    watch(() => settingsForm.mofa_mode, (newMode) => {
+      settingsForm.use_system_mofa = (newMode === 'system')
     })
 
     onMounted(() => {
