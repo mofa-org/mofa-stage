@@ -209,6 +209,13 @@
               show-input
             />
           </el-form-item>
+
+          <el-form-item :label="$t('settings.editorVersion')">
+            <el-select v-model="settingsForm.editor_version" style="width: 100%">
+              <el-option label="Classic" value="classic" />
+              <el-option label="New" value="new" />
+            </el-select>
+          </el-form-item>
         </el-form>
       </el-card>
     </div>
@@ -241,6 +248,7 @@ export default {
       theme: 'light',
       editor_font_size: 14,
       editor_tab_size: 4,
+      editor_version: 'classic',
       language: localStorage.getItem('language') || 'zh',
       terminal_display_mode: 'both',
       ttyd_port: 7681,

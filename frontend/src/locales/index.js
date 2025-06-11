@@ -122,7 +122,9 @@ export const messages = {
       sshSettings: 'Terminal Settings',
       showOnlyTtyd: 'Use TTYD Terminal',
       ttydPort: 'Terminal Port',
-      ttydPortHelp: 'Port for the terminal service (default: 7681)'
+      useDocker: 'Use Docker container',
+      ttydPortHelp: 'Port for the terminal service (default: 7681)',
+      editorVersion: 'Editor Version'
     },
     terminal: {
       environmentInfo: 'Environment Information',
@@ -313,6 +315,7 @@ export const messages = {
       theme: '主题',
       lightTheme: '亮色',
       darkTheme: '暗色',
+      useDocker: '使用 Docker 容器',     
       editorFontSize: '编辑器字体大小',
       editorTabSize: '编辑器缩进大小',
       showOnlyTerminal: '使用旧命令行',
@@ -322,7 +325,8 @@ export const messages = {
       sshSettings: '终端设置',
       showOnlyTtyd: '使用TTYD终端',
       ttydPort: '终端端口',
-      ttydPortHelp: '终端服务端口 (默认: 7681)'
+      ttydPortHelp: '终端服务端口 (默认: 7681)',
+      editorVersion: '编辑器版本'
     },
     terminal: {
       environmentInfo: '环境信息',

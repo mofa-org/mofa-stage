@@ -16,6 +16,8 @@ from routes.dataflows import dataflows_bp
 from routes.terminal import terminal_bp
 from routes.webssh import webssh_bp, init_websocket
 from routes.ttyd import ttyd_bp
+from routes.mermaid import mermaid_bp
+from routes.vscode import vscode_bp
 from utils.ttyd_manager import start_ttyd, get_ttyd_status, is_ttyd_installed
 
 def create_app():
@@ -35,6 +37,8 @@ def create_app():
     app.register_blueprint(terminal_bp)
     app.register_blueprint(webssh_bp)
     app.register_blueprint(ttyd_bp, url_prefix='/api/ttyd')
+    app.register_blueprint(mermaid_bp)
+    app.register_blueprint(vscode_bp)
     
     # 初始化WebSocket
     init_websocket(app)
@@ -94,6 +98,8 @@ if __name__ == '__main__':
     webssh_app.register_blueprint(agents_bp)
     webssh_app.register_blueprint(webssh_bp)
     webssh_app.register_blueprint(ttyd_bp, url_prefix='/api/ttyd')
+    webssh_app.register_blueprint(mermaid_bp)
+    webssh_app.register_blueprint(vscode_bp)
     init_websocket(webssh_app)
     
     # 添加错误处理

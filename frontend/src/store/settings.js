@@ -32,6 +32,7 @@ export const useSettingsStore = defineStore('settings', {
         theme: 'light',
         editor_font_size: 14,
         editor_tab_size: 4,
+        editor_version: 'classic',
         language: localStorage.getItem('language') || 'zh',
         ssh: {
           hostname: '127.0.0.1',
@@ -116,6 +117,11 @@ export const useSettingsStore = defineStore('settings', {
           // 确保终端显示模式有默认值
           if (this.settings.terminal_display_mode === undefined) {
             this.settings.terminal_display_mode = 'both';
+          }
+          
+          // 确保编辑器版本有默认值
+          if (this.settings.editor_version === undefined) {
+            this.settings.editor_version = 'classic'
           }
           
           // 确保ssh对象总是存在

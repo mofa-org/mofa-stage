@@ -1,6 +1,7 @@
 <template>
-  <div class="page-container ttyd-view">
-    <div class="page-header">
+  <div :class="embedded ? 'ttyd-embedded' : 'page-container ttyd-view'">
+    <!-- Header (hidden when embedded) -->
+    <div v-if="!embedded" class="page-header">
       <h1 class="page-title">{{ $t('sidebar.ttyd') || 'ttyd Terminal' }}</h1>
       <div class="page-actions">
         <el-tooltip content="Restart ttyd Service" placement="top">
@@ -11,9 +12,9 @@
       </div>
     </div>
 
-    <div class="ttyd-layout">
-      <!-- Examples Sidebar -->
-      <div class="examples-sidebar">
+    <div :class="embedded ? 'ttyd-layout-embedded' : 'ttyd-layout'">
+      <!-- Examples Sidebar (hidden when embedded) -->
+      <div v-if="!embedded" class="examples-sidebar">
         <div class="examples-header">Dataflows</div>
         <div class="examples-search">
           <el-input
@@ -41,7 +42,7 @@
       </div>
       
       <!-- Ttyd Terminal Tabs -->
-      <el-card class="ttyd-card">
+      <el-card :class="['ttyd-card', embedded ? 'ttyd-card-embedded' : '']" :body-style="embedded ? {padding: '0'} : {}" :style="embedded ? 'width:100%; height:100%; min-height:0;' : ''">
         <el-tabs 
           v-model="activeTabName" 
           type="card" 
@@ -51,7 +52,7 @@
           @tab-remove="handleTabRemove"
           @tab-change="handleTabChange"
           class="terminal-tabs"
-      >
+        >
         <el-tab-pane
           v-for="session in sessions"
           :key="session.name" 
@@ -75,6 +76,7 @@
                :id="`ttyd-frame-${session.id}`" 
                class="ttyd-iframe"
                tabindex="0"
+               sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-downloads allow-popups allow-popups-to-escape-sandbox"
                allow="clipboard-read; clipboard-write"
                @load="handleIframeLoad(session.id)"
                @click="focusIframe(session.id)"
@@ -135,6 +137,12 @@ import { Loading, Monitor, QuestionFilled, Search, Refresh } from '@element-plus
 
 export default {
   name: 'TtydTerminal',
+  props: {
+    embedded: {
+      type: Boolean,
+      default: false
+    }
+  },
   components: {
     Loading,
     Monitor,
@@ -143,6 +151,7 @@ export default {
     Refresh,
   },
   setup() {
+    const props = arguments[0] // Access props in setup
     const settingsStore = useSettingsStore()
     const agentStore = useAgentStore()
     const showNewTabDialog = ref(false)
@@ -194,40 +203,42 @@ export default {
           systemInfo.platformInfo = 'Error: ' + error.message
         }
         
-        // Fetch examples list from API
-        try {
-          // Use agent store to get examples list
-          await agentStore.fetchAgents()
-          
-          // Get example_agents from store
-          const exampleAgents = agentStore.exampleAgents || []
-          
-          // Convert to format compatible with this component
-          if (exampleAgents.length > 0) {
-            examples.value = exampleAgents.map(name => {
-              return {
-                name: name,
-                path: `${systemInfo.mofaDir}/python/examples/${name}`
-              }
-            })
-            filteredExamples.value = examples.value
-          } else {
-            console.warn('No examples found from API, using fallback')
-            // If API doesn't return examples, use default fallback
+        // Fetch examples list from API (only for non-embedded mode)
+        if (!props.embedded) {
+          try {
+            // Use agent store to get examples list
+            await agentStore.fetchAgents()
+            
+            // Get example_agents from store
+            const exampleAgents = agentStore.exampleAgents || []
+            
+            // Convert to format compatible with this component
+            if (exampleAgents.length > 0) {
+              examples.value = exampleAgents.map(name => {
+                return {
+                  name: name,
+                  path: `${systemInfo.mofaDir}/python/examples/${name}`
+                }
+              })
+              filteredExamples.value = examples.value
+            } else {
+              console.warn('No examples found from API, using fallback')
+              // If API doesn't return examples, use default fallback
+              examples.value = [
+                { name: 'hello_world', path: `${systemInfo.mofaDir}/python/examples/hello_world` },
+                { name: 'add_numbers', path: `${systemInfo.mofaDir}/python/examples/add_numbers` }
+              ]
+              filteredExamples.value = examples.value
+            }
+          } catch (error) {
+            console.error('Error fetching examples:', error)
+            // Use default fallback on error
             examples.value = [
               { name: 'hello_world', path: `${systemInfo.mofaDir}/python/examples/hello_world` },
               { name: 'add_numbers', path: `${systemInfo.mofaDir}/python/examples/add_numbers` }
             ]
             filteredExamples.value = examples.value
           }
-        } catch (error) {
-          console.error('Error fetching examples:', error)
-          // Use default fallback on error
-          examples.value = [
-            { name: 'hello_world', path: `${systemInfo.mofaDir}/python/examples/hello_world` },
-            { name: 'add_numbers', path: `${systemInfo.mofaDir}/python/examples/add_numbers` }
-          ]
-          filteredExamples.value = examples.value
         }
         
         // Automatically open a tab when initialized
@@ -749,6 +760,22 @@ export default {
   transition: none !important; /* 禁用过渡效果 */
 }
 
+.ttyd-card-embedded :deep(.el-card__body) {
+  height: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ttyd-card-embedded .terminal-tabs {
+  min-height: 0 !important;
+}
+
+.ttyd-card-embedded .terminal-tab-pane,
+.ttyd-card-embedded .terminal-tab-content {
+  min-height: 0 !important;
+}
+
 .examples-sidebar {
   width: 250px;
   min-width: 200px; /* Minimum width */
@@ -963,5 +990,17 @@ export default {
     min-height: 150px;
     max-height: 200px;
   }
+}
+
+.ttyd-embedded {
+  width: 100%;
+  height: 100%;
+}
+
+.ttyd-layout-embedded {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 </style> 

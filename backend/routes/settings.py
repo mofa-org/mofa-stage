@@ -56,7 +56,8 @@ DEFAULT_SETTINGS = {
         "auto_connect": True  # 是否自动连接
     },
     "terminal_display_mode": "both",  # 终端显示模式: both, terminal, webssh
-    "ttyd_port": 8080  # 默认ttyd端口
+    "ttyd_port": 8080,  # 默认ttyd端口
+    "gemini_api_key": ""  # Google Gemini API Key
 }
 
 def get_absolute_path(relative_path):
@@ -126,18 +127,26 @@ def get_settings():
             if not settings.get("mofa_dir") or not os.path.exists(settings.get("mofa_dir")):
                 settings["mofa_dir"] = detect_mofa_root()
             
+            # ------------------------------------------------------------------
+            # 使用 mofa_dir 重新计算默认的 agent_hub_path / examples_path
+            # 之前的实现用 get_absolute_path() 以 backend 目录为基准，
+            # 会得到诸如 /Users/xxx/Code/python/agent-hub 这样的错误路径。
+            # 这里统一用 mofa_dir 拼接 python/agent-hub | python/examples，
+            # 只有在 *使用默认路径* 且 *允许使用相对路径* 的场景才覆盖。
+            # ------------------------------------------------------------------
+            if settings.get("use_default_agent_hub_path", True):
+                settings["agent_hub_path"] = os.path.join(settings["mofa_dir"], AGENT_HUB_PATH)
+            if settings.get("use_default_examples_path", True):
+                settings["examples_path"] = os.path.join(settings["mofa_dir"], EXAMPLES_PATH)
+            
             # 处理路径设置
             if settings.get("use_relative_paths", True):
                 # 如果使用默认路径和相对路径
-                if settings.get("use_default_agent_hub_path", True):
-                    settings["agent_hub_path"] = get_absolute_path(REL_DEFAULT_AGENT_HUB_PATH)
-                else:
+                if not settings.get("use_default_agent_hub_path", True):
                     # 使用自定义路径
                     settings["agent_hub_path"] = settings.get("custom_agent_hub_path", CUSTOM_AGENT_HUB_PATH)
                     
-                if settings.get("use_default_examples_path", True):
-                    settings["examples_path"] = get_absolute_path(REL_DEFAULT_EXAMPLES_PATH)
-                else:
+                if not settings.get("use_default_examples_path", True):
                     # 使用自定义路径
                     settings["examples_path"] = settings.get("custom_examples_path", CUSTOM_EXAMPLES_PATH)
                     
@@ -240,15 +249,11 @@ def api_save_settings():
         # 处理路径设置
         if new_settings.get("use_relative_paths", True):
             # 如果使用默认路径和相对路径
-            if new_settings.get("use_default_agent_hub_path", True):
-                new_settings["agent_hub_path"] = get_absolute_path(REL_DEFAULT_AGENT_HUB_PATH)
-            else:
+            if not new_settings.get("use_default_agent_hub_path", True):
                 # 使用自定义路径
                 new_settings["agent_hub_path"] = new_settings.get("custom_agent_hub_path", CUSTOM_AGENT_HUB_PATH)
                 
-            if new_settings.get("use_default_examples_path", True):
-                new_settings["examples_path"] = get_absolute_path(REL_DEFAULT_EXAMPLES_PATH)
-            else:
+            if not new_settings.get("use_default_examples_path", True):
                 # 使用自定义路径
                 new_settings["examples_path"] = new_settings.get("custom_examples_path", CUSTOM_EXAMPLES_PATH)
                 

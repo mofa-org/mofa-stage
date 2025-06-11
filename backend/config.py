@@ -13,7 +13,7 @@ SECRET_KEY = 'mofa-stage-secret-key'
 # MoFA 配置
 DEFAULT_MOFA_ENV = ''
 DEFAULT_MOFA_DIR = ''
-DEFAULT_MOFA_MODE = 'system'  # system | venv | docker
+DEFAULT_MOFA_MODE = 'docker'  # system | venv | docker
 DEFAULT_DOCKER_CONTAINER = ''  # Docker container name when using docker mode
 # 默认使用系统MOFA
 USE_SYSTEM_MOFA = True
