@@ -57,7 +57,17 @@ DEFAULT_SETTINGS = {
     },
     "terminal_display_mode": "both",  # 终端显示模式: both, terminal, webssh
     "ttyd_port": 8080,  # 默认ttyd端口
-    "gemini_api_key": ""  # Google Gemini API Key
+    # ---- AI API Settings ----
+    # OpenAI
+    "openai_api_key": "",
+    "openai_base_url": "https://api.openai.com/v1",
+    # Azure OpenAI
+    "azure_openai_api_key": "",
+    "azure_openai_endpoint": "",  # e.g. https://your-resource.openai.azure.com/
+    "azure_openai_api_version": "2023-05-15-preview",
+    # Google Gemini
+    "gemini_api_key": "",
+    "gemini_api_endpoint": "https://generativelanguage.googleapis.com/v1beta"
 }
 
 def get_absolute_path(relative_path):

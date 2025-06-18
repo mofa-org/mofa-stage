@@ -141,6 +141,45 @@
         </el-form>
       </el-card>
 
+      <!-- AI API Settings -->
+      <el-card class="settings-card">
+        <template #header>
+          <div class="card-header">
+            <h3>AI API Settings</h3>
+          </div>
+        </template>
+
+        <el-form :model="settingsForm" label-position="top">
+          <el-form-item label="OpenAI API Key">
+            <el-input v-model="settingsForm.openai_api_key" type="password" show-password placeholder="sk-..." />
+          </el-form-item>
+
+          <el-form-item label="OpenAI Base URL">
+            <el-input v-model="settingsForm.openai_base_url" placeholder="https://api.openai.com/v1" />
+          </el-form-item>
+
+          <el-form-item label="Azure OpenAI API Key">
+            <el-input v-model="settingsForm.azure_openai_api_key" type="password" show-password />
+          </el-form-item>
+
+          <el-form-item label="Azure OpenAI Endpoint">
+            <el-input v-model="settingsForm.azure_openai_endpoint" placeholder="https://your-resource.openai.azure.com/" />
+          </el-form-item>
+
+          <el-form-item label="Azure API Version">
+            <el-input v-model="settingsForm.azure_openai_api_version" placeholder="2023-05-15-preview" />
+          </el-form-item>
+
+          <el-form-item label="Gemini API Key">
+            <el-input v-model="settingsForm.gemini_api_key" type="password" show-password placeholder="GEMINI_API_KEY" />
+          </el-form-item>
+
+          <el-form-item label="Gemini Endpoint">
+            <el-input v-model="settingsForm.gemini_api_endpoint" placeholder="https://generativelanguage.googleapis.com/v1beta" />
+          </el-form-item>
+        </el-form>
+      </el-card>
+
       <el-card class="settings-card">
         <template #header>
           <div class="card-header">
@@ -259,7 +298,15 @@ export default {
         password: '',
         auto_connect: true
       },
-      docker_container_name: ''
+      docker_container_name: '',
+      // ---- AI API Settings ----
+      openai_api_key: '',
+      openai_base_url: 'https://api.openai.com/v1',
+      azure_openai_api_key: '',
+      azure_openai_endpoint: '',
+      azure_openai_api_version: '2023-05-15-preview',
+      gemini_api_key: '',
+      gemini_api_endpoint: 'https://generativelanguage.googleapis.com/v1beta'
     })
     
     const isLoading = computed(() => settingsStore.isLoading)

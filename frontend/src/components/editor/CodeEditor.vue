@@ -113,8 +113,18 @@ export default {
       }
     })
     
+    // Provide method for external components to select and reveal lines
+    const selectLines = (startLine, endLine = startLine) => {
+      if (!editor) return
+      const monacoSelection = new monaco.Selection(startLine, 1, endLine, 1)
+      editor.setSelection(monacoSelection)
+      editor.revealLinesInCenter(startLine, endLine)
+      editor.focus()
+    }
+    
     return {
-      editorContainer
+      editorContainer,
+      selectLines
     }
   }
 }

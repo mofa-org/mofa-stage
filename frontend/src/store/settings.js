@@ -42,7 +42,15 @@ export const useSettingsStore = defineStore('settings', {
           auto_connect: true
         },
         // 添加终端显示模式设置
-        terminal_display_mode: 'both' // 'terminal', 'webssh', 'both'
+        terminal_display_mode: 'both', // 'terminal', 'webssh', 'both'
+        // ---- AI API Settings ----
+        openai_api_key: '',
+        openai_base_url: 'https://api.openai.com/v1',
+        azure_openai_api_key: '',
+        azure_openai_endpoint: '',
+        azure_openai_api_version: '2023-05-15-preview',
+        gemini_api_key: '',
+        gemini_api_endpoint: 'https://generativelanguage.googleapis.com/v1beta'
       },
       isLoading: false,
       error: null

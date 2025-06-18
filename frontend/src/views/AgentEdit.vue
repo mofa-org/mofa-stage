@@ -87,7 +87,8 @@
       <!-- 经典编辑器 -->
       <div v-else class="edit-container">
         <!-- 文件树侧边栏 -->
-        <div v-if="!useNewEditor" class="file-tree-sidebar">
+        <div v-if="!useNewEditor" class="file-tree-sidebar" :style="{ width: fileSidebarWidth + 'px' }">
+          <div class="file-tree-resize-handle" @mousedown="startResizeFileSidebar"></div>
           <div class="sidebar-header">
             <h3>文件列表</h3>
             <el-input
@@ -147,13 +148,14 @@
                         v-model="editorContent"
                         :language="editorLanguage"
                         @save="saveCurrentFile"
+                        ref="codeEditorRef"
                       />
                       <div v-else class="new-editor-placeholder">
                         <el-empty description="请选择文件或切换到新版编辑器" />
                       </div>
                     </el-tab-pane>
                     <el-tab-pane label="Graph" name="graph">
-                      <MermaidViewer :code="mermaidCode" />
+                      <MermaidViewer :code="mermaidCode" @node-click="handleMermaidNodeClick" />
                     </el-tab-pane>
                   </el-tabs>
                 </template>
@@ -164,7 +166,7 @@
                     <!-- Markdown 文件预览 -->
                     <div v-if="isMarkdownFile" class="markdown-preview" v-html="renderedMarkdown"></div>
                     <!-- Dataflow YAML -> Mermaid 预览 -->
-                    <MermaidViewer v-else-if="isDataflowYaml" :code="mermaidCode" />
+                    <MermaidViewer v-else-if="isDataflowYaml" :code="mermaidCode" @node-click="handleMermaidNodeClick" />
                     <!-- Mermaid HTML 预览 -->
                     <iframe v-else-if="isMermaidHtml" class="mermaid-html-preview" :srcdoc="editorContent" />
                     <!-- 其他文件暂不支持预览 -->
@@ -177,6 +179,7 @@
                       v-model="editorContent"
                       :language="editorLanguage"
                       @save="saveCurrentFile"
+                      ref="codeEditorRef"
                     />
                     <div v-else class="new-editor-placeholder">
                       <el-empty description="请选择文件或切换到新版编辑器" />
@@ -198,7 +201,8 @@
                     </div>
                   </div>
                 </div>
-                <div v-show="showTerminal" class="terminal-panel">
+                <div v-show="showTerminal" class="terminal-panel" :style="{ height: terminalHeight + 'px' }">
+                  <div class="terminal-resize-handle" @mousedown="startResizeTerminal"></div>
                   <keep-alive>
                     <TtydTerminal :embedded="true" />
                   </keep-alive>
@@ -222,7 +226,8 @@
          </div>
         
         <!-- Mermaid 预览面板 -->
-        <div v-if="!useNewEditor && showMermaidSidebar" class="mermaid-preview-sidebar">
+        <div v-if="!useNewEditor && showMermaidSidebar" class="mermaid-preview-sidebar" :style="{ width: mermaidSidebarWidth + 'px' }">
+           <div class="mermaid-resize-handle" @mousedown="startResizeMermaid"></div>
                      <div class="mermaid-sidebar-header">
              <h4>HTML 预览</h4>
              <div class="mermaid-toolbar">
@@ -458,6 +463,12 @@ export default {
       loading: false,
       error: null
     })
+
+    // 新增：终端高度和 Mermaid 侧栏宽度，可拖拽调整
+    const terminalHeight = ref(350)
+    const mermaidSidebarWidth = ref(300)
+    // 新增：文件树侧边栏宽度
+    const fileSidebarWidth = ref(250)
 
     // 启动 VS Code 服务
     const startVSCodeServer = async () => {
@@ -972,6 +983,83 @@ export default {
       }
     }
 
+    // 拖拽调整终端高度
+    const startResizeTerminal = (e) => {
+      e.preventDefault()
+      const startY = e.clientY
+      const startH = terminalHeight.value
+      const onMove = (m) => {
+        terminalHeight.value = Math.min(600, Math.max(150, startH + (startY - m.clientY)))
+      }
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseup', onUp)
+      }
+      window.addEventListener('mousemove', onMove)
+      window.addEventListener('mouseup', onUp)
+    }
+
+    // 拖拽调整 Mermaid 侧栏宽度
+    const startResizeMermaid = (e) => {
+      e.preventDefault()
+      const startX = e.clientX
+      const startW = mermaidSidebarWidth.value
+      const onMove = (m) => {
+        mermaidSidebarWidth.value = Math.min(600, Math.max(200, startW + (startX - m.clientX)))
+      }
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseup', onUp)
+      }
+      window.addEventListener('mousemove', onMove)
+      window.addEventListener('mouseup', onUp)
+    }
+
+    // 拖拽调整文件树侧边栏宽度
+    const startResizeFileSidebar = (e) => {
+      e.preventDefault()
+      const startX = e.clientX
+      const startW = fileSidebarWidth.value
+      const onMove = (m) => {
+        fileSidebarWidth.value = Math.min(400, Math.max(180, startW + (m.clientX - startX)))
+      }
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseup', onUp)
+      }
+      window.addEventListener('mousemove', onMove)
+      window.addEventListener('mouseup', onUp)
+    }
+
+    // add ref to CodeEditor
+    const codeEditorRef = ref(null)
+
+    const handleMermaidNodeClick = (nodeId) => {
+      if (!codeEditorRef.value) return
+      const lines = editorContent.value.split('\n')
+      let start = -1
+      for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim()
+        if (trimmed.startsWith('- id:') && trimmed.includes(nodeId)) {
+          start = i
+          break
+        }
+      }
+      if (start === -1) return
+      let end = lines.length - 1
+      for (let j = start + 1; j < lines.length; j++) {
+        const t = lines[j].trim()
+        if (t.startsWith('- id:')) {
+          end = j - 1
+          break
+        }
+      }
+      // monaco uses 1-based line numbers
+      codeEditorRef.value.selectLines(start + 1, end + 1)
+      // Switch to YAML tab if graph tab is active
+      if (showYamlTabs.value) activeYamlTab.value = 'yaml'
+    }
+
     onMounted(async () => {
       await loadAgentFiles()
       // 如果使用新版编辑器，检查并启动 VS Code 服务
@@ -1038,7 +1126,15 @@ export default {
       openMermaidInNewTab,
       fileTreeWrapper,
       rememberFileTreeScroll,
-      restoreFileTreeScroll
+      restoreFileTreeScroll,
+      terminalHeight,
+      mermaidSidebarWidth,
+      fileSidebarWidth,
+      startResizeTerminal,
+      startResizeMermaid,
+      startResizeFileSidebar,
+      codeEditorRef,
+      handleMermaidNodeClick
     }
   }
 }
@@ -1079,13 +1175,19 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100%;
+  position: relative; /* 使手柄绝对定位 */
+  transition: width .2s ease;
 }
 
-.file-tree-wrapper {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 5px;
+.file-tree-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background-color: var(--border-color);
+  z-index: 5;
 }
 
 .sidebar-header {
@@ -1205,8 +1307,20 @@ export default {
 }
 
 .terminal-panel {
-  height: 350px;
+  transition: height .2s ease;
+  position: relative; /* 为拖拽手柄定位 */
   border-top: 1px solid var(--border-color);
+}
+
+.terminal-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  background-color: var(--border-color);
+  z-index: 5;
 }
 
 .terminal-collapse-container {
@@ -1303,12 +1417,25 @@ export default {
 
 /* Mermaid 预览面板 */
 .mermaid-preview-sidebar {
+  position: relative; /* 为拖拽手柄定位 */
+  transition: width .2s ease;
   width: 300px;
   border-left: 1px solid var(--border-color);
   background-color: #fff;
   display: flex;
   flex-direction: column;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.mermaid-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  cursor: col-resize;
+  background-color: var(--border-color);
+  z-index: 5;
 }
 
 .mermaid-sidebar-header {

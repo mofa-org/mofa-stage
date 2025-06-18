@@ -10,6 +10,7 @@ export default {
   props: {
     code: { type: String, default: '' }
   },
+  emits: ['nodeClick'],
   watch: {
     code: {
       handler() { this.render() },
@@ -40,6 +41,20 @@ export default {
               })
               svgEl.__panZoomAttached = true
             }
+
+            // Attach click listeners to nodes to emit events
+            const nodes = this.$refs.container.querySelectorAll('.node')
+            nodes.forEach(nodeEl => {
+              nodeEl.style.cursor = 'pointer'
+              nodeEl.addEventListener('click', (e) => {
+                e.stopPropagation()
+                const textEl = nodeEl.querySelector('text')
+                const label = textEl ? textEl.textContent.trim() : null
+                if (label) {
+                  this.$emit('nodeClick', label)
+                }
+              })
+            })
           })
         })
       } catch (err) {
