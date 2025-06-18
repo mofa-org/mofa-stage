@@ -300,7 +300,7 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAgentStore } from '../store/agent'
@@ -1204,6 +1204,40 @@ export default {
   padding: 10px;
   border-top: 1px solid var(--border-color);
   text-align: center;
+}
+
+/* 使文件树内容区域可滚动并占据剩余高度 */
+.file-tree-wrapper {
+  flex: 1;
+  overflow-y: scroll; /* 始终显示滚动条 */
+  overflow-x: hidden;
+  /* 将滚动条放在左侧 */
+  direction: rtl;
+}
+
+/* 还原文件树内容方向，避免文字颠倒 */
+.file-tree-wrapper .el-tree {
+  direction: ltr;
+}
+
+/* 自定义滚动条样式，确保在 macOS 上可见 */
+.file-tree-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.file-tree-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.file-tree-wrapper::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.25);
+  border-radius: 4px;
+}
+
+/* Firefox */
+.file-tree-wrapper {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.25) transparent;
 }
 
 .editor-area {
