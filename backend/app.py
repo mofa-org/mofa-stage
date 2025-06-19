@@ -12,7 +12,6 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 # 引入路由
 from routes.agents import agents_bp
 from routes.settings import settings_bp
-from routes.dataflows import dataflows_bp
 from routes.terminal import terminal_bp
 from routes.webssh import webssh_bp, init_websocket
 from routes.ttyd import ttyd_bp
@@ -33,7 +32,6 @@ def create_app():
     # 注册蓝图
     app.register_blueprint(agents_bp)
     app.register_blueprint(settings_bp)
-    app.register_blueprint(dataflows_bp)
     app.register_blueprint(terminal_bp)
     app.register_blueprint(webssh_bp)
     app.register_blueprint(ttyd_bp, url_prefix='/api/ttyd')

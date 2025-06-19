@@ -10,8 +10,6 @@ import Terminal from '../views/Terminal.vue'
 // import WebSSH from '../views/WebSSH.vue'
 // import TtydTerminal from '../views/TtydTerminal.vue'
 import NotFound from '../views/NotFound.vue'
-import DataFlowList from '../views/dataflow/DataFlowList.vue'
-import DataFlowEditor from '../views/dataflow/DataFlowEditor.vue'
 
 // 创建空组件替代直接加载的终端组件
 const EmptyComponent = { render: () => null }
@@ -61,17 +59,6 @@ const router = createRouter({
       name: 'ttyd',
       component: EmptyComponent, // 使用空组件
       meta: { keepAlive: true }
-    },
-    {
-      path: '/dataflows',
-      name: 'dataflows',
-      component: DataFlowList
-    },
-    {
-      path: '/dataflows/:flowId/edit',
-      name: 'dataflow-edit',
-      component: DataFlowEditor,
-      props: true
     },
     {
       path: '/:pathMatch(.*)*',
