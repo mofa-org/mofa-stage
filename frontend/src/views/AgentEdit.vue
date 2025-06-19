@@ -2,7 +2,9 @@
   <div class="page-container">
     <div class="page-header">
       <div class="header-left">
-        <el-button @click="goBack" icon="ArrowLeft"></el-button>
+        <el-button @click="goBack">
+          <el-icon><ArrowLeft /></el-icon>
+        </el-button>
         <h1 class="page-title">{{ agentName }}</h1>
         <el-tag v-if="isAgentRunning" type="success">运行中</el-tag>
       </div>
