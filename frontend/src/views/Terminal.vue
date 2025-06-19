@@ -549,7 +549,7 @@ export default {
 .terminal-wrapper {
   height: 400px; 
   border: 1px solid var(--el-border-color);
-  border-radius: 4px;
+  border-radius: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;

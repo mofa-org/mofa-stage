@@ -136,7 +136,7 @@ export default {
   height: 100%;
   min-height: 300px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 0;
   overflow: hidden;
 }
 </style>

@@ -770,7 +770,7 @@ export default {
   gap: 24px;
   padding: 20px 24px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 254, 0.8) 100%);
-  border-radius: 16px;
+  border-radius: 0;
   border: 1px solid var(--border-color);
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
 }
@@ -780,11 +780,11 @@ export default {
 }
 
 .search-input {
-  border-radius: 12px;
+  border-radius: 0;
 }
 
 .search-input .el-input__wrapper {
-  border-radius: 12px;
+  border-radius: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid var(--border-color);
   transition: all 0.3s ease;
@@ -806,7 +806,7 @@ export default {
 }
 
 .create-btn {
-  border-radius: 12px;
+  border-radius: 0;
   padding: 12px 24px;
   font-weight: 600;
   font-size: 16px;
@@ -829,7 +829,7 @@ export default {
 }
 
 .action-btn {
-  border-radius: 8px !important;
+  border-radius: 0 !important;
   margin: 0 2px !important;
   border: none !important;
   color: white !important;
@@ -839,19 +839,19 @@ export default {
   height: 32px !important;
 }
 
-/* 复制按钮 - 红色 */
+/* 复制按钮 - 蓝色(原青蓝色) */
 .action-copy {
-  background: var(--mofa-red) !important;
-  box-shadow: 0 2px 8px rgba(255, 92, 72, 0.3) !important;
+  background: var(--mofa-teal) !important;
+  box-shadow: 0 2px 8px rgba(107, 206, 210, 0.3) !important;
 }
 
 .action-copy:hover {
-  background: #E54A35 !important;
-  box-shadow: 0 4px 12px rgba(255, 92, 72, 0.4) !important;
+  background: #5BC1C6 !important;
+  box-shadow: 0 4px 12px rgba(107, 206, 210, 0.4) !important;
   transform: translateY(-1px) !important;
 }
 
-/* 编辑按钮 - 橙红色 */
+/* 编辑按钮 - 深红色(原橙红色) */
 .action-edit {
   background: var(--mofa-orange) !important;
   box-shadow: 0 2px 8px rgba(255, 104, 87, 0.3) !important;
@@ -877,22 +877,22 @@ export default {
   color: #2C3E50 !important;
 }
 
-/* 删除按钮 - 青蓝色 */
+/* 删除按钮 - 浅红色(原红色) */
 .action-delete {
-  background: var(--mofa-teal) !important;
-  box-shadow: 0 2px 8px rgba(107, 206, 210, 0.3) !important;
+  background: var(--mofa-red) !important;
+  box-shadow: 0 2px 8px rgba(255, 92, 72, 0.3) !important;
 }
 
 .action-delete:hover {
-  background: #5BC1C6 !important;
-  box-shadow: 0 4px 12px rgba(107, 206, 210, 0.4) !important;
+  background: #E54A35 !important;
+  box-shadow: 0 4px 12px rgba(255, 92, 72, 0.4) !important;
   transform: translateY(-1px) !important;
 }
 
 /* 深色模式下的按钮调整 */
 [data-theme="dark"] .action-copy {
-  background: #FF6B5B !important;
-  box-shadow: 0 2px 8px rgba(255, 107, 91, 0.4) !important;
+  background: #7DD6DA !important;
+  box-shadow: 0 2px 8px rgba(125, 214, 218, 0.4) !important;
 }
 
 [data-theme="dark"] .action-edit {
@@ -906,8 +906,8 @@ export default {
 }
 
 [data-theme="dark"] .action-delete {
-  background: #7DD6DA !important;
-  box-shadow: 0 2px 8px rgba(125, 214, 218, 0.4) !important;
+  background: #FF6B5B !important;
+  box-shadow: 0 2px 8px rgba(255, 107, 91, 0.4) !important;
 }
 
 
@@ -915,7 +915,7 @@ export default {
 .log-container {
   height: 100%;
   padding: 10px;
-  border-radius: 4px;
+  border-radius: 0;
   overflow-y: auto;
 }
 
@@ -925,7 +925,7 @@ export default {
   background-color: #1e1e1e;
   color: #d4d4d4;
   padding: 1rem;
-  border-radius: 4px;
+  border-radius: 0;
   overflow: auto;
   height: 100%;
   margin: 0;
@@ -969,7 +969,7 @@ export default {
   background-color: #ffd04b;
   color: #000;
   padding: 0 2px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 .log-item {
@@ -995,7 +995,7 @@ export default {
   background-color: #1e1e1e;
   color: #d4d4d4;
   padding: 1rem;
-  border-radius: 4px;
+  border-radius: 0;
   overflow: auto;
   margin: 0;
   line-height: 1.5;
@@ -1110,7 +1110,7 @@ export default {
   flex: 1;
   overflow: auto;
   background-color: #1e1e1e;
-  border-radius: 4px;
+  border-radius: 0;
   padding: 10px;
 }
 

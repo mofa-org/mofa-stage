@@ -2,7 +2,7 @@ export const messages = {
   en: {
     sidebar: {
       controlCenter: 'MoFA Stage Control',
-      agentsList: 'Agents List',
+      agentsList: 'Agents Hub',
       dataflowOrchestration: 'Dataflow Orchestration',
       commandLine: 'Command Line',
       settings: 'Settings',

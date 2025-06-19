@@ -4,7 +4,7 @@
       <img src="/mofa-logo.png" alt="MoFA Logo" class="app-logo" />
       <div class="brand-info">
         <h1 class="app-title">MoFA Stage</h1>
-        <p class="app-subtitle">Control Center</p>
+        <p class="app-subtitle">Mission Control for MoFA</p>
       </div>
     </div>
 
@@ -124,7 +124,7 @@ export default {
 .app-logo {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: 0;
   transition: all 0.3s ease;
 }
 

@@ -153,7 +153,7 @@ body {
 
 .card {
   background-color: var(--card-background);
-  border-radius: 12px;
+  border-radius: 0;
   box-shadow: var(--card-shadow);
   padding: 24px;
   margin-bottom: 24px;
@@ -178,7 +178,7 @@ body {
 .el-button--primary {
   background: linear-gradient(135deg, var(--mofa-red) 0%, var(--mofa-orange) 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   box-shadow: var(--button-shadow);
   font-weight: 600;
   transition: all 0.3s ease;
@@ -193,7 +193,7 @@ body {
 .el-button--success {
   background: linear-gradient(135deg, var(--mofa-teal) 0%, #7DD6DA 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   box-shadow: 0 2px 8px rgba(107, 206, 210, 0.2);
 }
 
@@ -206,7 +206,7 @@ body {
 .el-button--warning {
   background: linear-gradient(135deg, var(--mofa-yellow) 0%, #FFD55A 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   color: #2C3E50;
   box-shadow: 0 2px 8px rgba(255, 200, 55, 0.2);
 }
@@ -220,7 +220,7 @@ body {
 .el-button--danger {
   background: linear-gradient(135deg, var(--mofa-red) 0%, var(--mofa-orange) 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   box-shadow: 0 2px 8px rgba(255, 92, 72, 0.2);
 }
 
@@ -315,7 +315,7 @@ body {
 
 .agent-card {
   background-color: var(--card-background);
-  border-radius: 16px;
+  border-radius: 0;
   box-shadow: var(--card-shadow);
   border: 1px solid var(--border-color);
   padding: 20px;
@@ -479,7 +479,7 @@ body {
 
 /* Card enhancements */
 .el-card {
-  border-radius: 16px;
+  border-radius: 0;
   border: 1px solid var(--border-color);
   box-shadow: var(--card-shadow);
   transition: all 0.3s ease;
@@ -501,7 +501,7 @@ body {
 
 /* Button group improvements */
 .el-button-group .el-button {
-  border-radius: 8px;
+  border-radius: 0;
   margin: 0 2px;
 }
 
@@ -515,7 +515,7 @@ body {
 
 /* Dialog improvements */
 .el-dialog {
-  border-radius: 16px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -548,7 +548,7 @@ body {
 
 /* Message and notification improvements */
 .el-message {
-  border-radius: 12px;
+  border-radius: 0;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(10px);
 }
@@ -573,7 +573,7 @@ body {
 
 /* Skeleton loading improvements */
 .el-skeleton__item {
-  border-radius: 8px;
+  border-radius: 0;
 }
 
 /* Dark theme dialog adjustments */

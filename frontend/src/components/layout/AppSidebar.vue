@@ -60,6 +60,10 @@ export default {
     const { t } = useI18n()
     
     const activeRoute = computed(() => {
+      // 对于 agents 相关的路由，都映射到 /agents
+      if (route.path.startsWith('/agents')) {
+        return '/agents'
+      }
       return route.path
     })
     
@@ -133,7 +137,7 @@ export default {
 
 .sidebar-nav .el-menu-item {
   margin: 4px 16px;
-  border-radius: 12px;
+  border-radius: 0;
   color: var(--sidebar-text-color);
   font-weight: 500;
   height: 48px;
@@ -152,7 +156,7 @@ export default {
   width: 3px;
   height: 0;
   background: linear-gradient(135deg, var(--mofa-red) 0%, var(--mofa-teal) 100%);
-  border-radius: 2px;
+  border-radius: 0;
   transition: height 0.3s ease;
 }
 
@@ -206,7 +210,7 @@ export default {
   font-family: 'Monaco', 'Consolas', monospace;
   background: rgba(107, 206, 210, 0.1);
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: 0;
 }
 
 /* Dark theme adjustments */

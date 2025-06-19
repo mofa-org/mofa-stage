@@ -548,7 +548,7 @@ export default {
   gap: 24px;
   padding: 24px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 254, 0.8) 100%);
-  border-radius: 16px;
+  border-radius: 0;
   border: 1px solid var(--border-color);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
@@ -579,7 +579,7 @@ export default {
 }
 
 .page-actions .el-button {
-  border-radius: 12px;
+  border-radius: 0;
   padding: 12px 20px;
   font-weight: 600;
 }
@@ -646,7 +646,7 @@ export default {
   padding: 8px 12px;
   background: rgba(107, 206, 210, 0.05);
   border-left: 3px solid var(--mofa-teal);
-  border-radius: 0 8px 8px 0;
+  border-radius: 0;
 }
 
 .loading-card {
@@ -668,7 +668,7 @@ export default {
 .el-textarea__inner,
 .el-select,
 .el-input-number {
-  border-radius: 10px;
+  border-radius: 0;
 }
 
 .el-input__wrapper {
@@ -702,7 +702,7 @@ export default {
 
 /* Input group styling */
 .el-input-group__append .el-button {
-  border-radius: 0 10px 10px 0;
+  border-radius: 0;
   border-left: none;
   background: var(--mofa-teal);
   color: white;
