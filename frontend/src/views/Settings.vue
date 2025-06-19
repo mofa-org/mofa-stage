@@ -1,7 +1,10 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h1 class="page-title">{{ $t('settings.title') }}</h1>
+      <div class="header-content">
+        <h1 class="page-title">System Configuration</h1>
+        <p class="page-subtitle">Manage your environment settings and preferences</p>
+      </div>
       <div class="page-actions">
         <el-button @click="resetSettings" :loading="isResetting">{{ $t('settings.reset') }}</el-button>
         <el-button type="primary" @click="saveSettings" :loading="isSaving">{{ $t('settings.save') }}</el-button>
@@ -544,33 +547,36 @@ export default {
   margin-bottom: 32px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 24px;
-  padding: 24px;
+  padding: 32px 24px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 254, 0.8) 100%);
   border-radius: 0;
   border: 1px solid var(--border-color);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .page-title {
-  font-size: 32px;
-  font-weight: 800;
+  font-size: 28px;
+  font-weight: 700;
   margin: 0;
-  background: linear-gradient(
-    45deg,
-    var(--mofa-red) 0%,
-    var(--mofa-orange) 25%,
-    var(--mofa-yellow) 50%,
-    var(--mofa-teal) 75%,
-    var(--mofa-red) 100%
-  );
-  background-size: 300% 300%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: flowing-gradient 12s ease-in-out infinite;
-  letter-spacing: -0.8px;
+  color: var(--text-color);
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  font-weight: 400;
+  margin: 0;
+  color: var(--text-color-secondary);
+  opacity: 0.8;
+  letter-spacing: 0;
 }
 
 .page-actions {
@@ -622,20 +628,20 @@ export default {
 
 .card-header h3 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
   color: var(--text-color);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .card-header h3::before {
   content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--mofa-teal);
+  width: 4px;
+  height: 24px;
+  border-radius: 0;
+  background: linear-gradient(135deg, var(--mofa-teal) 0%, var(--mofa-red) 100%);
 }
 
 .form-help {
@@ -717,6 +723,11 @@ export default {
 [data-theme="dark"] .page-header {
   background: linear-gradient(135deg, rgba(22, 27, 34, 0.9) 0%, rgba(13, 17, 23, 0.8) 100%);
   border-color: var(--border-color);
+}
+
+[data-theme="dark"] .page-subtitle {
+  color: var(--text-color-secondary);
+  opacity: 0.8;
 }
 
 [data-theme="dark"] .form-help {
