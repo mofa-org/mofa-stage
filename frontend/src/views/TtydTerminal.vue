@@ -1,5 +1,5 @@
 <template>
-  <div :class="embedded ? 'ttyd-embedded' : 'page-container ttyd-view'">
+  <div :class="embedded ? 'ttyd-embedded' : 'ttyd-view'">
     <!-- Header (hidden when embedded) -->
     <div v-if="!embedded" class="page-header">
       <h1 class="page-title">{{ $t('sidebar.ttyd') || 'ttyd Terminal' }}</h1>
@@ -14,30 +14,52 @@
 
     <div :class="embedded ? 'ttyd-layout-embedded' : 'ttyd-layout'">
       <!-- Examples Sidebar (hidden when embedded) -->
-      <div v-if="!embedded" class="examples-sidebar">
-        <div class="examples-header">Dataflows</div>
-        <div class="examples-search">
-          <el-input
-            v-model="searchQuery"
-            placeholder="Search Dataflows..."
-            clearable
-            @input="filterExamples"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
+      <div v-if="!embedded" class="examples-sidebar" :class="{ 'collapsed': isDataflowCollapsed }">
+        <div class="examples-header" @click="toggleDataflowList">
+          <span v-show="!isDataflowCollapsed" class="examples-title">Dataflows</span>
+          <span v-show="isDataflowCollapsed" class="examples-title-collapsed">D</span>
+          <el-icon class="collapse-icon" :class="{ 'rotated': isDataflowCollapsed }">
+            <ArrowRight />
+          </el-icon>
         </div>
-        <div class="examples-list">
-          <div 
-            v-for="example in filteredExamples" 
-            :key="example.name" 
-            class="example-item" 
-            :class="{ active: selectedExample === example.name }"
-            @click="selectExample(example.name)"
-          >
-            {{ example.name }}
+        <div v-show="!isDataflowCollapsed" class="examples-content">
+          <div class="examples-search">
+            <el-input
+              v-model="searchQuery"
+              placeholder="Search Dataflows..."
+              clearable
+              @input="filterExamples"
+              size="small"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
           </div>
+          <div class="examples-list">
+            <div 
+              v-for="example in filteredExamples" 
+              :key="example.name" 
+              class="example-item" 
+              :class="{ active: selectedExample === example.name }"
+              @click="selectExample(example.name)"
+            >
+              <el-icon class="example-icon"><Document /></el-icon>
+              <span class="example-name">{{ example.name }}</span>
+            </div>
+            <div v-if="filteredExamples.length === 0" class="no-examples">
+              <el-empty :image-size="60" description="No dataflows found" />
+            </div>
+          </div>
+        </div>
+        <!-- Collapsed state content -->
+        <div v-show="isDataflowCollapsed" class="collapsed-content">
+          <el-tooltip content="Click to see Dataflows List" placement="right">
+            <div class="collapsed-info">
+              <div class="collapsed-count">{{ filteredExamples.length }}</div>
+              <div class="collapsed-label">Items</div>
+            </div>
+          </el-tooltip>
         </div>
       </div>
       
@@ -133,7 +155,7 @@ import { ref, reactive, onMounted, onBeforeUnmount, nextTick, watch, onActivated
 import { ElMessage } from 'element-plus'
 import { useSettingsStore } from '../store/settings'
 import { useAgentStore } from '../store/agent'
-import { Loading, Monitor, QuestionFilled, Search, Refresh } from '@element-plus/icons-vue'
+import { Loading, Monitor, QuestionFilled, Search, Refresh, ArrowRight, Document } from '@element-plus/icons-vue'
 
 export default {
   name: 'TtydTerminal',
@@ -149,6 +171,8 @@ export default {
     QuestionFilled,
     Search,
     Refresh,
+    ArrowRight,
+    Document,
   },
   setup() {
     const props = arguments[0] // Access props in setup
@@ -170,6 +194,23 @@ export default {
     const isInitialized = ref(false)
     const nextTabId = ref(1)
 
+    // 新增：Dataflows 列表折叠状态
+    const isDataflowCollapsed = ref(false)
+    
+    // 初始化折叠状态
+    const initDataflowCollapsedState = () => {
+      const saved = localStorage.getItem('ttyd-dataflow-collapsed')
+      if (saved) {
+        isDataflowCollapsed.value = JSON.parse(saved)
+      }
+    }
+
+    // 切换 Dataflows 列表折叠状态
+    const toggleDataflowList = () => {
+      isDataflowCollapsed.value = !isDataflowCollapsed.value
+      localStorage.setItem('ttyd-dataflow-collapsed', JSON.stringify(isDataflowCollapsed.value))
+    }
+
     // Default values for new tab form
     const newTabForm = reactive({
       title: 'Terminal',
@@ -179,6 +220,9 @@ export default {
 
     const initializeComponent = async () => {
       try {
+        // 初始化 Dataflows 折叠状态
+        initDataflowCollapsedState()
+        
         // Load settings
         await settingsStore.fetchSettings()
         const settings = settingsStore.settings
@@ -709,7 +753,9 @@ export default {
       filterExamples,
       checkTtydService,
       restartTtyd,
-      focusIframe
+      focusIframe,
+      isDataflowCollapsed,
+      toggleDataflowList
     };
   }
 };
@@ -719,190 +765,341 @@ export default {
 .ttyd-view {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px); /* Adjust based on your layout's header height */
-  min-height: 600px; /* Ensure minimum height */
-  overflow: hidden; /* Prevent overflow at the container level */
-  max-width: 100%; /* Prevent horizontal overflow */
-  contain: layout style; /* 提高渲染性能 */
-  will-change: opacity; /* 告诉浏览器这个元素可能会产生变化，帮助优化渲染 */
-  transition: none !important; /* 禁用任何过渡效果 */
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--background-color);
 }
 
 .page-header {
-  margin-bottom: 10px; /* Reduce header margin to save space */
-  flex-shrink: 0; /* Prevent header from shrinking */
+  margin-bottom: 16px;
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: none !important; /* 禁用过渡效果 */
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.page-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .ttyd-layout {
   display: flex;
   flex-grow: 1;
-  min-height: 500px;
-  gap: 15px;
-  overflow: hidden; /* Prevent overflow in the layout */
-  width: 100%; /* Ensure it takes full width */
-  position: relative; /* For absolute positioning if needed */
-  contain: layout; /* 提高渲染性能 */
-  transition: none !important; /* 禁用过渡效果 */
+  gap: 16px;
+  overflow: hidden;
+  width: 100%;
+  position: relative;
 }
 
 .ttyd-card {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Prevent card content from overflowing */
-  min-height: 500px; /* Ensure minimum height for the card */
-  width: 0; /* Allow it to grow but start with 0 width */
-  contain: layout; /* 提高渲染性能 */
-  transition: none !important; /* 禁用过渡效果 */
+  overflow: hidden;
+  width: 0;
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
 }
 
-.ttyd-card-embedded :deep(.el-card__body) {
-  height: 100%;
+.ttyd-card:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.ttyd-card :deep(.el-card__body) {
   padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.ttyd-card-embedded .terminal-tabs {
-  min-height: 0 !important;
-}
-
-.ttyd-card-embedded .terminal-tab-pane,
-.ttyd-card-embedded .terminal-tab-content {
-  min-height: 0 !important;
-}
-
-.examples-sidebar {
-  width: 250px;
-  min-width: 200px; /* Minimum width */
-  max-width: 250px; /* Maximum width */
-  flex-shrink: 0; /* Prevent sidebar from shrinking */
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  border: 1px solid #e4e7ed;
+  flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.examples-header {
-  padding: 10px; /* Reduce padding */
-  background-color: #f0f2f5;
-  border-bottom: 1px solid #e4e7ed;
-  font-weight: bold;
+.ttyd-card-embedded :deep(.el-card__body) {
+  height: 100%;
+}
+
+.examples-sidebar {
+  width: 280px;
+  min-width: 250px;
+  max-width: 320px;
+  flex-shrink: 0;
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.examples-sidebar.collapsed {
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+}
+
+.examples-sidebar:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.examples-header {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--mofa-red) 0%, var(--mofa-orange) 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  flex-shrink: 0; /* Prevent header from shrinking */
+  cursor: pointer;
+  transition: all 0.3s ease;
+  user-select: none;
+  min-height: 52px;
+}
+
+.examples-sidebar.collapsed .examples-header {
+  padding: 16px 8px;
+  justify-content: center;
+}
+
+.examples-header:hover {
+  background: linear-gradient(135deg, var(--mofa-orange) 0%, var(--mofa-red) 100%);
+}
+
+.examples-title {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.examples-title-collapsed {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  color: white;
+  opacity: 0.9;
+}
+
+.collapse-icon {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 14px;
+}
+
+.collapse-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.examples-sidebar.collapsed .collapse-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.examples-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.collapsed-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 8px;
+}
+
+.collapsed-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.collapsed-info:hover {
+  transform: scale(1.05);
+}
+
+.collapsed-count {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary-color);
+  line-height: 1;
+}
+
+.collapsed-label {
+  font-size: 10px;
+  color: var(--text-color-secondary);
+  font-weight: 500;
+  text-align: center;
+  opacity: 0.8;
 }
 
 .examples-search {
-  margin: 10px;
-  flex-shrink: 0; /* Prevent search from shrinking */
+  padding: 16px 20px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color-light);
 }
 
 .examples-list {
   flex-grow: 1;
   overflow-y: auto;
-  padding: 0 15px;
+  padding: 8px 0;
+  max-height: calc(100% - 120px);
 }
 
 .example-item {
-  padding: 10px 0;
-  border-bottom: 1px solid #ebeef5;
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  border-left: 3px solid transparent;
+  color: var(--text-color-secondary);
 }
 
 .example-item:hover {
-  color: #409eff;
+  background-color: var(--border-color-light);
+  color: var(--primary-color);
+  border-left-color: var(--primary-color);
 }
 
 .example-item.active {
-  color: #409eff;
-  font-weight: bold;
+  background-color: rgba(255, 92, 72, 0.1);
+  color: var(--primary-color);
+  font-weight: 600;
+  border-left-color: var(--primary-color);
 }
 
-/* Make tabs container flexible */
+.example-icon {
+  margin-right: 8px;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.example-name {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.no-examples {
+  padding: 20px;
+  text-align: center;
+}
+
+/* Terminal tabs styling */
 .terminal-tabs {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 500px; /* Ensure minimum height for the tabs */
-  overflow: hidden; /* Add overflow hidden to prevent content from exceeding */
-  width: 100%; /* Ensure full width */
+  overflow: hidden;
+  width: 100%;
+  border-radius: 12px;
 }
 
 /* Tabs header styling */
 :deep(.el-tabs__header) {
-  flex-shrink: 0; /* Prevent header from shrinking */
-  margin-bottom: 0; /* Remove bottom margin */
-  width: 100%; /* Full width */
-  overflow-x: auto; /* Allow horizontal scrolling for many tabs */
-  scrollbar-width: thin; /* Firefox */
+  flex-shrink: 0;
+  margin-bottom: 0;
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  background: var(--card-background);
+  border-radius: 12px 12px 0 0;
 }
 
-/* Allow horizontal scrolling in tab bar */
 :deep(.el-tabs__nav-wrap) {
   overflow-x: auto !important;
-  margin-bottom: 0 !important; /* Remove bottom margin */
+  margin-bottom: 0 !important;
+  border-radius: 12px 12px 0 0;
 }
 
-/* Hide the bottom shadow/line that appears with scroll */
 :deep(.el-tabs__nav-wrap::after) {
   display: none !important;
 }
 
-/* Ensure tabs don't wrap */
 :deep(.el-tabs__nav) {
   white-space: nowrap !important;
   display: flex !important;
-  flex-wrap: nowrap !important; /* Prevent tab wrapping */
+  flex-wrap: nowrap !important;
 }
 
-/* Tab label styling */
+:deep(.el-tabs__item) {
+  border: none !important;
+  background: transparent;
+  color: var(--text-color-secondary);
+  transition: all 0.3s ease;
+  margin-right: 4px;
+  border-radius: 8px 8px 0 0;
+}
+
+:deep(.el-tabs__item:hover) {
+  color: var(--primary-color);
+  background: rgba(255, 92, 72, 0.1);
+}
+
+:deep(.el-tabs__item.is-active) {
+  color: var(--primary-color) !important;
+  background: linear-gradient(135deg, rgba(255, 92, 72, 0.1) 0%, rgba(255, 104, 87, 0.1) 100%);
+  font-weight: 600;
+}
+
 .tab-label {
-  font-size: 0.9em; /* Reduce font size slightly */
-  max-width: 180px; /* Limit tab width */
+  font-size: 13px;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* Make tab content area grow */
 :deep(.el-tabs__content) {
   flex: 1;
-  height: 100%; /* Use 100% instead of 0 for consistent height calculation */
-  padding: 0; /* Remove default padding if needed */
-  overflow: hidden; /* Prevent overflow */
-  min-height: 300px; /* Ensure minimum height */
-  position: relative; /* Add position relative for absolute positioning child content */
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+  background: var(--card-background);
+  border-radius: 0 0 12px 12px;
 }
 
 .terminal-tab-pane {
-  height: 100%; /* Ensure pane takes full height */
-  min-height: 500px; /* Ensure minimum height */
-  display: flex; /* Use flex for content */
+  height: 100%;
+  display: flex;
   flex-direction: column;
   overflow: hidden;
-  position: relative; /* Position relative for absolute child positioning */
+  position: relative;
 }
 
 .terminal-tab-content {
-  flex-grow: 1; /* Make terminal component container grow */
-  min-height: 500px; /* Ensure minimum height */
-  height: 100%; /* Ensure it fills the pane */
-  overflow: hidden; /* Prevent scrolling outside the iframe */
-  border-radius: 0 0 4px 4px;
-  position: absolute; /* Position absolutely within parent */
+  flex-grow: 1;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0 0 12px 12px;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  background: #1a1a1a;
 }
 
 /* ttyd iframe styling */
@@ -910,9 +1107,8 @@ export default {
   width: 100%;
   height: 100%;
   border: none;
-  background-color: #1e1e1e;
-  contain: strict; /* 最严格的性能优化 */
-  transition: none !important; /* 禁用过渡效果 */
+  background-color: #1a1a1a;
+  border-radius: 0 0 12px 12px;
 }
 
 .no-tabs-placeholder {
@@ -921,35 +1117,49 @@ export default {
   justify-content: center;
   align-items: center;
   height: 100%;
-  color: #909399;
-  font-size: 1em;
-  text-align: left;
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--card-background);
+  border-radius: 0 0 12px 12px;
 }
 
 .env-info {
-  margin-bottom: 2em;
-  padding: 1em;
-  border-radius: 8px;
-  background-color: #f5f7fa;
-  width: 80%;
-  max-width: 300px;
+  margin-bottom: 32px;
+  padding: 24px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--border-color-light) 0%, rgba(255, 255, 255, 0.5) 100%);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  max-width: 400px;
 }
 
 .env-info h3 {
-  color: #606266;
-  margin: 0.5em 0;
-  font-size: 1.1em;
+  color: var(--text-color);
+  margin: 16px 0 8px 0;
+  font-size: 16px;
   font-weight: 600;
 }
 
+.env-info h3:first-child {
+  margin-top: 0;
+}
+
 .env-info p {
-  margin: 0.5em 0;
-  color: #606266;
+  margin: 8px 0;
+  color: var(--text-color-secondary);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .action-hint {
-  color: #909399;
-  font-size: 1.1em;
+  color: var(--text-color-light);
+  font-size: 14px;
+  padding: 16px;
+  background: rgba(255, 92, 72, 0.05);
+  border: 1px dashed var(--primary-color);
+  border-radius: 8px;
+  max-width: 300px;
 }
 
 .form-help {
@@ -958,43 +1168,98 @@ export default {
   margin-top: 5px;
 }
 
-.page-container {
-  padding: 10px 20px; /* Reduce top/bottom padding */
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 1.5em; /* Slightly smaller title */
-}
-
 .dialog-footer {
   text-align: right;
 }
 
-.page-actions {
-  display: flex;
-  gap: 10px;
+/* Responsive design */
+@media (max-width: 1024px) {
+  .examples-sidebar {
+    width: 260px;
+    min-width: 220px;
+  }
+  
+  .examples-sidebar.collapsed {
+    width: 50px;
+    min-width: 50px;
+    max-width: 50px;
+  }
 }
 
-/* Media query for smaller screens */
 @media (max-width: 768px) {
   .ttyd-layout {
     flex-direction: column;
+    gap: 12px;
   }
   
   .examples-sidebar {
     width: 100%;
     max-width: 100%;
-    min-height: 150px;
-    max-height: 200px;
+    min-height: auto;
+    max-height: 300px;
+    order: 2;
+  }
+  
+  .examples-sidebar.collapsed {
+    width: 100%;
+    max-height: 60px;
+    min-height: 60px;
+  }
+  
+  .examples-sidebar.collapsed .examples-header {
+    padding: 16px 20px;
+    justify-content: space-between;
+  }
+  
+  .examples-sidebar.collapsed .collapse-icon {
+    position: static;
+    transform: rotate(180deg);
+  }
+  
+  .collapsed-tooltip {
+    display: none;
+  }
+  
+  .examples-content {
+    max-height: 250px;
+  }
+  
+  .ttyd-card {
+    order: 1;
+    min-height: 300px;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 0;
+  }
+  
+  .page-actions {
+    align-self: stretch;
   }
 }
 
+@media (max-width: 480px) {
+  .page-container {
+    padding: 16px;
+  }
+  
+  .examples-sidebar {
+    max-height: 200px;
+  }
+  
+  .examples-content {
+    max-height: 150px;
+  }
+}
+
+/* Embedded mode styles */
 .ttyd-embedded {
   width: 100%;
   height: 100%;
+  background: transparent;
 }
 
 .ttyd-layout-embedded {
@@ -1002,5 +1267,19 @@ export default {
   flex-direction: column;
   width: 100%;
   height: 100%;
+  gap: 0;
+}
+
+/* Dark theme specific adjustments */
+[data-theme="dark"] .env-info {
+  background: linear-gradient(135deg, var(--border-color) 0%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+[data-theme="dark"] .action-hint {
+  background: rgba(255, 92, 72, 0.08);
+}
+
+[data-theme="dark"] .example-item.active {
+  background-color: rgba(255, 92, 72, 0.15);
 }
 </style> 
