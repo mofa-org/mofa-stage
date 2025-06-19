@@ -1,13 +1,13 @@
 <template>
   <div class="page-container">
-    <div class="page-header">
-      <h1 class="page-title">{{ $t('agent.list') }}</h1>
+    <div class="page-controls">
       <div class="search-container">
         <el-input
           v-model="searchQuery"
           placeholder="Search for Agents/Dataflows..."
           clearable
           @input="handleSearch"
+          class="search-input"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
@@ -15,7 +15,7 @@
         </el-input>
       </div>
       <div class="page-actions">
-        <el-button type="primary" @click="handleCreateAgent">
+        <el-button type="primary" @click="handleCreateAgent" class="create-btn">
           <el-icon><Plus /></el-icon>
           {{ $t('agent.create') }}
         </el-button>
@@ -54,34 +54,24 @@
         </div>
 
         <div class="agent-card-footer">
-          <el-button-group>
+          <el-button-group class="agent-actions">
             <el-tooltip :content="$t('common.copy')" placement="top">
-              <el-button size="small" @click="handleCopyAgent(agent)">
+              <el-button size="small" @click="handleCopyAgent(agent)" class="action-btn action-copy">
                 <el-icon><CopyDocument /></el-icon>
               </el-button>
             </el-tooltip>
             <el-tooltip :content="$t('common.edit')" placement="top">
-              <el-button size="small" @click="handleEditAgent(agent)">
+              <el-button size="small" @click="handleEditAgent(agent)" class="action-btn action-edit">
                 <el-icon><Edit /></el-icon>
               </el-button>
             </el-tooltip>
             <el-tooltip :content="$t('agent.viewLogs')" placement="top">
-              <el-button size="small" type="info" @click="fetchAgentLogs(agent)">
+              <el-button size="small" @click="fetchAgentLogs(agent)" class="action-btn action-logs">
                 <el-icon><Document /></el-icon>
               </el-button>
             </el-tooltip>
-            <!-- <el-tooltip :content="$t('agent.run')" placement="top" v-if="!isAgentRunning(agent)" :hide-after="0">
-              <el-button size="small" type="success" @click="handleRunAgent(agent)">
-                <el-icon><VideoPlay /></el-icon>
-              </el-button>
-            </el-tooltip>
-            <el-tooltip :content="$t('agent.stop')" placement="top" v-else :hide-after="0">
-              <el-button size="small" type="danger" @click="handleStopAgent(agent)">
-                <el-icon><VideoPause /></el-icon>
-              </el-button>
-            </el-tooltip> -->
             <el-tooltip :content="$t('common.delete')" placement="top">
-              <el-button size="small" type="danger" @click="handleDeleteAgent(agent)">
+              <el-button size="small" @click="handleDeleteAgent(agent)" class="action-btn action-delete">
                 <el-icon><Delete /></el-icon>
               </el-button>
             </el-tooltip>
@@ -114,34 +104,24 @@
               </div>
 
               <div class="agent-card-footer">
-                <el-button-group>
+                <el-button-group class="agent-actions">
                   <el-tooltip :content="$t('common.copy')" placement="top">
-                    <el-button size="small" @click="handleCopyAgent(agent)">
+                    <el-button size="small" @click="handleCopyAgent(agent)" class="action-btn action-copy">
                       <el-icon><CopyDocument /></el-icon>
                     </el-button>
                   </el-tooltip>
                   <el-tooltip :content="$t('common.edit')" placement="top">
-                    <el-button size="small" @click="handleEditAgent(agent)">
+                    <el-button size="small" @click="handleEditAgent(agent)" class="action-btn action-edit">
                       <el-icon><Edit /></el-icon>
                     </el-button>
                   </el-tooltip>
                   <el-tooltip :content="$t('agent.viewLogs')" placement="top" :hide-after="0">
-                    <el-button size="small" type="info" @click="fetchAgentLogs(agent)">
+                    <el-button size="small" @click="fetchAgentLogs(agent)" class="action-btn action-logs">
                       <el-icon><Document /></el-icon>
                     </el-button>
                   </el-tooltip>
-                  <!-- <el-tooltip :content="$t('agent.run')" placement="top" v-if="!isAgentRunning(agent)" :hide-after="0">
-                    <el-button size="small" type="success" @click="handleRunAgent(agent)">
-                      <el-icon><VideoPlay /></el-icon>
-                    </el-button>
-                  </el-tooltip>
-                  <el-tooltip :content="$t('agent.stop')" placement="top" v-else>
-                    <el-button size="small" type="danger" @click="handleStopAgent(agent)">
-                      <el-icon><VideoPause /></el-icon>
-                    </el-button>
-                  </el-tooltip> -->
                   <el-tooltip :content="$t('common.delete')" placement="top">
-                    <el-button size="small" type="danger" @click="handleDeleteAgent(agent)">
+                    <el-button size="small" @click="handleDeleteAgent(agent)" class="action-btn action-delete">
                       <el-icon><Delete /></el-icon>
                     </el-button>
                   </el-tooltip>
@@ -778,32 +758,159 @@ export default {
 
 <style scoped>
 .page-container {
-  padding: 20px;
+  padding: 24px;
+  background: var(--background-color);
 }
 
-.page-header {
+.page-controls {
   margin-bottom: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 254, 0.8) 100%);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
 }
 
 .search-container {
-  flex: 1;
-  max-width: 400px;
+  min-width: 300px;
 }
 
-.page-title {
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0;
+.search-input {
+  border-radius: 12px;
+}
+
+.search-input .el-input__wrapper {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.search-input .el-input__wrapper:hover {
+  box-shadow: 0 4px 16px rgba(107, 206, 210, 0.15);
+  border-color: var(--mofa-teal);
+}
+
+.search-input .el-input__wrapper.is-focus {
+  box-shadow: 0 4px 16px rgba(107, 206, 210, 0.2);
+  border-color: var(--mofa-teal);
 }
 
 .page-actions {
   display: flex;
   gap: 16px;
 }
+
+.create-btn {
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 600;
+  font-size: 16px;
+  height: auto;
+}
+
+/* Dark theme adjustments for controls */
+[data-theme="dark"] .page-controls {
+  background: linear-gradient(135deg, rgba(22, 27, 34, 0.9) 0%, rgba(13, 17, 23, 0.8) 100%);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .search-input .el-input__wrapper:hover {
+  box-shadow: 0 4px 16px rgba(107, 206, 210, 0.2);
+}
+
+/* Agent 按钮样式 - 四种颜色主题 */
+.agent-actions {
+  gap: 4px;
+}
+
+.action-btn {
+  border-radius: 8px !important;
+  margin: 0 2px !important;
+  border: none !important;
+  color: white !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+  min-width: 36px !important;
+  height: 32px !important;
+}
+
+/* 复制按钮 - 红色 */
+.action-copy {
+  background: var(--mofa-red) !important;
+  box-shadow: 0 2px 8px rgba(255, 92, 72, 0.3) !important;
+}
+
+.action-copy:hover {
+  background: #E54A35 !important;
+  box-shadow: 0 4px 12px rgba(255, 92, 72, 0.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 编辑按钮 - 橙红色 */
+.action-edit {
+  background: var(--mofa-orange) !important;
+  box-shadow: 0 2px 8px rgba(255, 104, 87, 0.3) !important;
+}
+
+.action-edit:hover {
+  background: #E55A42 !important;
+  box-shadow: 0 4px 12px rgba(255, 104, 87, 0.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 日志按钮 - 黄色 */
+.action-logs {
+  background: var(--mofa-yellow) !important;
+  box-shadow: 0 2px 8px rgba(255, 200, 55, 0.3) !important;
+  color: #2C3E50 !important;
+}
+
+.action-logs:hover {
+  background: #E6B420 !important;
+  box-shadow: 0 4px 12px rgba(255, 200, 55, 0.4) !important;
+  transform: translateY(-1px) !important;
+  color: #2C3E50 !important;
+}
+
+/* 删除按钮 - 青蓝色 */
+.action-delete {
+  background: var(--mofa-teal) !important;
+  box-shadow: 0 2px 8px rgba(107, 206, 210, 0.3) !important;
+}
+
+.action-delete:hover {
+  background: #5BC1C6 !important;
+  box-shadow: 0 4px 12px rgba(107, 206, 210, 0.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 深色模式下的按钮调整 */
+[data-theme="dark"] .action-copy {
+  background: #FF6B5B !important;
+  box-shadow: 0 2px 8px rgba(255, 107, 91, 0.4) !important;
+}
+
+[data-theme="dark"] .action-edit {
+  background: #FF7866 !important;
+  box-shadow: 0 2px 8px rgba(255, 120, 102, 0.4) !important;
+}
+
+[data-theme="dark"] .action-logs {
+  background: #FFD147 !important;
+  box-shadow: 0 2px 8px rgba(255, 209, 71, 0.4) !important;
+}
+
+[data-theme="dark"] .action-delete {
+  background: #7DD6DA !important;
+  box-shadow: 0 2px 8px rgba(125, 214, 218, 0.4) !important;
+}
+
+
 
 .log-container {
   height: 100%;

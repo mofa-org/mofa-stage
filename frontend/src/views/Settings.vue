@@ -535,13 +535,83 @@ export default {
 </script>
 
 <style scoped>
+.page-container {
+  padding: 24px;
+  background: var(--background-color);
+}
+
+.page-header {
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 254, 0.8) 100%);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 800;
+  margin: 0;
+  background: linear-gradient(
+    45deg,
+    var(--mofa-red) 0%,
+    var(--mofa-orange) 25%,
+    var(--mofa-yellow) 50%,
+    var(--mofa-teal) 75%,
+    var(--mofa-red) 100%
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: flowing-gradient 6s ease-in-out infinite;
+  letter-spacing: -0.8px;
+}
+
+.page-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.page-actions .el-button {
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-weight: 600;
+}
+
 .settings-container {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
 .settings-card {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.settings-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--mofa-red) 0%,
+    var(--mofa-orange) 25%,
+    var(--mofa-yellow) 50%,
+    var(--mofa-teal) 75%,
+    var(--mofa-red) 100%
+  );
+  background-size: 300% 100%;
+  animation: flowing-border 8s ease-in-out infinite;
 }
 
 .card-header {
@@ -552,17 +622,113 @@ export default {
 
 .card-header h3 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-header h3::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mofa-teal);
 }
 
 .form-help {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-color-secondary);
-  margin-top: 5px;
+  margin-top: 8px;
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: rgba(107, 206, 210, 0.05);
+  border-left: 3px solid var(--mofa-teal);
+  border-radius: 0 8px 8px 0;
 }
 
 .loading-card {
-  padding: 20px;
+  padding: 40px;
+}
+
+/* Form enhancements */
+.el-form-item {
+  margin-bottom: 24px;
+}
+
+.el-form-item__label {
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 8px;
+}
+
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select,
+.el-input-number {
+  border-radius: 10px;
+}
+
+.el-input__wrapper {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.el-input__wrapper:hover {
+  border-color: var(--mofa-teal);
+  box-shadow: 0 4px 12px rgba(107, 206, 210, 0.15);
+}
+
+.el-input__wrapper.is-focus {
+  border-color: var(--mofa-teal);
+  box-shadow: 0 4px 16px rgba(107, 206, 210, 0.2);
+}
+
+.el-radio-group .el-radio {
+  margin-right: 24px;
+  margin-bottom: 8px;
+}
+
+.el-radio__label {
+  font-weight: 500;
+}
+
+.el-switch {
+  --el-switch-on-color: var(--mofa-teal);
+}
+
+/* Input group styling */
+.el-input-group__append .el-button {
+  border-radius: 0 10px 10px 0;
+  border-left: none;
+  background: var(--mofa-teal);
+  color: white;
+  font-weight: 600;
+}
+
+.el-input-group__append .el-button:hover {
+  background: #3AC5BC;
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .page-header {
+  background: linear-gradient(135deg, rgba(22, 27, 34, 0.9) 0%, rgba(13, 17, 23, 0.8) 100%);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .form-help {
+  background: rgba(107, 206, 210, 0.1);
+  border-left-color: var(--mofa-teal);
+}
+
+[data-theme="dark"] .el-input__wrapper:hover {
+  box-shadow: 0 4px 12px rgba(107, 206, 210, 0.2);
+}
+
+[data-theme="dark"] .el-input__wrapper.is-focus {
+  box-shadow: 0 4px 16px rgba(107, 206, 210, 0.25);
 }
 </style>

@@ -9,7 +9,7 @@
   "use_default_examples_path": false,
   "use_relative_paths": false,
   "agent_hub_path": "/Users/liyao/Code/mofa/python/agent-hub/",
-  "examples_path": "/Users/liyao/Code/dora/examples/",
+  "examples_path": "/Users/liyao/Code/mofa/python/examples/",
   "custom_agent_hub_path": "/Users/liyao/Code/mofa/python/agent-hub/",
   "custom_examples_path": "/Users/liyao/Code/mofa/python/examples/",
   "language": "en",

@@ -1,8 +1,8 @@
 <template>
   <div class="main-layout">
-    <AppSidebar />
-    <div class="main-content">
-      <AppHeader />
+    <AppHeader />
+    <div class="main-body">
+      <AppSidebar />
       <div class="content-container">
         <slot></slot>
       </div>
@@ -30,6 +30,7 @@ export default {
 <style scoped>
 .main-layout {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   overflow: hidden;
   position: fixed;
@@ -39,10 +40,9 @@ export default {
   bottom: 0;
 }
 
-.main-content {
+.main-body {
   flex: 1;
   display: flex;
-  flex-direction: column;
   overflow: hidden;
 }
 
@@ -51,7 +51,7 @@ export default {
   padding: 20px;
   background-color: var(--background-color);
   overflow-y: auto;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 70px);
   position: relative;
   transition: none;
   contain: layout size;
