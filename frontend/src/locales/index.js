@@ -119,7 +119,7 @@ export const messages = {
       showOnlyWebSSH: 'Use SSH Terminal',
       terminalDisplayMode: 'Terminal Mode',
       terminalDisplayModeHelp: 'Select command line mode (Refresh to take effect)',
-      sshSettings: 'Terminal Settings',
+      sshSettings: 'SSH Settings',
       showOnlyTtyd: 'Use TTYD Terminal',
       ttydPort: 'Terminal Port',
       useDocker: 'Use Docker container',
@@ -165,7 +165,7 @@ export const messages = {
       settings: 'Settings',
       autoConnect: 'Auto Connect',
       autoConnectHelp: 'Auto connects when opening the terminal',
-      sshSettings: 'Terminal Settings'
+      sshSettings: 'SSH Settings'
     },
     agent: {
       list: 'Agent Hub',

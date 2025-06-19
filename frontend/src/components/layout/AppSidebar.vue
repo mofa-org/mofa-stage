@@ -33,7 +33,7 @@
     <div class="sidebar-footer">
       <div class="version-info">
         <span class="version-label">MoFA Stage</span>
-        <span class="version-number">v0.3.0</span>
+        <span class="version-number">v0.5.0</span>
       </div>
     </div>
   </div>

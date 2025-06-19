@@ -115,7 +115,7 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: flowing-gradient 6s ease-in-out infinite;
+  animation: flowing-gradient 12s ease-in-out infinite;
 }
 
 /* 动态色条效果 */
@@ -129,7 +129,7 @@
     var(--mofa-red) 100%
   );
   background-size: 300% 100%;
-  animation: flowing-border 8s ease-in-out infinite;
+  animation: flowing-border 16s ease-in-out infinite;
 }
 
 * {
@@ -348,7 +348,7 @@ body {
     var(--mofa-red) 100%
   );
   background-size: 300% 100%;
-  animation: flowing-border 8s ease-in-out infinite;
+  animation: flowing-border 16s ease-in-out infinite;
 }
 
 .agent-card-header {
@@ -462,7 +462,7 @@ body {
     var(--mofa-red) 100%
   );
   background-size: 300% 100%;
-  animation: flowing-border 8s ease-in-out infinite;
+  animation: flowing-border 16s ease-in-out infinite;
 }
 
 .el-tabs__item {

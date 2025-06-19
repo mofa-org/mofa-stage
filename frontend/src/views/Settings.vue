@@ -569,7 +569,7 @@ export default {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: flowing-gradient 6s ease-in-out infinite;
+  animation: flowing-gradient 12s ease-in-out infinite;
   letter-spacing: -0.8px;
 }
 
@@ -611,7 +611,7 @@ export default {
     var(--mofa-red) 100%
   );
   background-size: 300% 100%;
-  animation: flowing-border 8s ease-in-out infinite;
+  animation: flowing-border 16s ease-in-out infinite;
 }
 
 .card-header {
