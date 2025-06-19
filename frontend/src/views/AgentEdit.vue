@@ -231,7 +231,7 @@
         <div v-if="!useNewEditor && isDataflowYaml && showMermaidSidebar" class="mermaid-preview-sidebar" :style="{ width: mermaidSidebarWidth + 'px' }">
            <div class="mermaid-resize-handle" @mousedown="startResizeMermaid"></div>
                      <div class="mermaid-sidebar-header">
-             <h4>数据流图预览</h4>
+             <h4>数据流图</h4>
              <div class="mermaid-toolbar">
                <el-tooltip content="放大" placement="top">
                  <el-button size="small" text @click="zoomIn"><el-icon><Plus /></el-icon></el-button>
