@@ -9,7 +9,7 @@
   "use_default_examples_path": false,
   "use_relative_paths": false,
   "agent_hub_path": "/Users/liyao/Code/mofa/python/agent-hub/",
-  "examples_path": "/Users/liyao/Code/mofa/python/examples/",
+  "examples_path": "/Users/liyao/Code/dora/examples/",
   "custom_agent_hub_path": "/Users/liyao/Code/mofa/python/agent-hub/",
   "custom_examples_path": "/Users/liyao/Code/mofa/python/examples/",
   "language": "en",
@@ -26,5 +26,11 @@
   "docker_container_name": "0bfdf2580246",
   "gemini_api_key": "",
   "editor_type": "vscode",
-  "editor_version": "classic"
+  "editor_version": "classic",
+  "openai_api_key": "123",
+  "openai_base_url": "https://api.openai.com/v1",
+  "azure_openai_api_key": "",
+  "azure_openai_endpoint": "",
+  "azure_openai_api_version": "2023-05-15-preview",
+  "gemini_api_endpoint": "https://generativelanguage.googleapis.com/v1beta"
 }

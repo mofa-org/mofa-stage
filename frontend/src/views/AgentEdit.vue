@@ -219,14 +219,14 @@
         </div>
 
                  <!-- HTML 预览窄栏 -->
-         <div v-if="!useNewEditor" class="mermaid-toggle-bar" @click="toggleMermaidSidebar" :title="showMermaidSidebar ? '关闭 HTML 预览' : '打开 HTML 预览'">
+         <div v-if="!useNewEditor && isDataflowYaml" class="mermaid-toggle-bar" @click="toggleMermaidSidebar" :title="showMermaidSidebar ? '关闭 HTML 预览' : '打开 HTML 预览'">
            <el-icon class="mermaid-icon" :class="{ 'expanded': showMermaidSidebar }">
              <Promotion />
            </el-icon>
          </div>
         
         <!-- Mermaid 预览面板 -->
-        <div v-if="!useNewEditor && showMermaidSidebar" class="mermaid-preview-sidebar" :style="{ width: mermaidSidebarWidth + 'px' }">
+        <div v-if="!useNewEditor && isDataflowYaml && showMermaidSidebar" class="mermaid-preview-sidebar" :style="{ width: mermaidSidebarWidth + 'px' }">
            <div class="mermaid-resize-handle" @mousedown="startResizeMermaid"></div>
                      <div class="mermaid-sidebar-header">
              <h4>数据流图预览</h4>
@@ -919,6 +919,13 @@ export default {
     const resetZoom = () => {
       zoomLevel.value = 1
     }
+
+    // 当切换到非 dataflow YAML 文件时，自动关闭 Mermaid 侧边栏
+    watch(isDataflowYaml, (val) => {
+      if (!val) {
+        showMermaidSidebar.value = false
+      }
+    })
 
     const openMermaidInNewTab = () => {
       if (!mermaidHtmlContent.value) return
