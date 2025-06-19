@@ -475,38 +475,73 @@ export default {
     }
 
     // Select an example from the sidebar and copy to clipboard
-    const selectExample = (exampleName) => {
+    const selectExample = async (exampleName) => {
       selectedExample.value = exampleName
       
-      // 获取settings中的examples路径
-      const settings = settingsStore.settings
-      let examplesPath = ''
-      
-      // 优先使用custom_examples_path，如果不存在则使用examples_path
-      if (settings.custom_examples_path) {
-        examplesPath = settings.custom_examples_path
-      } else if (settings.examples_path) {
-        examplesPath = settings.examples_path
-      } else {
-        examplesPath = '/mnt/c/Users/Yao/Desktop/code/mofa/mofa/python/examples'
+      try {
+        // 动态获取实际的 dataflow 文件名
+        const response = await fetch(`/api/agents/${exampleName}/dataflow-file`);
+        let dataflowFile = `${exampleName}_dataflow.yml`; // 默认文件名作为兜底
+        let examplesPath = '';
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            dataflowFile = data.dataflow_file;
+            examplesPath = data.agent_path;
+            console.log(`检测到 dataflow 文件: ${dataflowFile}`);
+          }
+        }
+        
+        // 如果 API 调用失败，使用设置中的路径作为兜底
+        if (!examplesPath) {
+          const settings = settingsStore.settings;
+          // 优先使用custom_examples_path，如果不存在则使用examples_path
+          if (settings.custom_examples_path) {
+            examplesPath = settings.custom_examples_path;
+          } else if (settings.examples_path) {
+            examplesPath = settings.examples_path;
+          } else {
+            examplesPath = '/mnt/c/Users/Yao/Desktop/code/mofa/mofa/python/examples';
+          }
+          examplesPath = `${examplesPath}/${exampleName}`;
+        }
+        
+        // 构建完整命令
+        const fullCommand = `cd ${examplesPath} && dora up && dora build ${dataflowFile} && dora start ${dataflowFile}`;
+        
+        // 复制命令到剪贴板
+        await navigator.clipboard.writeText(fullCommand);
+        ElMessage.success(`Command copied to clipboard (${dataflowFile})`);
+        
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+        ElMessage.error('Copy Failed');
+        
+        // 兜底方案：使用默认命名约定
+        const settings = settingsStore.settings;
+        let examplesPath = '';
+        if (settings.custom_examples_path) {
+          examplesPath = settings.custom_examples_path;
+        } else if (settings.examples_path) {
+          examplesPath = settings.examples_path;
+        } else {
+          examplesPath = '/mnt/c/Users/Yao/Desktop/code/mofa/mofa/python/examples';
+        }
+        
+        const fallbackCommand = `cd ${examplesPath}/${exampleName} && dora up && dora build ${exampleName}_dataflow.yml && dora start ${exampleName}_dataflow.yml`;
+        try {
+          await navigator.clipboard.writeText(fallbackCommand);
+          ElMessage.warning(`Command copied with default filename (${exampleName}_dataflow.yml)`);
+        } catch (fallbackErr) {
+          console.error('Fallback copy also failed:', fallbackErr);
+          ElMessage.error('Copy Failed');
+        }
       }
-      
-      // 构建完整命令
-      const fullCommand = `cd ${examplesPath}/${exampleName} && dora up && dora build ${exampleName}_dataflow.yml && dora start ${exampleName}_dataflow.yml`
-      
-      // 复制命令到剪贴板
-      navigator.clipboard.writeText(fullCommand)
-        .then(() => {
-          ElMessage.success(`Command Copied to clipboard`)
-        })
-        .catch(err => {
-          console.error('Failed to copy text: ', err)
-          ElMessage.error('Copy Failed')
-        })
     }
     
     // Run the selected example
-    const runSelectedExample = () => {
+    const runSelectedExample = async () => {
       if (!selectedExample.value) {
         ElMessage.warning('Please select an example first')
         return
@@ -533,28 +568,62 @@ export default {
         return
       }
       
-      // Create the command to run
-      const commands = [
-        `cd ${example.path} &&`,
-        'dora up &&', 
-        `dora build ${selectedExample.value}_dataflow.yml &&`, 
-        `dora start ${selectedExample.value}_dataflow.yml`
-      ]
-      
-      // Send the commands to the terminal
-      const commandString = commands.join(' ')
-      
-      // Send command to the terminal
-      if (terminalComponent && terminalComponent.ws && terminalComponent.ws.readyState === WebSocket.OPEN) {
-        // Send the command to the terminal
-        terminalComponent.ws.send(JSON.stringify({ type: 'input', data: commandString }))
+      try {
+        // 动态获取实际的 dataflow 文件名
+        const response = await fetch(`/api/agents/${selectedExample.value}/dataflow-file`);
+        let dataflowFile = `${selectedExample.value}_dataflow.yml`; // 默认文件名作为兜底
         
-        // Send Enter key
-        terminalComponent.ws.send(JSON.stringify({ type: 'input', data: '\r' }))
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            dataflowFile = data.dataflow_file;
+            console.log(`检测到 dataflow 文件: ${dataflowFile}`);
+          }
+        }
         
-        ElMessage.success(`Running example: ${selectedExample.value}`)
-      } else {
-        ElMessage.error('Terminal not connected')
+        // Create the command to run with detected file name
+        const commands = [
+          `cd ${example.path} &&`,
+          'dora up &&', 
+          `dora build ${dataflowFile} &&`, 
+          `dora start ${dataflowFile}`
+        ]
+        
+        // Send the commands to the terminal
+        const commandString = commands.join(' ')
+        
+        // Send command to the terminal
+        if (terminalComponent && terminalComponent.ws && terminalComponent.ws.readyState === WebSocket.OPEN) {
+          // Send the command to the terminal
+          terminalComponent.ws.send(JSON.stringify({ type: 'input', data: commandString }))
+          
+          // Send Enter key
+          terminalComponent.ws.send(JSON.stringify({ type: 'input', data: '\r' }))
+          
+          ElMessage.success(`Running example: ${selectedExample.value} (${dataflowFile})`)
+        } else {
+          ElMessage.error('Terminal not connected')
+        }
+      } catch (err) {
+        console.error('Failed to get dataflow file:', err);
+        
+        // 兜底方案：使用默认命名约定
+        const commands = [
+          `cd ${example.path} &&`,
+          'dora up &&', 
+          `dora build ${selectedExample.value}_dataflow.yml &&`, 
+          `dora start ${selectedExample.value}_dataflow.yml`
+        ]
+        
+        const commandString = commands.join(' ')
+        
+        if (terminalComponent && terminalComponent.ws && terminalComponent.ws.readyState === WebSocket.OPEN) {
+          terminalComponent.ws.send(JSON.stringify({ type: 'input', data: commandString }))
+          terminalComponent.ws.send(JSON.stringify({ type: 'input', data: '\r' }))
+          ElMessage.warning(`Running example with default filename: ${selectedExample.value}`)
+        } else {
+          ElMessage.error('Terminal not connected')
+        }
       }
     }
     

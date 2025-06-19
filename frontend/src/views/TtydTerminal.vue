@@ -664,34 +664,69 @@ export default {
     };
 
     // Select an example from the sidebar and copy command to clipboard
-    const selectExample = (exampleName) => {
+    const selectExample = async (exampleName) => {
       selectedExample.value = exampleName;
       
-      // Get examples path from settings
-      const settings = settingsStore.settings;
-      let examplesPath = '';
-      
-      // Prefer custom_examples_path, fall back to examples_path
-      if (settings.custom_examples_path) {
-        examplesPath = settings.custom_examples_path;
-      } else if (settings.examples_path) {
-        examplesPath = settings.examples_path;
-      } else {
-        examplesPath = `${systemInfo.mofaDir}/python/examples`;
-      }
-      
-      // Construct full command
-      const fullCommand = `cd ${examplesPath}/${exampleName} && dora up && dora build ${exampleName}_dataflow.yml && dora start ${exampleName}_dataflow.yml`;
-      
-      // Copy command to clipboard
-      navigator.clipboard.writeText(fullCommand)
-        .then(() => {
-          ElMessage.success(`Command Copied to clipboard`);
-        })
-        .catch(err => {
-          console.error('Failed to copy text: ', err);
+      try {
+        // 动态获取实际的 dataflow 文件名
+        const response = await fetch(`/api/agents/${exampleName}/dataflow-file`);
+        let dataflowFile = `${exampleName}_dataflow.yml`; // 默认文件名作为兜底
+        let examplesPath = '';
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            dataflowFile = data.dataflow_file;
+            examplesPath = data.agent_path;
+            console.log(`检测到 dataflow 文件: ${dataflowFile}`);
+          }
+        }
+        
+        // 如果 API 调用失败，使用设置中的路径作为兜底
+        if (!examplesPath) {
+          const settings = settingsStore.settings;
+          // Prefer custom_examples_path, fall back to examples_path
+          if (settings.custom_examples_path) {
+            examplesPath = settings.custom_examples_path;
+          } else if (settings.examples_path) {
+            examplesPath = settings.examples_path;
+          } else {
+            examplesPath = `${systemInfo.mofaDir}/python/examples`;
+          }
+          examplesPath = `${examplesPath}/${exampleName}`;
+        }
+        
+        // Construct full command with detected file name
+        const fullCommand = `cd ${examplesPath} && dora up && dora build ${dataflowFile} && dora start ${dataflowFile}`;
+        
+        // Copy command to clipboard
+        await navigator.clipboard.writeText(fullCommand);
+        ElMessage.success(`Command copied to clipboard (${dataflowFile})`);
+        
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+        ElMessage.error('Copy Failed');
+        
+        // 兜底方案：使用默认命名约定
+        const settings = settingsStore.settings;
+        let examplesPath = '';
+        if (settings.custom_examples_path) {
+          examplesPath = settings.custom_examples_path;
+        } else if (settings.examples_path) {
+          examplesPath = settings.examples_path;
+        } else {
+          examplesPath = `${systemInfo.mofaDir}/python/examples`;
+        }
+        
+        const fallbackCommand = `cd ${examplesPath}/${exampleName} && dora up && dora build ${exampleName}_dataflow.yml && dora start ${exampleName}_dataflow.yml`;
+        try {
+          await navigator.clipboard.writeText(fallbackCommand);
+          ElMessage.warning(`Command copied with default filename (${exampleName}_dataflow.yml)`);
+        } catch (fallbackErr) {
+          console.error('Fallback copy also failed:', fallbackErr);
           ElMessage.error('Copy Failed');
-        });
+        }
+      }
     };
     
     // Filter examples based on search query

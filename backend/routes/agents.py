@@ -189,3 +189,50 @@ def update_file_content(agent_name, file_path):
     mofa_cli = get_mofa_cli()
     result = mofa_cli.write_file(agent_name, file_path, content)
     return jsonify(result)
+
+@agents_bp.route('/<agent_name>/dataflow-file', methods=['GET'])
+def get_dataflow_file(agent_name):
+    """获取 agent 目录中的 dataflow YAML 文件名"""
+    mofa_cli = get_mofa_cli()
+    
+    # 检查示例是否存在
+    settings = mofa_cli.settings
+    examples_path = settings.get('custom_examples_path') or settings.get('examples_path') or os.path.join(settings.get('mofa_dir', ''), 'python', 'examples')
+    agent_path = os.path.join(examples_path, agent_name)
+    
+    if not os.path.exists(agent_path) or not os.path.isdir(agent_path):
+        return jsonify({"success": False, "message": f"Agent {agent_name} not found in examples directory"}), 404
+    
+    try:
+        # 查找 dataflow 配置文件，优先查找 _dataflow.yml，然后查找所有 .yml 文件
+        dataflow_files = []
+        
+        # 首先查找符合命名约定的文件
+        for filename in os.listdir(agent_path):
+            if filename.endswith('_dataflow.yml'):
+                dataflow_files.append(filename)
+        
+        # 如果没找到，查找所有 .yml 和 .yaml 文件
+        if not dataflow_files:
+            for filename in os.listdir(agent_path):
+                if filename.endswith('.yml') or filename.endswith('.yaml'):
+                    dataflow_files.append(filename)
+        
+        if not dataflow_files:
+            return jsonify({
+                "success": False,
+                "message": f"No dataflow configuration file found in {agent_name}"
+            }), 404
+        
+        # 返回第一个找到的文件（与后端运行逻辑保持一致）
+        dataflow_file = dataflow_files[0]
+        
+        return jsonify({
+            "success": True,
+            "dataflow_file": dataflow_file,
+            "agent_path": agent_path,
+            "all_dataflow_files": dataflow_files
+        })
+        
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
