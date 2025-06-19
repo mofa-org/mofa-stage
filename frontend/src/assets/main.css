@@ -517,6 +517,11 @@ body {
 .el-dialog {
   border-radius: 0;
   overflow: hidden;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
 }
 
 .el-dialog__header {
@@ -551,6 +556,7 @@ body {
   border-radius: 0;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(10px);
+  top: 90px !important; /* 调整消息位置到头栏下方，70px头栏高度 + 20px间距 */
 }
 
 .el-message--success {

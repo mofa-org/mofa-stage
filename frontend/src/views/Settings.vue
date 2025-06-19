@@ -30,7 +30,7 @@
               <el-radio label="venv">{{ $t('settings.useVirtualEnv') }}</el-radio>
               <el-radio label="docker">{{ $t('settings.useDocker') || 'Docker 容器' }}</el-radio>
             </el-radio-group>
-            <div class="form-help"></div>
+            <div class="form-help">{{ $t('settings.mofaCommandSourceHelp') || '选择MoFA来源：系统安装、虚拟环境或Docker容器' }}</div>
           </el-form-item>
 
           <el-form-item :label="$t('settings.mofaEnvPath')" v-if="settingsForm.mofa_mode === 'venv'">
@@ -577,6 +577,7 @@ export default {
   color: var(--text-color-secondary);
   opacity: 0.8;
   letter-spacing: 0;
+  line-height: 1.5;
 }
 
 .page-actions {
@@ -647,11 +648,13 @@ export default {
 .form-help {
   font-size: 13px;
   color: var(--text-color-secondary);
-  margin-top: 8px;
-  line-height: 1.5;
+  margin-top: 3px;
+  margin-bottom: 3px;
+  margin-left: 1px;
+  line-height: 0.7;
   padding: 8px 12px;
   background: rgba(107, 206, 210, 0.05);
-  border-left: 3px solid var(--mofa-teal);
+  border-left: 6px solid var(--mofa-teal);
   border-radius: 0;
 }
 
@@ -668,6 +671,8 @@ export default {
   font-weight: 600;
   color: var(--text-color);
   margin-bottom: 8px;
+  font-size: 14px;
+  letter-spacing: 0.2px;
 }
 
 .el-input__wrapper,
@@ -675,12 +680,14 @@ export default {
 .el-select,
 .el-input-number {
   border-radius: 0;
+  margin-bottom: 8px;
 }
 
 .el-input__wrapper {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   border: 1px solid var(--border-color);
   transition: all 0.3s ease;
+  margin-bottom: 8px;
 }
 
 .el-input__wrapper:hover {
@@ -704,6 +711,7 @@ export default {
 
 .el-switch {
   --el-switch-on-color: var(--mofa-teal);
+  margin-right: 16px;
 }
 
 /* Input group styling */

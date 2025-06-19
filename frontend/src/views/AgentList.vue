@@ -134,7 +134,13 @@
     </div>
 
     <!-- Copy Agent Dialog -->
-    <el-dialog v-model="copyDialogVisible" :title="$t('agent.copyAgent')" width="40%">
+    <el-dialog 
+      v-model="copyDialogVisible" 
+      :title="$t('agent.copyAgent')" 
+      width="40%"
+      :append-to-body="true"
+      :align-center="true"
+      :before-open="handleDialogBeforeOpen">
       <el-form :model="copyForm" label-width="120px">
         <el-form-item :label="$t('agent.sourceAgent')">
           <el-input v-model="copyForm.source" disabled />
@@ -624,6 +630,12 @@ export default {
       copyDialogVisible.value = true
     }
     
+    const handleDialogBeforeOpen = () => {
+      // 确保对话框出现在当前视窗中央
+      // 可以在这里添加滚动逻辑或其他位置调整
+      return true
+    }
+    
     const confirmCopyAgent = async () => {
       if (!copyForm.value.target) {
         ElMessage.warning('Please enter a new Agent name')
@@ -721,6 +733,7 @@ export default {
       handleCreateAgent,
       handleEditAgent,
       handleCopyAgent,
+      handleDialogBeforeOpen,
       confirmCopyAgent,
       handleDeleteAgent,
       handleRunAgent,

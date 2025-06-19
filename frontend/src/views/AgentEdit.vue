@@ -27,11 +27,11 @@
             <el-icon><Setting /></el-icon>
             配置
           </el-button>
-          <el-button type="primary" @click="saveCurrentFile" :disabled="!hasChanges" :loading="isSaving">
+          <el-button class="custom-save-btn" @click="saveCurrentFile" :disabled="!hasChanges" :loading="isSaving">
             <el-icon><Document /></el-icon>
             Save
           </el-button>
-          <el-button v-if="!isAgentRunning" type="success" @click="runAgent">
+          <el-button v-if="!isAgentRunning" class="custom-run-btn" @click="runAgent">
             <el-icon><VideoPlay /></el-icon>
             Run
           </el-button>
@@ -1544,5 +1544,51 @@ export default {
 .mermaid-zoom-wrapper {
   overflow: auto;
   height: 100%;
+}
+
+/* 自定义按钮颜色 */
+.custom-save-btn {
+  background-color: #6DCACE !important;
+  border-color: #6DCACE !important;
+  color: white !important;
+}
+
+.custom-save-btn:hover {
+  background-color: #5bb5b8 !important;
+  border-color: #5bb5b8 !important;
+  color: white !important;
+}
+
+.custom-save-btn:active,
+.custom-save-btn:focus {
+  background-color: #4da0a3 !important;
+  border-color: #4da0a3 !important;
+  color: white !important;
+}
+
+.custom-save-btn.is-disabled {
+  background-color: #a8d8da !important;
+  border-color: #a8d8da !important;
+  color: white !important;
+  opacity: 0.6;
+}
+
+.custom-run-btn {
+  background-color: #FF5640 !important;
+  border-color: #FF5640 !important;
+  color: white !important;
+}
+
+.custom-run-btn:hover {
+  background-color: #e6492e !important;
+  border-color: #e6492e !important;
+  color: white !important;
+}
+
+.custom-run-btn:active,
+.custom-run-btn:focus {
+  background-color: #cc3d1f !important;
+  border-color: #cc3d1f !important;
+  color: white !important;
 }
 </style>
