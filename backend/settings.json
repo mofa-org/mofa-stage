@@ -32,5 +32,6 @@
   "azure_openai_api_key": "",
   "azure_openai_endpoint": "",
   "azure_openai_api_version": "2023-05-15-preview",
-  "gemini_api_endpoint": "https://generativelanguage.googleapis.com/v1beta"
+  "gemini_api_endpoint": "https://generativelanguage.googleapis.com/v1beta",
+  "ttyd_command": "zsh"
 }

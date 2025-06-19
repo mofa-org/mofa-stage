@@ -184,24 +184,55 @@ def start_ttyd():
     ttyd_port = settings.get('ttyd_port', 7681)
     mofa_dir = settings.get('mofa_dir', os.path.expanduser("~"))
     
-    # Ensure the working directory exists
-    if not os.path.exists(mofa_dir):
-        logger.warning(f"Configured working directory '{mofa_dir}' doesn't exist. Using home directory instead.")
-        mofa_dir = os.path.expanduser("~")
+    # Determine working directory priority:
+    # 1. mofa_dir/python if exists
+    # 2. mofa_dir if exists  
+    # 3. parent directory of current stage project
+    # 4. home directory as fallback
+    working_dir = None
+    
+    if mofa_dir and os.path.exists(mofa_dir):
+        # Check if mofa_dir/python exists
+        mofa_python_dir = os.path.join(mofa_dir, 'python')
+        if os.path.exists(mofa_python_dir):
+            working_dir = mofa_python_dir
+            logger.info(f"Using mofa/python directory: {working_dir}")
+        else:
+            working_dir = mofa_dir
+            logger.info(f"Using mofa directory: {working_dir}")
+    else:
+        # Fallback to parent of current stage directory
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # backend parent
+        stage_parent = os.path.dirname(current_dir)  # stage parent
+        if os.path.exists(stage_parent):
+            working_dir = stage_parent
+            logger.info(f"Using stage parent directory: {working_dir}")
+        else:
+            working_dir = os.path.expanduser("~")
+            logger.warning(f"All preferred directories not found, using home directory: {working_dir}")
+    
+    # Final check
+    if not os.path.exists(working_dir):
+        logger.warning(f"Determined working directory '{working_dir}' doesn't exist. Using home directory instead.")
+        working_dir = os.path.expanduser("~")
+    
+    # Get shell command from settings, fallback to zsh
+    shell_cmd = settings.get('ttyd_command', 'zsh')
     
     # Prepare ttyd command with proper settings
     cmd = [
         'ttyd',
         '-p', str(ttyd_port),
-        '-W',  # 添加此参数允许终端可写入（默认是只读的）
-        '-t', 'fontSize=14',
-        '-t', "fontFamily='Courier New',monospace",
-        '-t', 'theme={"background":"#1e1e1e","foreground":"#d4d4d4"}',
-        'bash'
+        '-W',  # Allow write access
+        '-w', working_dir,  # Set working directory
+        # '-t', 'fontSize=14',
+        # '-t', "fontFamily='Courier New',monospace",
+        # '-t', 'theme={"background":"#1e1e1e","foreground":"#d4d4d4"}',
+        shell_cmd
     ]
     
     logger.info(f"Starting ttyd with command: {' '.join(cmd)}")
-    logger.info(f"Working directory: {mofa_dir}")
+    logger.info(f"Working directory: {working_dir}")
     
     try:
         # Open log file
@@ -210,7 +241,7 @@ def start_ttyd():
         # Start ttyd process
         ttyd_process = subprocess.Popen(
             cmd,
-            cwd=mofa_dir,
+            cwd=working_dir,  # Use the determined working directory
             stdout=log_fd,
             stderr=log_fd,
             start_new_session=True  # Detach from parent process
