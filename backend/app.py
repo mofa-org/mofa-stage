@@ -41,6 +41,105 @@ def create_app():
     # 初始化WebSocket
     init_websocket(app)
     
+    # 添加系统信息路由
+    @app.route('/api/system/info', methods=['GET'])
+    def get_system_info():
+        """获取系统信息，包括正确的 shell 环境"""
+        import platform
+        import subprocess
+        import getpass
+        import socket
+        
+        try:
+            # 获取基本系统信息
+            system = platform.system()
+            release = platform.release()
+            machine = platform.machine()
+            
+            # 获取用户和主机名
+            try:
+                username = getpass.getuser()
+                hostname = socket.gethostname()
+            except Exception:
+                username = "user"
+                hostname = "localhost"
+            
+            # 获取当前用户的默认 shell
+            current_shell = "bash"  # 默认值
+            try:
+                # 在 Unix 系统上获取用户的默认 shell
+                if system in ['Linux', 'Darwin']:
+                    # 方法1：通过 $SHELL 环境变量
+                    shell_env = os.environ.get('SHELL', '')
+                    if shell_env:
+                        current_shell = os.path.basename(shell_env)
+                    else:
+                        # 方法2：通过 /etc/passwd 文件
+                        try:
+                            import pwd
+                            user_info = pwd.getpwnam(username)
+                            current_shell = os.path.basename(user_info.pw_shell)
+                        except Exception:
+                            # 方法3：通过 dscl 命令 (macOS)
+                            if system == 'Darwin':
+                                try:
+                                    result = subprocess.run(['dscl', '.', 'read', f'/Users/{username}', 'UserShell'], 
+                                                          capture_output=True, text=True)
+                                    if result.returncode == 0:
+                                        shell_line = result.stdout.strip()
+                                        if 'UserShell:' in shell_line:
+                                            shell_path = shell_line.split('UserShell:')[1].strip()
+                                            current_shell = os.path.basename(shell_path)
+                                except Exception:
+                                    pass
+                elif system == 'Windows':
+                    current_shell = "cmd"  # Windows 默认使用 cmd
+            except Exception as e:
+                app.logger.warning(f"Failed to detect shell: {e}")
+            
+            # 构建平台信息字符串
+            platform_info = f"{system} {release} ({machine})"
+            
+            # 添加更详细的信息
+            if system == "Windows":
+                platform_info += " - For Windows users, we recommend using WSL for better compatibility"
+            elif system == "Linux":
+                # 检查是否在 WSL 中运行
+                if os.path.exists('/proc/version'):
+                    try:
+                        with open('/proc/version', 'r') as f:
+                            if 'microsoft' in f.read().lower():
+                                platform_info += " (Running in Windows Subsystem for Linux)"
+                    except Exception:
+                        pass
+            elif system == "Darwin":
+                platform_info += " (macOS)"
+            
+            # 构建完整的环境信息
+            shell_info = f"Default Shell: {current_shell}"
+            env_info = f"{username}@{hostname} | {shell_info}"
+            
+            return jsonify({
+                "success": True,
+                "platform_info": f"{platform_info} | {env_info}",
+                "system_info": {
+                    "username": username,
+                    "hostname": hostname,
+                    "platform": system,
+                    "release": release,
+                    "machine": machine,
+                    "shell": current_shell
+                }
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Error getting system info: {e}")
+            return jsonify({
+                "success": False,
+                "platform_info": "Error fetching system information",
+                "error": str(e)
+            }), 500
+    
     # 检查并启动ttyd服务
     try:
         # Check if ttyd is installed
@@ -99,6 +198,105 @@ if __name__ == '__main__':
     webssh_app.register_blueprint(mermaid_bp)
     webssh_app.register_blueprint(vscode_bp)
     init_websocket(webssh_app)
+    
+    # 为 WebSSH 应用也添加系统信息路由
+    @webssh_app.route('/api/system/info', methods=['GET'])
+    def get_system_info_webssh():
+        """获取系统信息，包括正确的 shell 环境 (WebSSH 应用)"""
+        import platform
+        import subprocess
+        import getpass
+        import socket
+        
+        try:
+            # 获取基本系统信息
+            system = platform.system()
+            release = platform.release()
+            machine = platform.machine()
+            
+            # 获取用户和主机名
+            try:
+                username = getpass.getuser()
+                hostname = socket.gethostname()
+            except Exception:
+                username = "user"
+                hostname = "localhost"
+            
+            # 获取当前用户的默认 shell
+            current_shell = "bash"  # 默认值
+            try:
+                # 在 Unix 系统上获取用户的默认 shell
+                if system in ['Linux', 'Darwin']:
+                    # 方法1：通过 $SHELL 环境变量
+                    shell_env = os.environ.get('SHELL', '')
+                    if shell_env:
+                        current_shell = os.path.basename(shell_env)
+                    else:
+                        # 方法2：通过 /etc/passwd 文件
+                        try:
+                            import pwd
+                            user_info = pwd.getpwnam(username)
+                            current_shell = os.path.basename(user_info.pw_shell)
+                        except Exception:
+                            # 方法3：通过 dscl 命令 (macOS)
+                            if system == 'Darwin':
+                                try:
+                                    result = subprocess.run(['dscl', '.', 'read', f'/Users/{username}', 'UserShell'], 
+                                                          capture_output=True, text=True)
+                                    if result.returncode == 0:
+                                        shell_line = result.stdout.strip()
+                                        if 'UserShell:' in shell_line:
+                                            shell_path = shell_line.split('UserShell:')[1].strip()
+                                            current_shell = os.path.basename(shell_path)
+                                except Exception:
+                                    pass
+                elif system == 'Windows':
+                    current_shell = "cmd"  # Windows 默认使用 cmd
+            except Exception as e:
+                webssh_app.logger.warning(f"Failed to detect shell: {e}")
+            
+            # 构建平台信息字符串
+            platform_info = f"{system} {release} ({machine})"
+            
+            # 添加更详细的信息
+            if system == "Windows":
+                platform_info += " - For Windows users, we recommend using WSL for better compatibility"
+            elif system == "Linux":
+                # 检查是否在 WSL 中运行
+                if os.path.exists('/proc/version'):
+                    try:
+                        with open('/proc/version', 'r') as f:
+                            if 'microsoft' in f.read().lower():
+                                platform_info += " (Running in Windows Subsystem for Linux)"
+                    except Exception:
+                        pass
+            elif system == "Darwin":
+                platform_info += " (macOS)"
+            
+            # 构建完整的环境信息
+            shell_info = f"Default Shell: {current_shell}"
+            env_info = f"{username}@{hostname} | {shell_info}"
+            
+            return jsonify({
+                "success": True,
+                "platform_info": f"{platform_info} | {env_info}",
+                "system_info": {
+                    "username": username,
+                    "hostname": hostname,
+                    "platform": system,
+                    "release": release,
+                    "machine": machine,
+                    "shell": current_shell
+                }
+            })
+            
+        except Exception as e:
+            webssh_app.logger.error(f"Error getting system info: {e}")
+            return jsonify({
+                "success": False,
+                "platform_info": "Error fetching system information",
+                "error": str(e)
+            }), 500
     
     # 添加错误处理
     @webssh_app.errorhandler(404)

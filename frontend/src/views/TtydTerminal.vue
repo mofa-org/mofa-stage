@@ -699,13 +699,12 @@ export default {
         // Construct full command with detected file name
         const fullCommand = `cd ${examplesPath} && dora up && dora build ${dataflowFile} && dora start ${dataflowFile}`;
         
-        // Copy command to clipboard
-        await navigator.clipboard.writeText(fullCommand);
+        // 尝试使用现代剪贴板 API
+        await copyToClipboard(fullCommand);
         ElMessage.success(`Command copied to clipboard (${dataflowFile})`);
         
       } catch (err) {
         console.error('Failed to copy text: ', err);
-        ElMessage.error('Copy Failed');
         
         // 兜底方案：使用默认命名约定
         const settings = settingsStore.settings;
@@ -720,15 +719,53 @@ export default {
         
         const fallbackCommand = `cd ${examplesPath}/${exampleName} && dora up && dora build ${exampleName}_dataflow.yml && dora start ${exampleName}_dataflow.yml`;
         try {
-          await navigator.clipboard.writeText(fallbackCommand);
+          await copyToClipboard(fallbackCommand);
           ElMessage.warning(`Command copied with default filename (${exampleName}_dataflow.yml)`);
         } catch (fallbackErr) {
           console.error('Fallback copy also failed:', fallbackErr);
-          ElMessage.error('Copy Failed');
+          // 如果复制失败，显示命令让用户手动复制
+          ElMessage({
+            message: `Copy failed. Please manually copy this command: ${fallbackCommand}`,
+            type: 'error',
+            duration: 8000,
+            showClose: true
+          });
         }
       }
     };
-    
+
+    // 兼容的剪贴板复制函数
+    const copyToClipboard = async (text) => {
+      // 优先使用现代 Clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return;
+        } catch (err) {
+          console.warn('Clipboard API failed, falling back to legacy method:', err);
+        }
+      }
+      
+      // 兜底方案：使用传统的 document.execCommand 方法
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        if (!successful) {
+          throw new Error('execCommand copy failed');
+        }
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    };
+
     // Filter examples based on search query
     const filterExamples = () => {
       if (!searchQuery.value) {
@@ -789,6 +826,7 @@ export default {
       checkTtydService,
       restartTtyd,
       focusIframe,
+      copyToClipboard,
       isDataflowCollapsed,
       toggleDataflowList
     };
