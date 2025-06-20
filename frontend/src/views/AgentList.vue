@@ -621,7 +621,9 @@ export default {
     }
     
     const handleEditAgent = (agentName) => {
-      router.push(`/agents/${agentName}/edit`)
+      // 根据当前标签页确定agent类型
+      const agentType = activeTab.value === 'hub' ? 'agent-hub' : 'examples'
+      router.push(`/agents/${agentName}/edit?type=${agentType}`)
     }
     
     const handleCopyAgent = (agentName) => {

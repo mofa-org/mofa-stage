@@ -327,8 +327,13 @@ class MofaCLI:
                 "example_agents": ["memory", "rag"]
             }
     
-    def get_agent_details(self, agent_name):
-        """获取 agent 的详细信息"""
+    def get_agent_details(self, agent_name, agent_type=None):
+        """获取 agent 的详细信息
+        
+        Args:
+            agent_name: agent名称
+            agent_type: 'agent-hub' 或 'examples'，如果为None则自动查找
+        """
         try:
             if self.mofa_mode == 'docker':
                 # Determine agent root inside container
@@ -352,19 +357,40 @@ class MofaCLI:
                     "files": self._file_dict_list(agent_path, files)
                 }
 
-            # 原有本地模式
-            agent_path = os.path.join(self.agents_dir, agent_name)
-            
-            # 如果在当前配置的目录中找不到，则尝试在所有可能的目录中查找
-            if not os.path.exists(agent_path):
-                for possible_dir in self.possible_agent_dirs:
-                    possible_path = os.path.join(possible_dir, agent_name)
-                    if os.path.exists(possible_path):
-                        agent_path = possible_path
-                        break
-            
-            if not os.path.exists(agent_path):
-                return None
+            # 根据agent_type参数明确查找对应目录
+            if agent_type == 'agent-hub':
+                # 明确指定要查找hub目录
+                hub_path = os.path.join(self.agent_hub_dir, agent_name)
+                if os.path.exists(hub_path):
+                    agent_path = hub_path
+                    print(f"Found agent '{agent_name}' in agent-hub directory: {agent_path}")
+                else:
+                    print(f"Agent '{agent_name}' not found in agent-hub directory")
+                    return None
+            elif agent_type == 'examples':
+                # 明确指定要查找examples目录
+                examples_path = os.path.join(self.examples_dir, agent_name)
+                if os.path.exists(examples_path):
+                    agent_path = examples_path
+                    print(f"Found agent '{agent_name}' in examples directory: {agent_path}")
+                else:
+                    print(f"Agent '{agent_name}' not found in examples directory")
+                    return None
+            else:
+                # 如果没有指定agent_type，则按优先级查找（examples优先）
+                examples_path = os.path.join(self.examples_dir, agent_name)
+                if os.path.exists(examples_path):
+                    agent_path = examples_path
+                    print(f"Found agent '{agent_name}' in examples directory: {agent_path}")
+                else:
+                    # 然后检查agent-hub目录
+                    hub_path = os.path.join(self.agent_hub_dir, agent_name)
+                    if os.path.exists(hub_path):
+                        agent_path = hub_path
+                        print(f"Found agent '{agent_name}' in agent-hub directory: {agent_path}")
+                    else:
+                        print(f"Agent '{agent_name}' not found in either examples or agent-hub directories")
+                        return None
             
             # 获取 agent 的基本信息
             details = {
@@ -1103,8 +1129,14 @@ class MofaCLI:
                     except Exception as e:
                         print(f"Error updating file {file_path}: {e}")
     
-    def read_file(self, agent_name, file_path):
-        """读取 agent 文件内容"""
+    def read_file(self, agent_name, file_path, agent_type=None):
+        """读取 agent 文件内容
+        
+        Args:
+            agent_name: agent名称
+            file_path: 文件路径
+            agent_type: 'agent-hub' 或 'examples'，如果为None则自动查找
+        """
         if self.mofa_mode == 'docker':
             # 尝试 hub 目录
             candidate_paths = [
@@ -1123,22 +1155,54 @@ class MofaCLI:
                         return {"success": False, "message": result.stderr}
             return {"success": False, "message": f"File {file_path} not found in container"}
 
-        # ---- 本地模式 ----
-        full_path = os.path.join(self.agents_dir, agent_name, file_path)
-        if not os.path.exists(full_path):
-            for possible_dir in self.possible_agent_dirs:
-                possible_path = os.path.join(possible_dir, agent_name, file_path)
-                if os.path.exists(possible_path):
-                    full_path = possible_path
-                    break
-        if not os.path.exists(full_path):
-            return {"success": False, "message": f"File {file_path} not found"}
-        try:
-            with open(full_path, 'r') as f:
-                content = f.read()
-            return {"success": True, "content": content}
-        except Exception as e:
-            return {"success": False, "message": str(e)}
+        # ---- 本地模式：根据agent_type参数明确查找对应目录 ----
+        if agent_type == 'agent-hub':
+            # 明确指定要在hub目录中查找
+            hub_file_path = os.path.join(self.agent_hub_dir, agent_name, file_path)
+            if os.path.exists(hub_file_path):
+                try:
+                    with open(hub_file_path, 'r') as f:
+                        content = f.read()
+                    return {"success": True, "content": content}
+                except Exception as e:
+                    return {"success": False, "message": str(e)}
+            else:
+                return {"success": False, "message": f"File {file_path} not found in agent-hub agent {agent_name}"}
+        elif agent_type == 'examples':
+            # 明确指定要在examples目录中查找
+            examples_file_path = os.path.join(self.examples_dir, agent_name, file_path)
+            if os.path.exists(examples_file_path):
+                try:
+                    with open(examples_file_path, 'r') as f:
+                        content = f.read()
+                    return {"success": True, "content": content}
+                except Exception as e:
+                    return {"success": False, "message": str(e)}
+            else:
+                return {"success": False, "message": f"File {file_path} not found in examples agent {agent_name}"}
+        else:
+            # 如果没有指定agent_type，则按优先级查找（examples优先）
+            # 首先检查examples目录
+            examples_file_path = os.path.join(self.examples_dir, agent_name, file_path)
+            if os.path.exists(examples_file_path):
+                try:
+                    with open(examples_file_path, 'r') as f:
+                        content = f.read()
+                    return {"success": True, "content": content}
+                except Exception as e:
+                    return {"success": False, "message": str(e)}
+            
+            # 然后检查agent-hub目录
+            hub_file_path = os.path.join(self.agent_hub_dir, agent_name, file_path)
+            if os.path.exists(hub_file_path):
+                try:
+                    with open(hub_file_path, 'r') as f:
+                        content = f.read()
+                    return {"success": True, "content": content}
+                except Exception as e:
+                    return {"success": False, "message": str(e)}
+            
+            return {"success": False, "message": f"File {file_path} not found in agent {agent_name}"}
     
     def write_file(self, agent_name, file_path, content):
         """写入 agent 文件内容"""
@@ -1164,17 +1228,20 @@ class MofaCLI:
             else:
                 return {"success": False, "message": result.stderr}
 
-        # ---- 本地模式 ----
-        agent_path = os.path.join(self.agents_dir, agent_name)
-        if not os.path.exists(agent_path):
-            for possible_dir in self.possible_agent_dirs:
-                possible_path = os.path.join(possible_dir, agent_name)
-                if os.path.exists(possible_path):
-                    agent_path = possible_path
-                    break
-        if not os.path.exists(agent_path):
-            agent_path = os.path.join(self.agents_dir, agent_name)
-            os.makedirs(agent_path, exist_ok=True)
+        # ---- 本地模式：明确区分agent类型，不进行跨目录查找 ----
+        # 首先检查examples目录中是否存在agent
+        examples_agent_path = os.path.join(self.examples_dir, agent_name)
+        if os.path.exists(examples_agent_path):
+            agent_path = examples_agent_path
+        else:
+            # 然后检查agent-hub目录
+            hub_agent_path = os.path.join(self.agent_hub_dir, agent_name)
+            if os.path.exists(hub_agent_path):
+                agent_path = hub_agent_path
+            else:
+                # 如果两个目录都不存在，默认在examples目录中创建
+                agent_path = examples_agent_path
+                os.makedirs(agent_path, exist_ok=True)
 
         full_path = os.path.join(agent_path, file_path)
         dir_path = os.path.dirname(full_path)

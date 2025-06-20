@@ -74,11 +74,22 @@ export const useAgentStore = defineStore('agent', {
       }
     },
     
-    async fetchAgentFiles(agentName) {
+    async fetchAgentFiles(agentName, forceAgentType = null) {
       this.isLoading = true
       this.error = null
       try {
-        const response = await agentApi.getAgentFiles(agentName)
+        // 确定agent类型
+        let agentType = forceAgentType
+        if (!agentType) {
+          // 如果没有强制指定类型，则按原逻辑判断
+          if (this.hubAgents.includes(agentName)) {
+            agentType = 'agent-hub'
+          } else if (this.exampleAgents.includes(agentName)) {
+            agentType = 'examples'
+          }
+        }
+        
+        const response = await agentApi.getAgentFiles(agentName, agentType)
         if (response.data && response.data.success) {
           this.currentAgentFiles = response.data.files
           return response.data.files
@@ -94,11 +105,22 @@ export const useAgentStore = defineStore('agent', {
       }
     },
     
-    async fetchFileContent(agentName, filePath) {
+    async fetchFileContent(agentName, filePath, forceAgentType = null) {
       this.isLoading = true
       this.error = null
       try {
-        const response = await agentApi.getFileContent(agentName, filePath)
+        // 确定agent类型
+        let agentType = forceAgentType
+        if (!agentType) {
+          // 如果没有强制指定类型，则按原逻辑判断
+          if (this.hubAgents.includes(agentName)) {
+            agentType = 'agent-hub'
+          } else if (this.exampleAgents.includes(agentName)) {
+            agentType = 'examples'
+          }
+        }
+        
+        const response = await agentApi.getFileContent(agentName, filePath, agentType)
         if (response.data && response.data.success) {
           this.currentFile = {
             path: filePath,
@@ -324,6 +346,60 @@ export const useAgentStore = defineStore('agent', {
           all_output: []
         }
       }
-    }
+    },
+    
+    async deleteFileOrFolder(agentName, filePath) {
+      this.isLoading = true
+      this.error = null
+      try {
+        const response = await agentApi.deleteFileOrFolder(agentName, filePath)
+        if (response.data && response.data.success) {
+          // 更新当前文件相关状态
+          if (this.currentFile && this.currentFile.path === filePath) {
+            this.currentFile = null
+            this.currentAgentFiles = this.currentAgentFiles.filter(f => f.path !== filePath)
+          }
+          return true
+        } else {
+          throw new Error(`Failed to delete: ${filePath}`)
+        }
+      } catch (error) {
+        this.error = error.message || `Failed to delete: ${filePath}`
+        console.error(error)
+        return false
+      } finally {
+        this.isLoading = false
+      }
+    },
+    
+    async renameFileOrFolder(agentName, filePath, newName) {
+      this.isLoading = true
+      this.error = null
+      try {
+        const response = await agentApi.renameFileOrFolder(agentName, filePath, newName)
+        if (response.data && response.data.success) {
+          // 更新当前文件相关状态
+          if (this.currentFile && this.currentFile.path === filePath) {
+            this.currentFile.path = response.data.new_path
+          }
+          return {
+            success: true,
+            newPath: response.data.new_path,
+            message: response.data.message
+          }
+        } else {
+          throw new Error(response.data.message || `Failed to rename: ${filePath}`)
+        }
+      } catch (error) {
+        this.error = error.response?.data?.message || error.message || `Failed to rename: ${filePath}`
+        console.error(error)
+        return {
+          success: false,
+          error: this.error
+        }
+      } finally {
+        this.isLoading = false
+      }
+    },
   }
 })

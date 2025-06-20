@@ -84,15 +84,17 @@ export default {
   /**
    * 获取 agent 的所有文件
    */
-  getAgentFiles(agentName) {
-    return axios.get(`${API_URL}/agents/${agentName}/files`)
+  getAgentFiles(agentName, agentType = null) {
+    const params = agentType ? { agent_type: agentType } : {}
+    return axios.get(`${API_URL}/agents/${agentName}/files`, { params })
   },
 
   /**
    * 获取文件内容
    */
-  getFileContent(agentName, filePath) {
-    return axios.get(`${API_URL}/agents/${agentName}/files/${filePath}`)
+  getFileContent(agentName, filePath, agentType = null) {
+    const params = agentType ? { agent_type: agentType } : {}
+    return axios.get(`${API_URL}/agents/${agentName}/files/${filePath}`, { params })
   },
 
   /**
@@ -100,5 +102,21 @@ export default {
    */
   updateFileContent(agentName, filePath, content) {
     return axios.put(`${API_URL}/agents/${agentName}/files/${filePath}`, { content })
+  },
+
+  /**
+   * 删除文件或文件夹
+   */
+  deleteFileOrFolder(agentName, filePath) {
+    return axios.delete(`${API_URL}/agents/${agentName}/files/${filePath}`)
+  },
+
+  /**
+   * 重命名文件或文件夹
+   */
+  renameFileOrFolder(agentName, filePath, newName) {
+    return axios.post(`${API_URL}/agents/${agentName}/files/${filePath}/rename`, { 
+      new_name: newName 
+    })
   }
 }

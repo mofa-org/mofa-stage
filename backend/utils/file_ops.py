@@ -138,3 +138,37 @@ def write_env_file(file_path, data):
     except Exception as e:
         print(f"Error writing .env file {file_path}: {e}")
         return False
+
+def delete_path(target_path):
+    """删除文件或文件夹"""
+    try:
+        if not os.path.exists(target_path):
+            return False
+        if os.path.isdir(target_path):
+            shutil.rmtree(target_path)
+        else:
+            os.remove(target_path)
+        return True
+    except Exception as e:
+        print(f"Error deleting {target_path}: {e}")
+        return False
+
+def rename_path(old_path, new_path):
+    """重命名文件或文件夹"""
+    try:
+        if not os.path.exists(old_path):
+            return False, "源文件不存在"
+        
+        # 检查新路径的父目录是否存在
+        new_dir = os.path.dirname(new_path)
+        if new_dir and not os.path.exists(new_dir):
+            os.makedirs(new_dir, exist_ok=True)
+        
+        # 如果目标文件已存在，返回错误
+        if os.path.exists(new_path):
+            return False, "目标文件已存在"
+        
+        os.rename(old_path, new_path)
+        return True, "重命名成功"
+    except Exception as e:
+        return False, f"重命名失败: {str(e)}"

@@ -1,7 +1,7 @@
 """
 Agent 相关的 API 路由
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 import os
 import sys
 
@@ -9,7 +9,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.mofa_cli import MofaCLI
-from utils.file_ops import read_file, write_file, get_file_type
+from utils.file_ops import read_file, write_file, get_file_type, delete_path, rename_path
 from routes.settings import get_settings
 
 agents_bp = Blueprint('agents', __name__, url_prefix='/api/agents')
@@ -154,8 +154,9 @@ def stop_agent(process_id):
 @agents_bp.route('/<agent_name>/files', methods=['GET'])
 def get_agent_files(agent_name):
     """获取 agent 的所有文件"""
+    agent_type = request.args.get('agent_type')  # 获取agent类型参数
     mofa_cli = get_mofa_cli()
-    details = mofa_cli.get_agent_details(agent_name)
+    details = mofa_cli.get_agent_details(agent_name, agent_type)
     if not details:
         return jsonify({"success": False, "message": f"Agent {agent_name} not found"}), 404
     
@@ -164,17 +165,45 @@ def get_agent_files(agent_name):
 @agents_bp.route('/<agent_name>/files/<path:file_path>', methods=['GET'])
 def get_file_content(agent_name, file_path):
     """获取文件内容"""
-    mofa_cli = get_mofa_cli()
-    result = mofa_cli.read_file(agent_name, file_path)
-    if result.get('success'):
-        file_type = get_file_type(file_path)
-        return jsonify({
-            "success": True, 
-            "content": result.get('content'),
-            "type": file_type
-        })
+    agent_type = request.args.get('agent_type')  # 获取agent类型参数
+    
+    # 检查是否为图片文件
+    image_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']
+    is_image = any(file_path.lower().endswith(ext) for ext in image_extensions)
+    
+    if is_image:
+        # 对于图片文件，直接返回二进制数据
+        mofa_cli = get_mofa_cli()
+        # 确定文件的完整路径
+        candidate_dirs = [mofa_cli.agent_hub_dir, mofa_cli.examples_dir]
+        full_path = None
+        
+        for base_dir in candidate_dirs:
+            potential_path = os.path.join(base_dir, agent_name, file_path)
+            if os.path.exists(potential_path) and os.path.isfile(potential_path):
+                full_path = potential_path
+                break
+        
+        if full_path:
+            try:
+                return send_file(full_path, as_attachment=False)
+            except Exception as e:
+                return jsonify({"success": False, "message": str(e)}), 500
+        else:
+            return jsonify({"success": False, "message": "Image file not found"}), 404
     else:
-        return jsonify(result), 404
+        # 对于文本文件，使用原有逻辑
+        mofa_cli = get_mofa_cli()
+        result = mofa_cli.read_file(agent_name, file_path, agent_type)
+        if result.get('success'):
+            file_type = get_file_type(file_path)
+            return jsonify({
+                "success": True, 
+                "content": result.get('content'),
+                "type": file_type
+            })
+        else:
+            return jsonify(result), 404
 
 @agents_bp.route('/<agent_name>/files/<path:file_path>', methods=['PUT'])
 def update_file_content(agent_name, file_path):
@@ -189,6 +218,28 @@ def update_file_content(agent_name, file_path):
     mofa_cli = get_mofa_cli()
     result = mofa_cli.write_file(agent_name, file_path, content)
     return jsonify(result)
+
+@agents_bp.route('/<agent_name>/files/<path:file_path>', methods=['DELETE'])
+def delete_file_or_folder(agent_name, file_path):
+    """删除文件或文件夹"""
+    mofa_cli = get_mofa_cli()
+    # 可能的base路径
+    candidate_dirs = [mofa_cli.agent_hub_dir, mofa_cli.examples_dir]
+    full_path = None
+    for base in candidate_dirs:
+        p = os.path.join(base, agent_name, file_path)
+        if os.path.exists(p):
+            full_path = p
+            break
+    if not full_path:
+        return jsonify({"success": False, "message": "File or folder not found"}), 404
+    try:
+        if delete_path(full_path):
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "message": "Delete failed"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
 
 @agents_bp.route('/<agent_name>/dataflow-file', methods=['GET'])
 def get_dataflow_file(agent_name):
@@ -234,5 +285,50 @@ def get_dataflow_file(agent_name):
             "all_dataflow_files": dataflow_files
         })
         
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@agents_bp.route('/<agent_name>/files/<path:file_path>/rename', methods=['POST'])
+def rename_file_or_folder(agent_name, file_path):
+    """重命名文件或文件夹"""
+    if not request.is_json:
+        return jsonify({"success": False, "message": "Content must be JSON"}), 400
+    
+    new_name = request.json.get('new_name')
+    if not new_name:
+        return jsonify({"success": False, "message": "New name is required"}), 400
+    
+    mofa_cli = get_mofa_cli()
+    # 可能的base路径
+    candidate_dirs = [mofa_cli.agent_hub_dir, mofa_cli.examples_dir]
+    old_full_path = None
+    base_dir = None
+    
+    for base in candidate_dirs:
+        p = os.path.join(base, agent_name, file_path)
+        if os.path.exists(p):
+            old_full_path = p
+            base_dir = base
+            break
+    
+    if not old_full_path:
+        return jsonify({"success": False, "message": "File or folder not found"}), 404
+    
+    # 构建新的完整路径
+    path_parts = file_path.split('/')
+    path_parts[-1] = new_name  # 替换最后一部分（文件名）
+    new_file_path = '/'.join(path_parts)
+    new_full_path = os.path.join(base_dir, agent_name, new_file_path)
+    
+    try:
+        success, message = rename_path(old_full_path, new_full_path)
+        if success:
+            return jsonify({
+                "success": True, 
+                "message": message,
+                "new_path": new_file_path
+            })
+        else:
+            return jsonify({"success": False, "message": message}), 400
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500

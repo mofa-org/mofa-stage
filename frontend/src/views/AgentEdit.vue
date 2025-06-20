@@ -49,7 +49,7 @@
     </el-card>
 
     <!-- 主编辑区 -->
-    <div v-else>
+    <div v-else class="main-edit-area">
       <!-- 新版编辑器 - VS Code Web 嵌入 -->
       <div v-if="useNewEditor" class="vscode-full-container">
         <div v-if="vscodeStatus.loading" class="vscode-loading">
@@ -89,9 +89,18 @@
       <!-- 经典编辑器 -->
       <div v-else class="edit-container">
         <!-- 文件树侧边栏 -->
-        <div v-if="!useNewEditor" class="file-tree-sidebar" :style="{ width: fileSidebarWidth + 'px' }">
-          <div class="file-tree-resize-handle" @mousedown="startResizeFileSidebar"></div>
-          <div class="sidebar-header">
+        <div v-if="!useNewEditor" class="file-tree-sidebar" :class="{ 'collapsed': fileTreeCollapsed }" :style="{ width: fileTreeCollapsed ? '40px' : fileSidebarWidth + 'px' }">
+          <div class="file-tree-resize-handle" @mousedown="startResizeFileSidebar" v-if="!fileTreeCollapsed"></div>
+          
+          <!-- 折叠/展开按钮 -->
+          <div class="file-tree-collapse-btn" @click="toggleFileTree">
+            <el-icon class="collapse-icon" :class="{ 'collapsed': fileTreeCollapsed }">
+              <ArrowLeft v-if="!fileTreeCollapsed" />
+              <ArrowRight v-else />
+            </el-icon>
+          </div>
+          
+          <div v-if="!fileTreeCollapsed" class="sidebar-header">
             <h3>文件列表</h3>
             <el-input
               placeholder="搜索文件"
@@ -102,20 +111,24 @@
             />
           </div>
           
-          <div class="file-tree-wrapper" ref="fileTreeWrapper" @scroll="rememberFileTreeScroll">
+          <div v-if="!fileTreeCollapsed" class="file-tree-wrapper" ref="fileTreeWrapper" @scroll="rememberFileTreeScroll">
             <el-tree
               :data="fileTreeData"
               :props="defaultProps"
               :filter-node-method="filterNode"
               @node-click="handleFileClick"
+              @node-contextmenu="handleFileRightClick"
               ref="fileTree"
               default-expand-all
               highlight-current
             />
           </div>
 
-          <div class="sidebar-footer">
-            <el-button size="small" @click="addNewFile" icon="Plus">Create New File</el-button>
+          <div v-if="!fileTreeCollapsed" class="sidebar-footer">
+            <el-button-group>
+              <el-button size="small" @click="addNewFile" :icon="Document">文件</el-button>
+              <el-button size="small" @click="addNewFolder" :icon="FolderAdd">文件夹</el-button>
+            </el-button-group>
           </div>
         </div>
 
@@ -126,6 +139,14 @@
               <div class="file-path">{{ currentFile.path }}</div>
               <div class="file-actions">
                 <el-button-group>
+                  <!-- 预览切换按钮，仅在支持预览的文件类型中显示 -->
+                  <el-button 
+                    v-if="isMarkdownFile || isMermaidHtml || isImageFile"
+                    size="small"
+                    @click="togglePreviewMode"
+                    :type="previewMode ? 'primary' : 'default'">
+                    {{ previewMode ? '编辑' : '预览' }}
+                  </el-button>
                   <el-button 
                     size="small" 
                     @click="saveCurrentFile" 
@@ -171,6 +192,27 @@
                     <MermaidViewer v-else-if="isDataflowYaml" :code="mermaidCode" @node-click="handleMermaidNodeClick" />
                     <!-- Mermaid HTML 预览 -->
                     <iframe v-else-if="isMermaidHtml" class="mermaid-html-preview" :srcdoc="editorContent" />
+                    <!-- 图片文件预览 -->
+                    <div v-else-if="isImageFile" class="image-preview">
+                      <div class="image-container">
+                        <img 
+                          :src="imageDataUrl" 
+                          :alt="currentFile.path" 
+                          class="preview-image"
+                          @load="onImageLoad"
+                          @error="onImageError"
+                        />
+                        <div class="image-info">
+                          <div class="image-filename">{{ currentFile.path.split('/').pop() }}</div>
+                          <div v-if="imageInfo.width && imageInfo.height" class="image-dimensions">
+                            {{ imageInfo.width }} × {{ imageInfo.height }} 像素
+                          </div>
+                          <div v-if="imageInfo.size" class="image-size">
+                            {{ formatFileSize(imageInfo.size) }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     <!-- 其他文件暂不支持预览 -->
                     <div v-else class="empty-preview"></div>
                   </template>
@@ -189,27 +231,6 @@
                   </template>
                 </template>
               </div>
-              <!-- 底部折叠终端面板 -->
-              <div class="terminal-collapse-container">
-                <div class="terminal-collapse-header" @click="showTerminal = !showTerminal">
-                  <div class="collapse-header-content">
-                    <el-icon class="collapse-icon" :class="{ 'collapsed': !showTerminal }">
-                      <ArrowUp />
-                    </el-icon>
-                    <span class="collapse-title">Terminal</span>
-                    <div class="terminal-status" v-if="showTerminal">
-                      <span class="status-dot connected"></span>
-                      <span class="status-text">Connected</span>
-                    </div>
-                  </div>
-                </div>
-                <div v-show="showTerminal" class="terminal-panel" :style="{ height: terminalHeight + 'px' }">
-                  <div class="terminal-resize-handle" @mousedown="startResizeTerminal"></div>
-                  <keep-alive>
-                    <TtydTerminal :embedded="true" />
-                  </keep-alive>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -220,15 +241,25 @@
           </div>
         </div>
 
-                 <!-- HTML 预览窄栏 -->
-         <div v-if="!useNewEditor && isDataflowYaml" class="mermaid-toggle-bar" @click="toggleMermaidSidebar" :title="showMermaidSidebar ? '关闭 HTML 预览' : '打开 HTML 预览'">
-           <el-icon class="mermaid-icon" :class="{ 'expanded': showMermaidSidebar }">
-             <Promotion />
-           </el-icon>
+                 <!-- 数据流图预览切换栏 -->
+         <div v-if="!useNewEditor && isDataflowYaml" class="mermaid-toggle-bar" @click="toggleMermaidSidebar">
+           <div class="toggle-content">
+                           <el-icon class="toggle-icon" :class="{ 'expanded': showMermaidSidebar }">
+                <ArrowLeft v-if="!showMermaidSidebar" />
+                <ArrowRight v-else />
+              </el-icon>
+                           <div class="toggle-text" v-if="showMermaidSidebar">
+                <span class="toggle-label-expanded">关闭</span>
+              </div>
+              <el-icon class="preview-icon" v-else>
+                <View />
+              </el-icon>
+           </div>
          </div>
         
         <!-- Mermaid 预览面板 -->
-        <div v-if="!useNewEditor && isDataflowYaml && showMermaidSidebar" class="mermaid-preview-sidebar" :style="{ width: mermaidSidebarWidth + 'px' }">
+        <transition name="mermaid-slide">
+          <div v-if="!useNewEditor && isDataflowYaml && showMermaidSidebar" class="mermaid-preview-sidebar" :style="{ width: mermaidSidebarWidth + 'px' }">
            <div class="mermaid-resize-handle" @mousedown="startResizeMermaid"></div>
                      <div class="mermaid-sidebar-header">
              <h4>数据流图</h4>
@@ -276,6 +307,31 @@
              </div>
           </div>
         </div>
+        </transition>
+      </div>
+      
+      <!-- 全局终端面板 -->
+      <div v-if="!useNewEditor" class="terminal-collapse-container">
+        <div class="terminal-collapse-header" @click="showTerminal = !showTerminal">
+          <div class="collapse-header-content">
+            <el-icon class="collapse-icon" :class="{ 'collapsed': !showTerminal }">
+              <ArrowUp />
+            </el-icon>
+            <span class="collapse-title">Terminal</span>
+            <div class="terminal-status" v-if="showTerminal">
+              <span class="status-dot connected"></span>
+              <span class="status-text">Connected</span>
+            </div>
+          </div>
+        </div>
+        <transition name="terminal-slide">
+          <div v-show="showTerminal" class="terminal-panel" :style="{ height: terminalHeight + 'px' }">
+          <div class="terminal-resize-handle" @mousedown="startResizeTerminal"></div>
+          <keep-alive>
+            <TtydTerminal :embedded="true" />
+          </keep-alive>
+        </div>
+        </transition>
       </div>
     </div>
 
@@ -299,16 +355,89 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 新建文件夹对话框 -->
+    <el-dialog v-model="newFolderDialogVisible" title="Create New Folder" width="30%">
+      <el-form :model="newFolderForm" label-width="80px">
+        <el-form-item label="Folder Name" required>
+          <el-input v-model="newFolderForm.folderName" placeholder="Example: utils">
+          </el-input>
+        </el-form-item>
+        <el-form-item label="Directory">
+          <el-input v-model="newFolderForm.path" placeholder="Leave blank for root directory" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="newFolderDialogVisible = false">Cancel</el-button>
+          <el-button type="primary" @click="createNewFolder" :loading="isCreatingFolder">
+            Create
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 右键菜单 -->
+    <div 
+      v-if="contextMenuVisible" 
+      class="context-menu" 
+      :style="{ left: contextMenuPosition.x + 'px', top: contextMenuPosition.y + 'px' }"
+      ref="contextMenuEl"
+      @click.stop
+      @contextmenu.prevent
+    >
+      <div class="context-menu-item" v-if="contextMenuData && contextMenuData.isDirectory" @click="handleRenameItem">
+        <el-icon><Edit /></el-icon>
+        <span>重命名</span>
+      </div>
+      <div class="context-menu-item" v-if="contextMenuData && contextMenuData.isDirectory" @click="handleDeleteItem">
+        <el-icon><Delete /></el-icon>
+        <span>删除文件夹</span>
+      </div>
+      <div class="context-menu-item" v-if="contextMenuData && !contextMenuData.isDirectory" @click="handleRenameItem">
+        <el-icon><Edit /></el-icon>
+        <span>重命名</span>
+      </div>
+      <div class="context-menu-item" v-if="contextMenuData && !contextMenuData.isDirectory" @click="handleCopyItem">
+        <el-icon><CopyDocument /></el-icon>
+        <span>复制文件</span>
+      </div>
+      <div class="context-menu-item" v-if="contextMenuData && !contextMenuData.isDirectory" @click="handleDeleteItem">
+        <el-icon><Delete /></el-icon>
+        <span>删除文件</span>
+      </div>
+    </div>
+
+    <!-- 右键菜单遮罩 -->
+    <div v-if="contextMenuVisible" class="context-menu-overlay" @click="hideContextMenu"></div>
+
+    <!-- 重命名对话框 -->
+    <el-dialog v-model="renameDialogVisible" title="Rename" width="30%">
+      <el-form :model="renameForm" label-width="80px">
+        <el-form-item label="New Name" required>
+          <el-input v-model="renameForm.newName" placeholder="Enter new name">
+          </el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="renameDialogVisible = false">Cancel</el-button>
+          <el-button type="primary" @click="confirmRename" :loading="isRenaming">
+            Rename
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAgentStore } from '../store/agent'
 import { useSettingsStore } from '../store/settings'
 import CodeEditor from '../components/editor/CodeEditor.vue'
-import { Document, ArrowLeft, VideoPlay, VideoPause, Search, Plus, Minus, Refresh, Download, Setting, ArrowUp, Promotion, Close } from '@element-plus/icons-vue'
+import { Document, ArrowLeft, VideoPlay, VideoPause, Search, Plus, Minus, Refresh, Download, Setting, ArrowUp, ArrowRight, Close, View, Hide, Delete, CopyDocument, Edit, Folder, FolderAdd } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MarkdownIt from 'markdown-it'
 import MermaidViewer from '../components/MermaidViewer.vue'
@@ -331,8 +460,15 @@ export default {
     Download,
     Setting,
     ArrowUp,
-    Promotion,
+    ArrowRight,
     Close,
+    View,
+    Hide,
+    Delete,
+    CopyDocument,
+    Edit,
+    Folder,
+    FolderAdd,
     MermaidViewer,
     VSCodeEmbed,
     TtydTerminal
@@ -376,6 +512,22 @@ export default {
       path: ''
     })
     const isCreatingFile = ref(false)
+    
+    // 新建文件夹相关
+    const newFolderDialogVisible = ref(false)
+    const newFolderForm = ref({
+      folderName: '',
+      path: ''
+    })
+    const isCreatingFolder = ref(false)
+    
+    // 右键菜单相关
+    const contextMenuData = ref(null)
+    const renameDialogVisible = ref(false)
+    const renameForm = ref({
+      newName: ''
+    })
+    const isRenaming = ref(false)
 
     // 计算属性
     const defaultProps = {
@@ -425,6 +577,24 @@ export default {
       return lowerPath.endsWith('.html') && lowerPath.includes('graph')
     })
 
+    // 新增：检测图片文件
+    const isImageFile = computed(() => {
+      if (!currentFile.value) return false
+      const lowerPath = currentFile.value.path.toLowerCase()
+      const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']
+      return imageExtensions.some(ext => lowerPath.endsWith(ext))
+    })
+
+    // 获取图片文件的数据 URL
+    const imageDataUrl = ref('')
+    
+    // 图片信息
+    const imageInfo = ref({
+      width: null,
+      height: null,
+      size: null
+    })
+
     // 计算 VSCode Web 需要打开的文件夹路径
     const agentFolderPath = computed(() => {
       let baseDir = settingsStore.settings.mofa_dir || ''
@@ -467,10 +637,10 @@ export default {
     })
 
     // 新增：终端高度和 Mermaid 侧栏宽度，可拖拽调整
-    const terminalHeight = ref(350)
-    const mermaidSidebarWidth = ref(300)
+    const terminalHeight = ref(300)
+    const mermaidSidebarWidth = ref(280)
     // 新增：文件树侧边栏宽度
-    const fileSidebarWidth = ref(250)
+    const fileSidebarWidth = ref(220)
 
     // 启动 VS Code 服务
     const startVSCodeServer = async () => {
@@ -582,7 +752,9 @@ export default {
 
     const loadAgentFiles = async () => {
       try {
-        const files = await agentStore.fetchAgentFiles(props.agentName)
+        // 从路由查询参数中获取agent类型
+        const agentType = route.query.type || null
+        const files = await agentStore.fetchAgentFiles(props.agentName, agentType)
         generateFileTree(files)
       } catch (err) {
         ElMessage.error(`Failed to load Agent files: ${err.message}`)
@@ -684,6 +856,7 @@ export default {
     }
 
     const handleFileClick = async (data) => {
+      console.log('handleFileClick called with:', data)
       if (data.isDirectory) return
       
       // 如果当前有未保存的更改，提示保存
@@ -704,24 +877,81 @@ export default {
         }
       }
       
+      console.log('Loading file content for:', data.path)
       await loadFileContent(data.path)
       restoreFileTreeScroll()
     }
 
     const loadFileContent = async (filePath) => {
       try {
-        const fileData = await agentStore.fetchFileContent(props.agentName, filePath)
-        if (fileData) {
+        // 从路由查询参数中获取agent类型
+        const agentType = route.query.type || null
+        
+        // 检查是否为图片文件
+        const lowerPath = filePath.toLowerCase()
+        const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']
+        const isImage = imageExtensions.some(ext => lowerPath.endsWith(ext))
+        
+        if (isImage) {
+          // 对于图片文件，直接设置文件信息，不获取文本内容
           currentFile.value = {
             path: filePath,
-            type: fileData.type
+            type: 'image'
           }
-          originalContent.value = fileData.content
-          editorContent.value = fileData.content
-          // 如果是 Mermaid HTML，则自动进入预览模式
-          previewMode.value = isMermaidHtml.value
+          originalContent.value = '' // 图片文件没有文本内容
+          editorContent.value = ''
+          
+          // 清空旧的图片数据
+          if (imageDataUrl.value) {
+            URL.revokeObjectURL(imageDataUrl.value)
+            imageDataUrl.value = ''
+          }
+          imageInfo.value = { width: null, height: null, size: null }
+          
+          try {
+            // 构建正确的API路径
+            const encodedPath = filePath.split('/').map(segment => encodeURIComponent(segment)).join('/')
+            const queryParams = agentType ? `?agent_type=${agentType}` : ''
+            const response = await fetch(`/api/agents/${props.agentName}/files/${encodedPath}${queryParams}`)
+            
+            if (response.ok) {
+              const blob = await response.blob()
+              imageDataUrl.value = URL.createObjectURL(blob)
+              // 保存图片大小信息
+              imageInfo.value.size = blob.size
+              previewMode.value = true // 图片文件自动进入预览模式
+              console.log('图片加载成功:', filePath, '大小:', blob.size)
+            } else {
+              console.error('Failed to load image:', response.status, response.statusText)
+              ElMessage.error('Failed to load image file')
+            }
+          } catch (e) {
+            console.error('Failed to load image:', e)
+            ElMessage.error('Failed to load image file')
+          }
+        } else {
+          // 对于非图片文件，使用原有逻辑获取文本内容
+          const fileData = await agentStore.fetchFileContent(props.agentName, filePath, agentType)
+          if (fileData) {
+            currentFile.value = {
+              path: filePath,
+              type: fileData.type
+            }
+            originalContent.value = fileData.content
+            editorContent.value = fileData.content
+            
+            // 清空图片数据URL和信息
+            if (imageDataUrl.value) {
+              URL.revokeObjectURL(imageDataUrl.value)
+              imageDataUrl.value = ''
+            }
+            imageInfo.value = { width: null, height: null, size: null }
+            // 如果是 Mermaid HTML，则自动进入预览模式
+            previewMode.value = isMermaidHtml.value
+          }
         }
       } catch (err) {
+        console.error('Failed to load file content:', err)
         ElMessage.error(`Failed to load file content: ${err.message}`)
       }
     }
@@ -810,6 +1040,22 @@ export default {
         const ext = fileNameParts.length > 1 ? fileNameParts.pop().toLowerCase() : ''
         const fileName = fileNameParts.join('.')
         
+        // 对于图片文件，不创建默认内容，直接创建空文件
+        const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico']
+        if (imageExtensions.includes(ext)) {
+          ElMessage.info('图片文件已创建，请使用外部工具编辑后上传')
+          const result = await agentStore.saveFileContent(props.agentName, filePath, '')
+          if (result) {
+            ElMessage.success('图片文件占位符已创建')
+            newFileDialogVisible.value = false
+            await loadAgentFiles()
+          } else {
+            ElMessage.error(`Failed to create file: ${error.value}`)
+          }
+          isCreatingFile.value = false
+          return
+        }
+        
         // 创建默认内容
         let defaultContent = ''
           
@@ -874,6 +1120,251 @@ export default {
         ElMessage.error(`Failed to create file: ${err.message}`)
       } finally {
         isCreatingFile.value = false
+      }
+    }
+
+    // 新建文件夹
+    const addNewFolder = () => {
+      newFolderForm.value = {
+        folderName: '',
+        path: ''
+      }
+      newFolderDialogVisible.value = true
+    }
+
+    const createNewFolder = async () => {
+      if (!newFolderForm.value.folderName.trim()) {
+        ElMessage.warning('Please enter a folder name')
+        return
+      }
+      
+      isCreatingFolder.value = true
+      try {
+        const folderPath = newFolderForm.value.path 
+          ? `${newFolderForm.value.path}/${newFolderForm.value.folderName}`
+          : newFolderForm.value.folderName
+        
+        // 创建一个临时文件在文件夹内，然后删除，这样可以创建文件夹
+        const tempFilePath = `${folderPath}/.gitkeep`
+        
+        const result = await agentStore.saveFileContent(
+          props.agentName,
+          tempFilePath,
+          '# This file keeps the folder in git\n'
+        )
+        
+        if (result) {
+          ElMessage.success('Folder created successfully')
+          newFolderDialogVisible.value = false
+          
+          // 重新加载文件列表
+          await loadAgentFiles()
+        } else {
+          ElMessage.error(`Failed to create folder: ${error.value}`)
+        }
+      } catch (err) {
+        ElMessage.error(`Failed to create folder: ${err.message}`)
+      } finally {
+        isCreatingFolder.value = false
+      }
+    }
+
+    // 右键菜单处理
+    const contextMenuVisible = ref(false)
+    const contextMenuPosition = ref({ x: 0, y: 0 })
+    
+    const contextMenuEl = ref(null)
+
+    const handleFileRightClick = (event, data) => {
+      event.preventDefault()
+      event.stopPropagation()
+      
+      contextMenuData.value = data
+      
+      // 获取被右键的树节点元素
+      const treeNode = event.target.closest('.el-tree-node')
+      if (treeNode) {
+        const rect = treeNode.getBoundingClientRect()
+        // 将菜单定位到节点右侧
+        const x = rect.right + 5
+        const y = rect.top
+        
+        contextMenuPosition.value = { x, y }
+        contextMenuVisible.value = true
+        
+        // 下一帧调整位置，确保不超出视口
+        nextTick(() => {
+          const el = contextMenuEl.value
+          if (!el) return
+          const menuRect = el.getBoundingClientRect()
+          let adjustedX = contextMenuPosition.value.x
+          let adjustedY = contextMenuPosition.value.y
+          const padding = 8
+          
+          // 如果菜单超出右边界，显示在节点左侧
+          if (menuRect.right > window.innerWidth) {
+            adjustedX = rect.left - menuRect.width - 5
+          }
+          
+          // 如果还是超出左边界，就靠左显示
+          if (adjustedX < 0) {
+            adjustedX = padding
+          }
+          
+          // 防止菜单超出下边界
+          if (menuRect.bottom > window.innerHeight) {
+            adjustedY = window.innerHeight - menuRect.height - padding
+          }
+          
+          // 防止菜单超出上边界
+          if (adjustedY < 0) {
+            adjustedY = padding
+          }
+          
+          contextMenuPosition.value = { x: adjustedX, y: adjustedY }
+        })
+      } else {
+        // 如果找不到树节点，回退到鼠标位置
+        contextMenuPosition.value = { x: event.clientX, y: event.clientY }
+        contextMenuVisible.value = true
+      }
+    }
+
+    const hideContextMenu = () => {
+      contextMenuVisible.value = false
+    }
+
+    const handleRenameItem = () => {
+      if (!contextMenuData.value) return
+      
+      renameForm.value.newName = contextMenuData.value.label
+      renameDialogVisible.value = true
+      hideContextMenu()
+    }
+
+    const handleCopyItem = async () => {
+      if (!contextMenuData.value || contextMenuData.value.isDirectory) return
+      hideContextMenu()
+      
+      try {
+        const fileData = await agentStore.fetchFileContent(props.agentName, contextMenuData.value.path)
+        if (fileData) {
+          // 生成新文件名 - 改进文件名处理逻辑
+          const pathParts = contextMenuData.value.path.split('/')
+          const fileName = pathParts.pop()
+          const filePath = pathParts.join('/')
+          
+          // 更好的文件扩展名处理
+          const lastDotIndex = fileName.lastIndexOf('.')
+          let baseName, ext
+          
+          if (lastDotIndex > 0 && lastDotIndex < fileName.length - 1) {
+            // 有有效的扩展名
+            baseName = fileName.substring(0, lastDotIndex)
+            ext = fileName.substring(lastDotIndex) // 包含点号
+          } else {
+            // 没有扩展名或点号在开头/结尾
+            baseName = fileName
+            ext = ''
+          }
+          
+          const newFileName = `${baseName}_copy${ext}`
+          const newFilePath = filePath ? `${filePath}/${newFileName}` : newFileName
+          
+          const result = await agentStore.saveFileContent(
+            props.agentName,
+            newFilePath,
+            fileData.content
+          )
+          
+          if (result) {
+            ElMessage.success('File copied successfully')
+            await loadAgentFiles()
+          } else {
+            ElMessage.error('Failed to copy file')
+          }
+        }
+      } catch (err) {
+        ElMessage.error(`Failed to copy file: ${err.message}`)
+      }
+    }
+
+    const handleDeleteItem = async () => {
+      if (!contextMenuData.value) return
+      hideContextMenu()
+      
+      const itemType = contextMenuData.value.isDirectory ? '文件夹' : '文件'
+      const itemName = contextMenuData.value.label
+      
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除这个${itemType}吗: ${itemName}?`,
+          `删除${itemType}`,
+          {
+            confirmButtonText: '删除',
+            cancelButtonText: '取消',
+            type: 'warning',
+            confirmButtonClass: 'el-button--danger'
+          }
+        )
+        
+        // 调用后端删除接口
+        const success = await agentStore.deleteFileOrFolder(props.agentName, contextMenuData.value.path)
+        if (success) {
+          ElMessage.success(`${itemType}已删除`)
+          await loadAgentFiles()
+          // 如果删除的是当前打开文件，清空编辑器
+          if (currentFile.value && currentFile.value.path === contextMenuData.value.path) {
+            currentFile.value = null
+            editorContent.value = ''
+          }
+        } else {
+          ElMessage.error(`删除${itemType}失败`)
+        }
+        
+      } catch (e) {
+        // 用户取消删除
+      }
+    }
+
+    const confirmRename = async () => {
+      if (!contextMenuData.value || !renameForm.value.newName.trim()) {
+        ElMessage.warning('请输入新名称')
+        return
+      }
+      
+      if (renameForm.value.newName === contextMenuData.value.label) {
+        renameDialogVisible.value = false
+        return
+      }
+      
+      isRenaming.value = true
+      try {
+        // 调用后端重命名API
+        const result = await agentStore.renameFileOrFolder(
+          props.agentName, 
+          contextMenuData.value.path, 
+          renameForm.value.newName
+        )
+        
+        if (result.success) {
+          ElMessage.success(`${result.message}`)
+          renameDialogVisible.value = false
+          // 重新加载文件列表以反映更改
+          await loadAgentFiles()
+          
+          // 如果重命名的是当前打开的文件，更新当前文件路径
+          if (currentFile.value && currentFile.value.path === contextMenuData.value.path) {
+            currentFile.value.path = result.newPath
+          }
+        } else {
+          ElMessage.error(`重命名失败: ${result.error}`)
+        }
+        
+      } catch (err) {
+        ElMessage.error(`重命名失败: ${err.message}`)
+      } finally {
+        isRenaming.value = false
       }
     }
 
@@ -1069,6 +1560,31 @@ export default {
       if (showYamlTabs.value) activeYamlTab.value = 'yaml'
     }
 
+    const fileTreeCollapsed = ref(false)
+
+    const toggleFileTree = () => {
+      fileTreeCollapsed.value = !fileTreeCollapsed.value
+    }
+
+    // 图片加载事件处理
+    const onImageLoad = (event) => {
+      const img = event.target
+      imageInfo.value.width = img.naturalWidth
+      imageInfo.value.height = img.naturalHeight
+    }
+
+    const onImageError = (event) => {
+      console.error('Image load error:', event)
+    }
+
+    // 格式化文件大小
+    const formatFileSize = (bytes) => {
+      if (!bytes) return ''
+      const sizes = ['B', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(1024))
+      return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
+    }
+
     onMounted(async () => {
       await loadAgentFiles()
       // 如果使用新版编辑器，检查并启动 VS Code 服务
@@ -1077,6 +1593,18 @@ export default {
         if (!vscodeStatus.value.running) {
           await startVSCodeServer()
         }
+      }
+      
+      // 监听全局点击事件，隐藏右键菜单
+      document.addEventListener('click', hideContextMenu)
+    })
+    
+    onBeforeUnmount(() => {
+      // 清理事件监听器
+      document.removeEventListener('click', hideContextMenu)
+      // 清理图片数据URL，防止内存泄漏
+      if (imageDataUrl.value) {
+        URL.revokeObjectURL(imageDataUrl.value)
       }
     })
 
@@ -1143,15 +1671,53 @@ export default {
       startResizeMermaid,
       startResizeFileSidebar,
       codeEditorRef,
-      handleMermaidNodeClick
+      handleMermaidNodeClick,
+      // 新建文件夹相关
+      newFolderDialogVisible,
+      newFolderForm,
+      isCreatingFolder,
+      addNewFolder,
+      createNewFolder,
+      // 右键菜单相关
+      contextMenuVisible,
+      contextMenuPosition,
+      contextMenuData,
+      renameDialogVisible,
+      renameForm,
+      isRenaming,
+      handleFileRightClick,
+      handleRenameItem,
+      handleCopyItem,
+      handleDeleteItem,
+      confirmRename,
+      hideContextMenu,
+      fileTreeCollapsed,
+      toggleFileTree,
+      contextMenuEl,
+      // 图片预览相关
+      isImageFile,
+      imageDataUrl,
+      imageInfo,
+      onImageLoad,
+      onImageError,
+      formatFileSize
     }
   }
 }
 </script>
 
 <style scoped>
+.page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--background-color);
+}
+
 .page-header {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1160,32 +1726,45 @@ export default {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .page-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
+}
+
+.main-edit-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .edit-container {
   display: flex;
+  flex: 1;
   background-color: #fff;
   border-radius: 4px;
   box-shadow: var(--card-shadow);
   overflow: hidden;
-  height: calc(100vh - 140px);
+  min-height: 0;
 }
 
 .file-tree-sidebar {
-  width: 250px;
+  width: 220px;
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   height: 100%;
   position: relative; /* 使手柄绝对定位 */
   transition: width .2s ease;
+}
+
+.file-tree-sidebar.collapsed {
+  overflow: hidden;
 }
 
 .file-tree-resize-handle {
@@ -1199,18 +1778,41 @@ export default {
   z-index: 5;
 }
 
+.file-tree-collapse-btn {
+  position: absolute;
+  top: 12px;
+  right: 8px;
+  z-index: 10;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.file-tree-collapse-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.file-tree-sidebar.collapsed .file-tree-collapse-btn {
+  top: 50%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  transform: translateY(-50%);
+}
+
 .sidebar-header {
-  padding: 15px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-color);
 }
 
 .sidebar-header h3 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
+  margin: 0 0 8px 0;
+  font-size: 14px;
 }
 
 .sidebar-footer {
-  padding: 10px;
+  padding: 8px;
   border-top: 1px solid var(--border-color);
   text-align: center;
 }
@@ -1264,7 +1866,7 @@ export default {
 }
 
 .editor-header {
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-color);
   background-color: #f9f9f9;
   display: flex;
@@ -1274,6 +1876,7 @@ export default {
 
 .file-path {
   font-family: monospace;
+  font-size: 13px;
   color: var(--text-color-secondary);
 }
 
@@ -1305,13 +1908,19 @@ export default {
 }
 
 .loading-container {
-  padding: 40px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
 }
 
 /* VS Code Web 全屏容器 */
 .vscode-full-container {
   width: 100%;
-  height: calc(100vh - 140px); /* 与 classic 编辑区保持一致高度 */
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .new-editor-placeholder {
@@ -1344,11 +1953,6 @@ export default {
   height: 100%;
 }
 
-.loading-container {
-  width: 100%;
-  height: 200px;
-}
-
 .terminal-panel {
   transition: height .2s ease;
   position: relative; /* 为拖拽手柄定位 */
@@ -1371,7 +1975,7 @@ export default {
 }
 
 .terminal-collapse-header {
-  padding: 10px;
+  padding: 8px 10px;
   cursor: pointer;
   background-color: #f8f9fa;
   border-bottom: 1px solid var(--border-color);
@@ -1385,7 +1989,7 @@ export default {
 .collapse-header-content {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .collapse-icon {
@@ -1398,18 +2002,19 @@ export default {
 
 .collapse-title {
   font-weight: 600;
+  font-size: 14px;
 }
 
 .terminal-status {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 
 .status-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   display: inline-block;
 }
@@ -1419,7 +2024,7 @@ export default {
 }
 
 .status-text {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-color-secondary);
 }
 
@@ -1430,39 +2035,155 @@ export default {
   border: 0;
 }
 
-/* Mermaid 预览窄栏 */
+/* 图片预览样式 */
+.image-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  background-color: #f9f9f9;
+  padding: 20px;
+  overflow: auto;
+}
+
+.image-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: calc(100% - 40px);
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  background-color: white;
+  padding: 4px;
+}
+
+.image-info {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.image-filename {
+  font-size: 14px;
+  color: var(--text-color);
+  font-family: monospace;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.image-dimensions, .image-size {
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 3px 6px;
+  border-radius: 4px;
+  margin: 2px 0;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+/* 数据流图预览切换栏 */
 .mermaid-toggle-bar {
-  width: 10px;
-  background-color: #f0f0f0;
+  width: 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border-left: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
   position: relative;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
 
 .mermaid-toggle-bar:hover {
-  background-color: #e0e0e0;
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.12);
 }
 
-.mermaid-icon {
-  transform: rotate(90deg);
-  font-size: 12px;
+.toggle-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 1px;
+  padding: 4px 1px;
+}
+
+.toggle-icon {
+  font-size: 11px;
+  color: var(--primary-color);
+  transition: all 0.3s ease;
+}
+
+.toggle-icon.expanded {
+  color: var(--mofa-orange);
+}
+
+.toggle-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.toggle-text.vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.toggle-label {
+  font-size: 9px;
   color: #666;
-  transition: transform 0.3s ease;
+  font-weight: 500;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
 }
 
-.mermaid-icon.expanded {
-  transform: rotate(270deg);
+.toggle-label-expanded {
+  font-size: 10px;
+  color: var(--mofa-orange);
+  font-weight: 600;
+}
+
+.preview-icon {
+  font-size: 9px;
+  color: #999;
+  opacity: 0.8;
+}
+
+.mermaid-toggle-bar:hover .toggle-icon {
+  transform: scale(1.1);
+}
+
+.mermaid-toggle-bar:hover .toggle-label {
+  color: var(--primary-color);
+}
+
+.mermaid-toggle-bar:hover .preview-icon {
+  opacity: 1;
+  color: var(--primary-color);
 }
 
 /* Mermaid 预览面板 */
 .mermaid-preview-sidebar {
   position: relative; /* 为拖拽手柄定位 */
   transition: width .2s ease;
-  width: 300px;
+  width: 280px;
   border-left: 1px solid var(--border-color);
   background-color: #fff;
   display: flex;
@@ -1482,7 +2203,7 @@ export default {
 }
 
 .mermaid-sidebar-header {
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
@@ -1492,12 +2213,12 @@ export default {
 
 .mermaid-sidebar-header h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-color);
 }
 
 .mermaid-file-selector {
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -1538,7 +2259,8 @@ export default {
 }
 
 .mermaid-toolbar .el-button {
-  margin-left: 4px;
+  margin-left: 2px;
+  padding: 6px 8px;
 }
 
 .mermaid-zoom-wrapper {
@@ -1590,5 +2312,139 @@ export default {
   background-color: #cc3d1f !important;
   border-color: #cc3d1f !important;
   color: white !important;
+}
+
+/* 全局优化按钮和输入框尺寸 */
+:deep(.el-button.el-button--small) {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+:deep(.el-input.el-input--small .el-input__wrapper) {
+  padding: 1px 8px;
+}
+
+:deep(.el-input.el-input--small .el-input__inner) {
+  font-size: 13px;
+  height: 28px;
+}
+
+:deep(.el-tree-node__content) {
+  height: 24px;
+  font-size: 13px;
+}
+
+:deep(.el-tree-node__label) {
+  font-size: 13px;
+}
+
+:deep(.el-tabs__item) {
+  font-size: 13px;
+  padding: 0 16px;
+  height: 36px;
+  line-height: 36px;
+}
+
+/* Markdown 预览内容优化 */
+.markdown-preview {
+  padding: 16px;
+  overflow: auto;
+  height: 100%;
+}
+
+.markdown-preview h1 { font-size: 1.5em; margin: 0.5em 0; }
+.markdown-preview h2 { font-size: 1.3em; margin: 0.4em 0; }
+.markdown-preview h3 { font-size: 1.1em; margin: 0.3em 0; }
+.markdown-preview p { margin: 0.3em 0; line-height: 1.4; }
+.markdown-preview code { font-size: 12px; }
+.markdown-preview pre { font-size: 12px; line-height: 1.3; }
+
+/* 终端展开动画 */
+.terminal-slide-enter-active,
+.terminal-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: top;
+}
+
+.terminal-slide-enter-from {
+  height: 0px !important;
+  opacity: 0;
+  transform: scaleY(0);
+}
+
+.terminal-slide-leave-to {
+  height: 0px !important;
+  opacity: 0;
+  transform: scaleY(0);
+}
+
+/* Mermaid 侧边栏展开动画 */
+.mermaid-slide-enter-active,
+.mermaid-slide-leave-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: left;
+}
+
+.mermaid-slide-enter-from {
+  width: 0px !important;
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.mermaid-slide-leave-to {
+  width: 0px !important;
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+/* 切换栏图标动画优化 */
+.toggle-icon {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.toggle-icon.expanded {
+  transform: rotate(180deg);
+}
+
+/* 右键菜单样式 */
+.context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  min-width: 140px;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #606266;
+  transition: background-color 0.2s;
+}
+
+.context-menu-item:hover {
+  background-color: #f5f7fa;
+}
+
+.context-menu-item .el-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.context-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9998;
+  background: transparent;
 }
 </style>
