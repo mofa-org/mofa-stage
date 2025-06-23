@@ -152,13 +152,82 @@ def export_html():
     if not mermaid_code:
         return jsonify({"success": False, "message": "conversion failed"}), 500
 
-    html = (
-        "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head>"
-        "<body><div class='mermaid'>\n" + mermaid_code + "\n</div>"
-        "<script src='https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js'></script>"
-        "<script>mermaid.initialize({ startOnLoad:true, securityLevel:'loose', theme:'base' });</script>"
-        "</body></html>"
-    )
+    html = f"""<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ margin: 0; padding: 20px; font-family: Arial, sans-serif; }}
+        .mermaid {{ cursor: pointer; }}
+        .node {{ cursor: pointer !important; }}
+        .node:hover {{ filter: brightness(1.1); }}
+    </style>
+</head>
+<body>
+    <div class='mermaid'>
+{mermaid_code}
+    </div>
+    <script src='https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js'></script>
+    <script>
+        mermaid.initialize({{ 
+            startOnLoad: true, 
+            securityLevel: 'loose', 
+            theme: 'base',
+            flowchart: {{
+                useMaxWidth: true,
+                htmlLabels: true
+            }}
+        }});
+        
+        function handleNodeClick(e, node) {{
+            e.preventDefault();
+            e.stopPropagation();
+            
+            let nodeId = null;
+            const textElement = node.querySelector('text');
+            if (textElement) {{
+                nodeId = textElement.textContent.trim();
+            }} else {{
+                const fullText = node.textContent.trim();
+                const lines = fullText.split('\\n');
+                for (let line of lines) {{
+                    line = line.trim();
+                    if (line && !line.includes('→') && !line.includes('--')) {{
+                        nodeId = line;
+                        break;
+                    }}
+                }}
+                if (!nodeId) nodeId = fullText;
+            }}
+            
+            if (nodeId && window.parent && window.parent !== window) {{
+                window.parent.postMessage({{
+                    type: 'mermaid-node-click',
+                    nodeId: nodeId
+                }}, '*');
+            }}
+        }}
+        
+        setTimeout(() => {{
+            const nodes = document.querySelectorAll('.node');
+            if (nodes.length === 0) {{
+                const textGroups = document.querySelectorAll('g');
+                textGroups.forEach(g => {{
+                    const text = g.textContent.trim();
+                    if (text && !text.includes('→') && !text.includes('--') && text.length > 0) {{
+                        g.style.cursor = 'pointer';
+                        g.addEventListener('click', e => handleNodeClick(e, g));
+                    }}
+                }});
+            }} else {{
+                nodes.forEach(node => {{
+                    node.addEventListener('click', e => handleNodeClick(e, node));
+                }});
+            }}
+         }}, 1500);
+    </script>
+</body>
+</html>"""
 
     # Determine html path: replace .yml/.yaml with -graph.html
     base_name = os.path.basename(yaml_path)

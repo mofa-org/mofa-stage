@@ -1,8 +1,9 @@
 # .gitignore for mofa-stage project
 
-# Byte-code files for Python, specifically in backend
-backend/*.pyc
-backend/__pycache__/
+# Byte-code files for Python
+*.pyc
+*/__pycache__/
+__pycache__/
 
 # IDE/Editor specific files
 .ropeproject/ # Seen in project structure

@@ -985,7 +985,7 @@ export default {
               })
               const data = await resp.json()
               if (data.success) {
-                ElMessage.success('Mermaid HTML 生成成功: ' + data.html_path)
+                // ElMessage.success('Mermaid HTML 生成成功: ' + data.html_path)
                 // 刷新 mermaidHtmlFiles，下次侧边栏可见
                 scanMermaidHtmlFiles()
                 await loadAgentFiles()
@@ -1181,53 +1181,45 @@ export default {
       
       contextMenuData.value = data
       
-      // 获取被右键的树节点元素
-      const treeNode = event.target.closest('.el-tree-node')
-      if (treeNode) {
-        const rect = treeNode.getBoundingClientRect()
-        // 将菜单定位到节点右侧
-        const x = rect.right + 5
-        const y = rect.top
+      // 优先使用鼠标位置作为菜单定位起点
+      let x = event.clientX - 220
+      let y = event.clientY - 60
+      
+      contextMenuPosition.value = { x, y }
+      contextMenuVisible.value = true
+      
+      // 下一帧调整位置，确保不超出视口
+      nextTick(() => {
+        const el = contextMenuEl.value
+        if (!el) return
         
-        contextMenuPosition.value = { x, y }
-        contextMenuVisible.value = true
+        const menuRect = el.getBoundingClientRect()
+        let adjustedX = x
+        let adjustedY = y
+        const padding = 8
         
-        // 下一帧调整位置，确保不超出视口
-        nextTick(() => {
-          const el = contextMenuEl.value
-          if (!el) return
-          const menuRect = el.getBoundingClientRect()
-          let adjustedX = contextMenuPosition.value.x
-          let adjustedY = contextMenuPosition.value.y
-          const padding = 8
-          
-          // 如果菜单超出右边界，显示在节点左侧
-          if (menuRect.right > window.innerWidth) {
-            adjustedX = rect.left - menuRect.width - 5
-          }
-          
-          // 如果还是超出左边界，就靠左显示
-          if (adjustedX < 0) {
-            adjustedX = padding
-          }
-          
-          // 防止菜单超出下边界
-          if (menuRect.bottom > window.innerHeight) {
-            adjustedY = window.innerHeight - menuRect.height - padding
-          }
-          
-          // 防止菜单超出上边界
-          if (adjustedY < 0) {
-            adjustedY = padding
-          }
-          
-          contextMenuPosition.value = { x: adjustedX, y: adjustedY }
-        })
-      } else {
-        // 如果找不到树节点，回退到鼠标位置
-        contextMenuPosition.value = { x: event.clientX, y: event.clientY }
-        contextMenuVisible.value = true
-      }
+        // 防止菜单超出右边界
+        if (adjustedX + menuRect.width > window.innerWidth) {
+          adjustedX = window.innerWidth - menuRect.width - padding
+        }
+        
+        // 防止菜单超出左边界
+        if (adjustedX < 0) {
+          adjustedX = padding
+        }
+        
+        // 防止菜单超出下边界
+        if (adjustedY + menuRect.height > window.innerHeight) {
+          adjustedY = window.innerHeight - menuRect.height - padding
+        }
+        
+        // 防止菜单超出上边界
+        if (adjustedY < 0) {
+          adjustedY = padding
+        }
+        
+        contextMenuPosition.value = { x: adjustedX, y: adjustedY }
+      })
     }
 
     const hideContextMenu = () => {
@@ -1536,28 +1528,50 @@ export default {
 
     const handleMermaidNodeClick = (nodeId) => {
       if (!codeEditorRef.value) return
+      
       const lines = editorContent.value.split('\n')
       let start = -1
+      
+      // 查找包含指定nodeId的行
       for (let i = 0; i < lines.length; i++) {
-        const trimmed = lines[i].trim()
-        if (trimmed.startsWith('- id:') && trimmed.includes(nodeId)) {
-          start = i
-          break
+        const line = lines[i]
+        const trimmed = line.trim()
+        
+        // 查找 "- id: nodeId" 这样的行
+        if (trimmed.startsWith('- id:')) {
+          const idPart = trimmed.substring(5).trim() // 去掉 "- id:" 部分
+          if (idPart === nodeId) {
+            start = i
+            break
+          }
         }
       }
+      
       if (start === -1) return
+      
+      // 查找下一个 "- id:" 开始的行作为结束位置
       let end = lines.length - 1
       for (let j = start + 1; j < lines.length; j++) {
-        const t = lines[j].trim()
-        if (t.startsWith('- id:')) {
+        const trimmed = lines[j].trim()
+        if (trimmed.startsWith('- id:')) {
           end = j - 1
           break
         }
       }
+      
       // monaco uses 1-based line numbers
-      codeEditorRef.value.selectLines(start + 1, end + 1)
+      codeEditorRef.value.selectLines(start + 1, end + 2)
+      
       // Switch to YAML tab if graph tab is active
       if (showYamlTabs.value) activeYamlTab.value = 'yaml'
+    }
+
+    // 监听来自Mermaid HTML iframe的消息
+    const handleMermaidMessage = (event) => {
+      if (event.data && event.data.type === 'mermaid-node-click') {
+        const nodeId = event.data.nodeId
+        handleMermaidNodeClick(nodeId)
+      }
     }
 
     const fileTreeCollapsed = ref(false)
@@ -1597,11 +1611,24 @@ export default {
       
       // 监听全局点击事件，隐藏右键菜单
       document.addEventListener('click', hideContextMenu)
+      
+      // 监听来自Mermaid HTML iframe的消息
+      window.addEventListener('message', handleMermaidMessage)
+      
+      // 临时：暴露selectLines方法到全局，方便控制台测试
+      window.testSelectLines = (start, end) => {
+        if (codeEditorRef.value) {
+          codeEditorRef.value.selectLines(start, end)
+        } else {
+          console.log('编辑器未初始化或不可用')
+        }
+      }
     })
     
     onBeforeUnmount(() => {
       // 清理事件监听器
       document.removeEventListener('click', hideContextMenu)
+      window.removeEventListener('message', handleMermaidMessage)
       // 清理图片数据URL，防止内存泄漏
       if (imageDataUrl.value) {
         URL.revokeObjectURL(imageDataUrl.value)
