@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app
-import os, sys, yaml, json, requests
+import os, sys, yaml, json
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -88,33 +88,14 @@ def preview():
         return jsonify({"success": False, "message": "JSON required"}), 400
     data = request.json
     yaml_code = data.get('yaml', '')
-    use_llm = data.get('use_llm', False)
     if not yaml_code:
         return jsonify({"success": False, "message": "yaml empty"}), 400
-    # 1. try local conversion
+    # try local conversion only
     mermaid_code = yaml_to_mermaid(yaml_code)
     if mermaid_code:
         return jsonify({"success": True, "mermaid": mermaid_code})
-    # 2. fallback llm
-    if use_llm:
-        settings = get_settings()
-        api_key = settings.get('gemini_api_key', '')
-        if not api_key:
-            return jsonify({"success": False, "message": "GEMINI_API_KEY not set"}), 400
-        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-        payload = {
-            "contents": [{"parts": [{"text": f"Convert the following mofa dataflow yaml to a mermaid flowchart code, only output code:\n{yaml_code}"}]}]
-        }
-        try:
-            resp = requests.post(endpoint, json=payload, timeout=20)
-            if resp.status_code == 200:
-                mermaid = resp.json()['candidates'][0]['content']['parts'][0]['text']
-                return jsonify({"success": True, "mermaid": mermaid})
-            else:
-                return jsonify({"success": False, "message": resp.text}), 500
-        except Exception as e:
-            return jsonify({"success": False, "message": str(e)}), 500
-    return jsonify({"success": False, "message": "conversion failed"}), 500
+    else:
+        return jsonify({"success": False, "message": "local conversion failed"}), 500
 
 @mermaid_bp.route('/export', methods=['POST'])
 def export_html():

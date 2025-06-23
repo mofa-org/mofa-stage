@@ -31,7 +31,7 @@
     <div v-else>
       <el-tabs v-model="activeTab" class="agent-tabs">
         <!-- Agent Hub Tab -->
-        <el-tab-pane :label="'Agent Hub (' + filteredHubAgents.length + ')'" name="hub">
+        <el-tab-pane :label="'Nodes (' + filteredHubAgents.length + ')'" name="hub">
           <!-- Empty state for hub agents -->
           <el-empty v-if="filteredHubAgents.length === 0" :description="$t('agent.noAgentsFound')">
             <el-button type="primary" @click="handleCreateAgent">{{ $t('agent.createFirst') }}</el-button>

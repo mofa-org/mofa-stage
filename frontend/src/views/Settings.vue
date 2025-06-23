@@ -53,63 +53,114 @@
             <div class="form-help">{{ $t('settings.dockerContainerHelp') || '已运行的含 MoFA 的容器名称或ID' }}</div>
           </el-form-item>
 
-          <el-form-item :label="$t('settings.mofaDir')">
-            <el-input 
-              v-model="settingsForm.mofa_dir" 
-              placeholder="/path/to/mofa"
-            >
-              <template #append>
-                <el-button @click="selectMofaDir">{{ $t('settings.browse') }}</el-button>
-              </template>
-            </el-input>
-            <div class="form-help">{{ $t('settings.mofaDirHelp') }}</div>
-          </el-form-item>
-
-          <!-- 相对路径设置 -->
-          <el-form-item :label="$t('settings.useRelativePaths')">
-            <el-switch v-model="settingsForm.use_relative_paths" />
-            <div class="form-help">{{ $t('settings.useRelativePathsHelp') }}</div>
-          </el-form-item>
-
-          <!-- Agent Hub 设置 -->
-          <el-form-item :label="$t('settings.agentHubStorage')">
-            <el-radio-group v-model="settingsForm.use_default_agent_hub_path">
-              <el-radio :label="true">{{ $t('settings.useDefaultPath') }}</el-radio>
-              <el-radio :label="false">{{ $t('settings.useCustomPath') }}</el-radio>
+          <!-- 项目类型选择 -->
+          <el-form-item :label="$t('settings.projectType') || '项目类型'">
+            <el-radio-group v-model="settingsForm.project_type">
+              <el-radio label="mofa">{{ $t('settings.mofaProject') || 'MoFA 项目' }}</el-radio>
+              <el-radio label="dora">{{ $t('settings.doraProject') || 'Dora 项目' }}</el-radio>
             </el-radio-group>
+            <div class="form-help">{{ $t('settings.projectTypeHelp') || '选择项目类型：MoFA（标准结构）或 Dora（兼容模式）' }}</div>
           </el-form-item>
 
-          <el-form-item :label="$t('settings.agentHubPath')" v-if="!settingsForm.use_default_agent_hub_path">
-            <el-input 
-              v-model="settingsForm.custom_agent_hub_path" 
-              placeholder="/path/to/custom/agent-hub/directory"
-            >
-              <template #append>
-                <el-button @click="selectCustomAgentHubPath">{{ $t('settings.browse') }}</el-button>
-              </template>
-            </el-input>
-            <div class="form-help">{{ $t('settings.agentHubPathHelp') }}</div>
-          </el-form-item>
+          <!-- MoFA 模式的配置 -->
+          <template v-if="settingsForm.project_type === 'mofa'">
+            <el-form-item :label="$t('settings.mofaDir')">
+              <el-input 
+                v-model="settingsForm.mofa_dir" 
+                placeholder="/path/to/mofa"
+              >
+                <template #append>
+                  <el-button @click="selectMofaDir">{{ $t('settings.browse') }}</el-button>
+                </template>
+              </el-input>
+              <div class="form-help">{{ $t('settings.mofaDirHelp') }}</div>
+            </el-form-item>
 
-          <!-- Examples 设置 -->
-          <el-form-item :label="$t('settings.examplesStorage')">
-            <el-radio-group v-model="settingsForm.use_default_examples_path">
-              <el-radio :label="true">{{ $t('settings.useDefaultPath') }}</el-radio>
-              <el-radio :label="false">{{ $t('settings.useCustomPath') }}</el-radio>
-            </el-radio-group>
-          </el-form-item>
+            <!-- 相对路径设置 -->
+            <el-form-item :label="$t('settings.useRelativePaths')">
+              <el-switch v-model="settingsForm.use_relative_paths" />
+              <div class="form-help">{{ $t('settings.useRelativePathsHelp') }}</div>
+            </el-form-item>
 
-          <el-form-item :label="$t('settings.examplesPath')" v-if="!settingsForm.use_default_examples_path">
-            <el-input 
-              v-model="settingsForm.custom_examples_path" 
-              placeholder="/path/to/custom/examples/directory"
-            >
-              <template #append>
-                <el-button @click="selectCustomExamplesPath">{{ $t('settings.browse') }}</el-button>
-              </template>
-            </el-input>
-            <div class="form-help">{{ $t('settings.examplesPathHelp') }}</div>
-          </el-form-item>
+            <!-- Agent Hub 设置 -->
+            <el-form-item :label="$t('settings.agentHubStorage')">
+              <el-radio-group v-model="settingsForm.use_default_agent_hub_path">
+                <el-radio :label="true">{{ $t('settings.useDefaultPath') }}</el-radio>
+                <el-radio :label="false">{{ $t('settings.useCustomPath') }}</el-radio>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item :label="$t('settings.agentHubPath')" v-if="!settingsForm.use_default_agent_hub_path">
+              <el-input 
+                v-model="settingsForm.custom_agent_hub_path" 
+                placeholder="/path/to/custom/agent-hub/directory"
+              >
+                <template #append>
+                  <el-button @click="selectCustomAgentHubPath">{{ $t('settings.browse') }}</el-button>
+                </template>
+              </el-input>
+              <div class="form-help">{{ $t('settings.agentHubPathHelp') }}</div>
+            </el-form-item>
+
+            <!-- Examples 设置 -->
+            <el-form-item :label="$t('settings.examplesStorage')">
+              <el-radio-group v-model="settingsForm.use_default_examples_path">
+                <el-radio :label="true">{{ $t('settings.useDefaultPath') }}</el-radio>
+                <el-radio :label="false">{{ $t('settings.useCustomPath') }}</el-radio>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item :label="$t('settings.examplesPath')" v-if="!settingsForm.use_default_examples_path">
+              <el-input 
+                v-model="settingsForm.custom_examples_path" 
+                placeholder="/path/to/custom/examples/directory"
+              >
+                <template #append>
+                  <el-button @click="selectCustomExamplesPath">{{ $t('settings.browse') }}</el-button>
+                </template>
+              </el-input>
+              <div class="form-help">{{ $t('settings.examplesPathHelp') }}</div>
+            </el-form-item>
+          </template>
+
+          <!-- Dora 模式的配置 -->
+          <template v-if="settingsForm.project_type === 'dora'">
+            <el-form-item :label="$t('settings.doraRootDir') || 'Dora 根目录'">
+              <el-input 
+                v-model="settingsForm.mofa_dir" 
+                placeholder="/path/to/dora"
+              >
+                <template #append>
+                  <el-button @click="selectMofaDir">{{ $t('settings.browse') }}</el-button>
+                </template>
+              </el-input>
+              <div class="form-help">{{ $t('settings.doraRootDirHelp') || '指定 Dora 项目根目录' }}</div>
+            </el-form-item>
+
+            <el-form-item :label="$t('settings.doraNodeHubPath') || 'Node Hub 路径'">
+              <el-input 
+                v-model="settingsForm.custom_agent_hub_path" 
+                placeholder="/path/to/dora/node-hub"
+              >
+                <template #append>
+                  <el-button @click="selectCustomAgentHubPath">{{ $t('settings.browse') }}</el-button>
+                </template>
+              </el-input>
+              <div class="form-help">{{ $t('settings.doraNodeHubPathHelp') || '指定 Dora 的 node-hub 目录路径（对应 MoFA 的 agent-hub）' }}</div>
+            </el-form-item>
+
+            <el-form-item :label="$t('settings.doraExamplesPath') || 'Examples 路径'">
+              <el-input 
+                v-model="settingsForm.custom_examples_path" 
+                placeholder="/path/to/dora/examples"
+              >
+                <template #append>
+                  <el-button @click="selectCustomExamplesPath">{{ $t('settings.browse') }}</el-button>
+                </template>
+              </el-input>
+              <div class="form-help">{{ $t('settings.doraExamplesPathHelp') || '指定 Dora 的 examples 目录路径' }}</div>
+            </el-form-item>
+          </template>
         </el-form>
       </el-card>
 
@@ -254,8 +305,8 @@
 
           <el-form-item :label="$t('settings.editorVersion')">
             <el-select v-model="settingsForm.editor_version" style="width: 100%">
-              <el-option label="Classic" value="classic" />
-              <el-option label="New" value="new" />
+              <el-option label="Traditional" value="classic" />
+              <el-option label="VS Code" value="new" />
             </el-select>
           </el-form-item>
         </el-form>
@@ -309,7 +360,8 @@ export default {
       azure_openai_endpoint: '',
       azure_openai_api_version: '2023-05-15-preview',
       gemini_api_key: '',
-      gemini_api_endpoint: 'https://generativelanguage.googleapis.com/v1beta'
+      gemini_api_endpoint: 'https://generativelanguage.googleapis.com/v1beta',
+      project_type: 'mofa'
     })
     
     const isLoading = computed(() => settingsStore.isLoading)
@@ -475,6 +527,24 @@ export default {
     // 同步mofa_mode和旧字段use_system_mofa，保持向后兼容
     watch(() => settingsForm.mofa_mode, (newMode) => {
       settingsForm.use_system_mofa = (newMode === 'system')
+    })
+
+    // 监听project_type变化，自动调整dora模式的设置
+    watch(() => settingsForm.project_type, (newType) => {
+      if (newType === 'dora') {
+        // 当切换到dora模式时，自动设置为使用自定义路径
+        settingsForm.use_default_agent_hub_path = false
+        settingsForm.use_default_examples_path = false
+        settingsForm.use_relative_paths = false
+        
+        // 如果路径为空，自动设置合理的默认值
+        if (!settingsForm.custom_agent_hub_path && settingsForm.mofa_dir) {
+          settingsForm.custom_agent_hub_path = settingsForm.mofa_dir + '/node-hub'
+        }
+        if (!settingsForm.custom_examples_path && settingsForm.mofa_dir) {
+          settingsForm.custom_examples_path = settingsForm.mofa_dir + '/examples'
+        }
+      }
     })
 
     onMounted(() => {

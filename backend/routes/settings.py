@@ -40,6 +40,8 @@ DEFAULT_SETTINGS = {
     "mofa_mode": DEFAULT_MOFA_MODE,  # 'system', 'venv', or 'docker'
     "docker_container_name": DEFAULT_DOCKER_CONTAINER,  # name or id of docker container
     "use_system_mofa": USE_SYSTEM_MOFA,  # deprecated, kept for backward compatibility
+    # 项目类型
+    "project_type": "mofa",  # 'mofa' or 'dora'
     # 分开存储agent-hub和examples的路径
     "use_default_agent_hub_path": True,  # 是否使用默认agent-hub路径
     "use_default_examples_path": True,  # 是否使用默认examples路径
