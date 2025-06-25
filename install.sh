@@ -295,9 +295,11 @@ install_ttyd() {
         return 0
     fi
     
-    print_color_msg "$YELLOW" "$ZH_INSTALL_TTYD" "$EN_INSTALL_TTYD"
-    read -r REPLY
+    # 暂时注释掉用户询问，直接安装ttyd
+    # print_color_msg "$YELLOW" "$ZH_INSTALL_TTYD" "$EN_INSTALL_TTYD"
+    # read -r REPLY
     # 默认为Y，只有明确输入n或N时才跳过
+    REPLY="Y"  # 直接设置为Y，自动安装ttyd
     if [ "$REPLY" = "n" ] || [ "$REPLY" = "N" ]; then
         print_color_msg "$YELLOW" "$ZH_SKIP_TTYD" "$EN_SKIP_TTYD"
         return 0

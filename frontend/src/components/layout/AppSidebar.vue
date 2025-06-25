@@ -1,5 +1,13 @@
 <template>
-  <div class="sidebar">
+  <div class="sidebar" :class="{ 'collapsed': isCollapsed }">
+    <!-- 浮动折叠按钮 -->
+    <div class="collapse-toggle" @click="toggleCollapse">
+      <el-icon>
+        <Expand v-if="isCollapsed" />
+        <Fold v-else />
+      </el-icon>
+    </div>
+    
     <div class="sidebar-menu">
       <el-menu
         router
@@ -7,30 +15,31 @@
         class="sidebar-nav"
         :background-color="computedTheme.bgColor"
         :text-color="computedTheme.textColor"
-        :active-text-color="computedTheme.activeTextColor">
+        :active-text-color="computedTheme.activeTextColor"
+        :collapse="isCollapsed">
         <el-menu-item index="/agents" class="menu-item">
           <el-icon><Menu /></el-icon>
-          <span>{{ $t('sidebar.agentsList') }}</span>
+          <span v-if="!isCollapsed">{{ $t('sidebar.agentsList') }}</span>
         </el-menu-item>
         <el-menu-item index="/terminal" v-if="showTerminal" class="menu-item">
           <el-icon><Monitor /></el-icon>
-          <span>{{ $t('sidebar.commandLine') }}</span>
+          <span v-if="!isCollapsed">{{ $t('sidebar.commandLine') }}</span>
         </el-menu-item>
         <el-menu-item index="/webssh" v-if="showWebSSH" class="menu-item">
           <el-icon><Monitor /></el-icon>
-          <span>{{ $t('sidebar.webSSH') }}</span>
+          <span v-if="!isCollapsed">{{ $t('sidebar.webSSH') }}</span>
         </el-menu-item>
         <el-menu-item index="/ttyd" v-if="showTtyd" class="menu-item">
           <el-icon><Monitor /></el-icon>
-          <span>{{ $t('sidebar.ttyd') || 'ttyd Terminal' }}</span>
+          <span v-if="!isCollapsed">{{ $t('sidebar.ttyd') || 'ttyd Terminal' }}</span>
         </el-menu-item>
         <el-menu-item index="/settings" class="menu-item">
           <el-icon><Setting /></el-icon>
-          <span>{{ $t('sidebar.settings') }}</span>
+          <span v-if="!isCollapsed">{{ $t('sidebar.settings') }}</span>
         </el-menu-item>
       </el-menu>
     </div>
-    <div class="sidebar-footer">
+    <div class="sidebar-footer" v-if="!isCollapsed">
       <div class="version-info">
         <span class="version-label">MoFA Stage</span>
         <span class="version-number">v0.5.0</span>
@@ -40,11 +49,11 @@
 </template>
 
 <script>
-import { computed, watch } from 'vue'
+import { computed, watch, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSettingsStore } from '../../store/settings'
 import { useI18n } from 'vue-i18n'
-import { Menu, Setting, Connection, Monitor } from '@element-plus/icons-vue'
+import { Menu, Setting, Connection, Monitor, Fold, Expand } from '@element-plus/icons-vue'
 
 export default {
   name: 'AppSidebar',
@@ -52,12 +61,22 @@ export default {
     Menu,
     Setting,
     Connection,
-    Monitor
+    Monitor,
+    Fold,
+    Expand
   },
   setup() {
     const route = useRoute()
     const settingsStore = useSettingsStore()
     const { t } = useI18n()
+    
+    // 折叠状态
+    const isCollapsed = ref(false)
+    
+    // 切换折叠状态
+    const toggleCollapse = () => {
+      isCollapsed.value = !isCollapsed.value
+    }
     
     const activeRoute = computed(() => {
       // 对于 agents 相关的路由，都映射到 /agents
@@ -104,7 +123,9 @@ export default {
       computedTheme,
       showTerminal,
       showWebSSH,
-      showTtyd
+      showTtyd,
+      isCollapsed,
+      toggleCollapse
     }
   }
 }
@@ -122,12 +143,50 @@ export default {
   height: calc(100vh - 70px);
   overflow: hidden;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.sidebar.collapsed {
+  width: 64px;
+}
+
+/* 浮动折叠按钮 */
+.collapse-toggle {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  background: var(--sidebar-background);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  font-size: 12px;
+  color: var(--sidebar-text-color);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.collapse-toggle:hover {
+  background: var(--mofa-teal);
+  color: white;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(107, 206, 210, 0.3);
 }
 
 .sidebar-menu {
   flex: 1;
   overflow-y: auto;
   padding: 24px 0 16px 0;
+}
+
+.sidebar.collapsed .sidebar-menu {
+  padding: 16px 0;
 }
 
 .sidebar-nav {
@@ -145,6 +204,13 @@ export default {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+}
+
+.sidebar.collapsed .sidebar-nav .el-menu-item {
+  margin: 4px 8px;
+  text-align: center;
+  padding: 0 !important;
+  justify-content: center;
 }
 
 .sidebar-nav .el-menu-item::before {
@@ -166,6 +232,10 @@ export default {
   transform: translateX(4px);
 }
 
+.sidebar.collapsed .sidebar-nav .el-menu-item:hover {
+  transform: none;
+}
+
 .sidebar-nav .el-menu-item:hover::before {
   height: 24px;
 }
@@ -183,6 +253,10 @@ export default {
 .sidebar-nav .el-menu-item .el-icon {
   margin-right: 12px;
   font-size: 18px;
+}
+
+.sidebar.collapsed .sidebar-nav .el-menu-item .el-icon {
+  margin-right: 0;
 }
 
 .sidebar-footer {
@@ -219,7 +293,15 @@ export default {
   border-right-color: var(--border-color);
 }
 
+[data-theme="dark"] .collapse-toggle {
+  background: var(--sidebar-background);
+  border-color: var(--border-color);
+}
 
+[data-theme="dark"] .collapse-toggle:hover {
+  background: var(--mofa-teal);
+  box-shadow: 0 4px 12px rgba(107, 206, 210, 0.4);
+}
 
 [data-theme="dark"] .sidebar-footer {
   background: rgba(22, 27, 34, 0.6);

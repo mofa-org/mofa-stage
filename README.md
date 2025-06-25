@@ -2,27 +2,26 @@
 
 English | [中文](README_cn.md)
 
-MoFA_Stage is a visual management platform built for the MoFA (Modular Framework for Agents) framework. Through a simple and intuitive web interface, you can create, edit, and run Agents without directly operating the command line.
+MoFA_Stage is a web-based development tool for managing and editing Agents in the MoFA framework.
 
-## Main Features
+## Features
 
 - **Agent Management**
-  - Browse and search existing Agents
-  - Create new Agents based on templates, or duplicate existing Agents
-  - Modify Agent code and configuration
-  - Start/stop Agent execution
-  - Delete unwanted Agents
+  - Browse Agent list
+  - Create and copy Agents
+  - Edit Agent files
+  - Run and stop Agents
+  - View execution logs
 
-- **Terminal Integration**
-  - Web SSH access (no additional SSH client required)
-  - ttyd terminal directly integrated into the page
-  - Convenient command-line environment
+- **Terminal Access**
+  - Web terminal
+  - SSH connections
+  - ttyd integration
 
-- **Editor Features**
-  - Monaco-based code editing (same editor engine as VS Code)
-  - Code highlighting and auto-completion
-  - Markdown instant preview
-  - Project file navigation
+- **Code Editing**
+  - Text editor
+  - File browser
+  - VSCode Server integration (optional)
 
 ## Technology Stack
 
@@ -33,20 +32,23 @@ MoFA_Stage is a visual management platform built for the MoFA (Modular Framework
 - RESTful API
 
 **Frontend**
-- Vue 3 
-- Element Plus component library
+- Vue 3 + Element Plus
 - Monaco editor
-- XTerm.js terminal emulation
-- Multi-language support
-- Pinia state management
 
-**Third-party Dependencies**
-- ttyd terminal service (optional)
+**Third-party Services**
+- ttyd (recommanded)
+- code-server (optional)
 
 ## Quick Start
 
 ### Environment Requirements
 
+**System Support**
+- Linux (supports apt-get and yum package managers)
+- macOS
+- Windows is not currently supported, WSL (Windows Subsystem for Linux) is recommended
+
+**Software Requirements**
 - Python 3.8 or higher
 - Node.js 14 or higher
 - MoFA framework installed
@@ -166,26 +168,32 @@ If ttyd automatic installation fails, you can refer to the [ttyd GitHub page](ht
 
 ## Directory Structure
 
-Core directories and files:
-
 ```
-MoFA_Stage/
-├── backend/                # Flask backend
-│   ├── app.py              # Main application entry
+mofa-stage/
+├── backend/
+│   ├── app.py              # Main application
+│   ├── config.py           # Configuration
 │   ├── routes/             # API routes
-│   │   ├── agents.py       # Agent API
-│   │   ├── dataflows.py    # Dataflow API
-│   │   ├── webssh.py       # SSH API, etc.
-│   ├── utils/              # Utility functions
-│   │   ├── mofa_cli.py     # mofa command line wrapper
-│   │   ├── dataflow_engine.py # Dataflow engine
-│   └── models/             # Data models
-├── frontend/               # Vue3 frontend
+│   │   ├── agents.py       # Agent management
+│   │   ├── terminal.py     # Terminal features
+│   │   ├── webssh.py       # SSH connections
+│   │   ├── vscode.py       # VSCode integration
+│   │   ├── settings.py     # Settings management
+│   │   ├── ttyd.py         # ttyd integration
+│   │   └── mermaid.py      # Chart rendering
+│   ├── utils/              # Utility modules
+│   │   ├── mofa_cli.py     # MoFA command wrapper
+│   │   ├── file_ops.py     # File operations
+│   │   └── ttyd_manager.py # ttyd management
+│   └── requirements.txt    # Python dependencies
+├── frontend/
 │   ├── src/
-│       ├── views/          # Page views
-│       ├── components/     # Components
-│       ├── api/            # API calls
+│   │   ├── views/          # Page components
+│   │   ├── components/     # UI components
+│   │   ├── api/            # API calls
+│   │   ├── store/          # State management
+│   │   └── router/         # Routing
+│   └── package.json        # Node.js dependencies
 ├── install.sh              # Installation script
-├── run.sh                  # Service startup script
-└── README.md               
+└── run.sh                  # Startup script
 ```
