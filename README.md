@@ -2,7 +2,7 @@
 
 English | [中文](README_cn.md)
 
-MoFA_Stage is a web-based development tool for managing and editing Agents in the MoFA framework.
+MoFA_Stage is a web-based development tool for managing and editing Agents and Dataflows in the MoFA framework.
 
 ## Features
 

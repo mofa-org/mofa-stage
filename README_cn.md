@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-MoFA_Stage 是一个 Web 界面的 Agent 开发工具，用于管理和编辑 MoFA 框架中的 Agent。
+MoFA_Stage 是一个 Web 界面的开发工具，用于管理和编辑 MoFA 框架中的 Nodes 和 Dataflows。
 
 ## 功能
 
