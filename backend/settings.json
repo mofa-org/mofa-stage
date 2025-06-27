@@ -1,6 +1,6 @@
 {
   "mofa_env_path": "",
-  "mofa_dir": "/Users/liyao/Code/bak_files/mofa",
+  "mofa_dir": "/Users/liyao/Code",
   "project_type": "mofa",
   "theme": "light",
   "editor_font_size": 14,
@@ -11,7 +11,7 @@
   "use_relative_paths": false,
   "agent_hub_path": "/Users/liyao/code/bak_files/mofa/python/agent-hub",
   "examples_path": "/Users/liyao/code/bak_files/mofa/python/examples",
-  "custom_agent_hub_path": "/Users/liyao/code/bak_files/mofa/python/agent-hub",
+  "custom_agent_hub_path": "/Users/liyao/code/bak_files/mofa/python/agent-hub2",
   "custom_examples_path": "/Users/liyao/code/bak_files/mofa/python/examples",
   "language": "en",
   "ssh": {

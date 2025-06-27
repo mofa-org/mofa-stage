@@ -4,6 +4,9 @@
       <div class="header-content">
         <h1 class="page-title">System Configuration</h1>
         <p class="page-subtitle">Manage your environment settings and preferences</p>
+        <div class="keyboard-hint">
+          <span class="hint-text">💡 使用 {{ isMac ? 'Cmd+S' : 'Ctrl+S' }} 快速保存设置</span>
+        </div>
       </div>
       <div class="page-actions">
         <el-button @click="resetSettings" :loading="isResetting">{{ $t('settings.reset') }}</el-button>
@@ -34,14 +37,12 @@
           </el-form-item>
 
           <el-form-item :label="$t('settings.mofaEnvPath')" v-if="settingsForm.mofa_mode === 'venv'">
-            <el-input 
-              v-model="settingsForm.mofa_env_path" 
+            <PathInputWithHistory
+              v-model="settingsForm.mofa_env_path"
+              path-type="mofa_env_path"
               placeholder="/path/to/mofa_venv"
-            >
-              <template #append>
-                <el-button @click="selectMofaEnvPath">{{ $t('settings.browse') }}</el-button>
-              </template>
-            </el-input>
+              @browse="selectMofaEnvPath"
+            />
             <div class="form-help">{{ $t('settings.mofaEnvPathHelp') }}</div>
           </el-form-item>
 
@@ -65,14 +66,12 @@
           <!-- MoFA 模式的配置 -->
           <template v-if="settingsForm.project_type === 'mofa'">
             <el-form-item :label="$t('settings.mofaDir')">
-              <el-input 
-                v-model="settingsForm.mofa_dir" 
+              <PathInputWithHistory
+                v-model="settingsForm.mofa_dir"
+                path-type="mofa_dir"
                 placeholder="/path/to/mofa"
-              >
-                <template #append>
-                  <el-button @click="selectMofaDir">{{ $t('settings.browse') }}</el-button>
-                </template>
-              </el-input>
+                @browse="selectMofaDir"
+              />
               <div class="form-help">{{ $t('settings.mofaDirHelp') }}</div>
             </el-form-item>
 
@@ -91,14 +90,13 @@
             </el-form-item>
 
             <el-form-item :label="$t('settings.agentHubPath')" v-if="!settingsForm.use_default_agent_hub_path">
-              <el-input 
-                v-model="settingsForm.custom_agent_hub_path" 
+              <PathInputWithHistory
+                v-model="settingsForm.custom_agent_hub_path"
+                path-type="custom_agent_hub_path"
                 placeholder="/path/to/custom/agent-hub/directory"
-              >
-                <template #append>
-                  <el-button @click="selectCustomAgentHubPath">{{ $t('settings.browse') }}</el-button>
-                </template>
-              </el-input>
+                :context="{ mofa_dir: settingsForm.mofa_dir }"
+                @browse="selectCustomAgentHubPath"
+              />
               <div class="form-help">{{ $t('settings.agentHubPathHelp') }}</div>
             </el-form-item>
 
@@ -111,14 +109,13 @@
             </el-form-item>
 
             <el-form-item :label="$t('settings.examplesPath')" v-if="!settingsForm.use_default_examples_path">
-              <el-input 
-                v-model="settingsForm.custom_examples_path" 
+              <PathInputWithHistory
+                v-model="settingsForm.custom_examples_path"
+                path-type="custom_examples_path"
                 placeholder="/path/to/custom/examples/directory"
-              >
-                <template #append>
-                  <el-button @click="selectCustomExamplesPath">{{ $t('settings.browse') }}</el-button>
-                </template>
-              </el-input>
+                :context="{ mofa_dir: settingsForm.mofa_dir }"
+                @browse="selectCustomExamplesPath"
+              />
               <div class="form-help">{{ $t('settings.examplesPathHelp') }}</div>
             </el-form-item>
           </template>
@@ -126,38 +123,34 @@
           <!-- Dora 模式的配置 -->
           <template v-if="settingsForm.project_type === 'dora'">
             <el-form-item :label="$t('settings.doraRootDir') || 'Dora 根目录'">
-              <el-input 
-                v-model="settingsForm.mofa_dir" 
+              <PathInputWithHistory
+                v-model="settingsForm.mofa_dir"
+                path-type="mofa_dir"
                 placeholder="/path/to/dora"
-              >
-                <template #append>
-                  <el-button @click="selectMofaDir">{{ $t('settings.browse') }}</el-button>
-                </template>
-              </el-input>
+                @browse="selectMofaDir"
+              />
               <div class="form-help">{{ $t('settings.doraRootDirHelp') || '指定 Dora 项目根目录' }}</div>
             </el-form-item>
 
             <el-form-item :label="$t('settings.doraNodeHubPath') || 'Node Hub 路径'">
-              <el-input 
-                v-model="settingsForm.custom_agent_hub_path" 
+              <PathInputWithHistory
+                v-model="settingsForm.custom_agent_hub_path"
+                path-type="custom_agent_hub_path"
                 placeholder="/path/to/dora/node-hub"
-              >
-                <template #append>
-                  <el-button @click="selectCustomAgentHubPath">{{ $t('settings.browse') }}</el-button>
-                </template>
-              </el-input>
+                :context="{ mofa_dir: settingsForm.mofa_dir }"
+                @browse="selectCustomAgentHubPath"
+              />
               <div class="form-help">{{ $t('settings.doraNodeHubPathHelp') || '指定 Dora 的 node-hub 目录路径（对应 MoFA 的 agent-hub）' }}</div>
             </el-form-item>
 
             <el-form-item :label="$t('settings.doraExamplesPath') || 'Examples 路径'">
-              <el-input 
-                v-model="settingsForm.custom_examples_path" 
+              <PathInputWithHistory
+                v-model="settingsForm.custom_examples_path"
+                path-type="custom_examples_path"
                 placeholder="/path/to/dora/examples"
-              >
-                <template #append>
-                  <el-button @click="selectCustomExamplesPath">{{ $t('settings.browse') }}</el-button>
-                </template>
-              </el-input>
+                :context="{ mofa_dir: settingsForm.mofa_dir }"
+                @browse="selectCustomExamplesPath"
+              />
               <div class="form-help">{{ $t('settings.doraExamplesPathHelp') || '指定 Dora 的 examples 目录路径' }}</div>
             </el-form-item>
           </template>
@@ -316,14 +309,19 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useSettingsStore } from '../store/settings'
 import { ElMessage } from 'element-plus'
 import { Setting, Folder, Document } from '@element-plus/icons-vue'
 import { setLanguage } from '../utils/i18n'
+import PathInputWithHistory from '../components/PathInputWithHistory.vue'
+import { smartSelectPath } from '../utils/fileBrowser'
 
 export default {
   name: 'Settings',
+  components: {
+    PathInputWithHistory
+  },
   setup() {
     const settingsStore = useSettingsStore()
     
@@ -367,6 +365,7 @@ export default {
     const isLoading = computed(() => settingsStore.isLoading)
     const isSaving = ref(false)
     const isResetting = ref(false)
+    const isMac = computed(() => navigator.platform.toUpperCase().indexOf('MAC') >= 0)
     
     const loadSettings = async () => {
       const settings = await settingsStore.fetchSettings()
@@ -486,24 +485,52 @@ export default {
       }
     }
     
-    const selectMofaEnvPath = () => {
-      // todo: 集成文件选择对话框
-      ElMessage.info('File Selection Dialog')
+    const selectMofaEnvPath = async () => {
+      try {
+        const selectedPath = await smartSelectPath(settingsForm.mofa_env_path, 'mofa_env_path')
+        if (selectedPath) {
+          settingsForm.mofa_env_path = selectedPath
+          ElMessage.success('MoFA 环境路径选择成功')
+        }
+      } catch (error) {
+        ElMessage.error('路径选择失败，请手动输入')
+      }
     }
     
-    const selectMofaDir = () => {
-      // todo: 集成文件选择对话框
-      ElMessage.info('File Selection Dialog')
+    const selectMofaDir = async () => {
+      try {
+        const selectedPath = await smartSelectPath(settingsForm.mofa_dir, 'mofa_dir')
+        if (selectedPath) {
+          settingsForm.mofa_dir = selectedPath
+          ElMessage.success('MoFA 根目录选择成功')
+        }
+      } catch (error) {
+        ElMessage.error('路径选择失败，请手动输入')
+      }
     }
     
-    const selectCustomAgentHubPath = () => {
-      // todo: 集成文件选择对话框
-      ElMessage.info('File Selection Dialog')
+    const selectCustomAgentHubPath = async () => {
+      try {
+        const selectedPath = await smartSelectPath(settingsForm.custom_agent_hub_path, 'custom_agent_hub_path')
+        if (selectedPath) {
+          settingsForm.custom_agent_hub_path = selectedPath
+          ElMessage.success('Agent Hub 路径选择成功')
+        }
+      } catch (error) {
+        ElMessage.error('路径选择失败，请手动输入')
+      }
     }
     
-    const selectCustomExamplesPath = () => {
-      // todo: 集成文件选择对话框
-      ElMessage.info('File Selection Dialog')
+    const selectCustomExamplesPath = async () => {
+      try {
+        const selectedPath = await smartSelectPath(settingsForm.custom_examples_path, 'custom_examples_path')
+        if (selectedPath) {
+          settingsForm.custom_examples_path = selectedPath
+          ElMessage.success('Examples 路径选择成功')
+        }
+      } catch (error) {
+        ElMessage.error('路径选择失败，请手动输入')
+      }
     }
 
     const handleLanguageChange = (value) => {
@@ -512,6 +539,19 @@ export default {
       
       // Save settings to apply changes server-side
       saveSettings()
+    }
+
+    // 键盘快捷键处理
+    const handleKeydown = (event) => {
+      // 检查是否按下了 Cmd+S (Mac) 或 Ctrl+S (Windows/Linux)
+      if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+        event.preventDefault() // 阻止浏览器默认保存行为
+        
+        // 如果不是正在保存中，则执行保存
+        if (!isSaving.value) {
+          saveSettings()
+        }
+      }
     }
     
     // Apply theme when it changes
@@ -588,6 +628,14 @@ export default {
       loadSettings()
       // Apply theme on initial load
       applyTheme(settingsForm.theme)
+      
+      // 添加键盘事件监听器
+      document.addEventListener('keydown', handleKeydown)
+    })
+
+    onBeforeUnmount(() => {
+      // 移除键盘事件监听器
+      document.removeEventListener('keydown', handleKeydown)
     })
     
     return {
@@ -595,13 +643,15 @@ export default {
       isLoading,
       isSaving,
       isResetting,
+      isMac,
       saveSettings,
       resetSettings,
       selectMofaEnvPath,
       selectMofaDir,
       selectCustomAgentHubPath,
       selectCustomExamplesPath,
-      handleLanguageChange
+      handleLanguageChange,
+      handleKeydown
     }
   }
 }
@@ -659,6 +709,21 @@ export default {
   border-radius: 0;
   padding: 12px 20px;
   font-weight: 600;
+}
+
+.keyboard-hint {
+  margin-top: 8px;
+  opacity: 0.8;
+}
+
+.hint-text {
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  background: rgba(107, 206, 210, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border-left: 3px solid var(--mofa-teal);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
 .settings-container {

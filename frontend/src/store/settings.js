@@ -3,6 +3,7 @@
  */
 import { defineStore } from 'pinia'
 import settingsApi from '../api/settings'
+import PathHistory from '../utils/pathHistory'
 
 export const useSettingsStore = defineStore('settings', {
   state: () => {
@@ -181,6 +182,20 @@ export const useSettingsStore = defineStore('settings', {
         localStorage.setItem('examples_path', settings.examples_path || '');
         localStorage.setItem('custom_agent_hub_path', settings.custom_agent_hub_path || '');
         localStorage.setItem('custom_examples_path', settings.custom_examples_path || '');
+        
+        // 添加路径到历史记录
+        if (settings.mofa_dir) {
+          PathHistory.addToHistory('mofa_dir', settings.mofa_dir)
+        }
+        if (settings.mofa_env_path) {
+          PathHistory.addToHistory('mofa_env_path', settings.mofa_env_path)
+        }
+        if (settings.custom_agent_hub_path) {
+          PathHistory.addToHistory('custom_agent_hub_path', settings.custom_agent_hub_path)
+        }
+        if (settings.custom_examples_path) {
+          PathHistory.addToHistory('custom_examples_path', settings.custom_examples_path)
+        }
         
         const response = await settingsApi.updateSettings(settings)
         if (response.data && response.data.success) {
