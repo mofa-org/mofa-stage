@@ -141,7 +141,7 @@
                 <el-button-group>
                   <!-- 预览切换按钮，仅在支持预览的文件类型中显示 -->
                   <el-button 
-                    v-if="isMarkdownFile || isMermaidHtml || isImageFile"
+                    v-if="isMarkdownFile || isMermaidHtml || isImageFile || isVideoFile"
                     size="small"
                     @click="togglePreviewMode"
                     :type="previewMode ? 'primary' : 'default'">
@@ -209,6 +209,33 @@
                           </div>
                           <div v-if="imageInfo.size" class="image-size">
                             {{ formatFileSize(imageInfo.size) }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- 视频文件预览 -->
+                    <div v-else-if="isVideoFile" class="video-preview">
+                      <div class="video-container">
+                        <video 
+                          :src="videoDataUrl" 
+                          class="preview-video"
+                          controls
+                          preload="metadata"
+                          @loadedmetadata="onVideoLoad"
+                          @error="onVideoError"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                        <div class="video-info">
+                          <div class="video-filename">{{ currentFile.path.split('/').pop() }}</div>
+                          <div v-if="videoInfo.duration" class="video-duration">
+                            时长: {{ formatDuration(videoInfo.duration) }}
+                          </div>
+                          <div v-if="videoInfo.width && videoInfo.height" class="video-dimensions">
+                            {{ videoInfo.width }} × {{ videoInfo.height }} 像素
+                          </div>
+                          <div v-if="videoInfo.size" class="video-size">
+                            {{ formatFileSize(videoInfo.size) }}
                           </div>
                         </div>
                       </div>
@@ -585,6 +612,14 @@ export default {
       return imageExtensions.some(ext => lowerPath.endsWith(ext))
     })
 
+    // 新增：检测视频文件
+    const isVideoFile = computed(() => {
+      if (!currentFile.value) return false
+      const lowerPath = currentFile.value.path.toLowerCase()
+      const videoExtensions = ['.mp4', '.webm', '.ogg', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.m4v', '.3gp']
+      return videoExtensions.some(ext => lowerPath.endsWith(ext))
+    })
+
     // 获取图片文件的数据 URL
     const imageDataUrl = ref('')
     
@@ -592,6 +627,17 @@ export default {
     const imageInfo = ref({
       width: null,
       height: null,
+      size: null
+    })
+
+    // 获取视频文件的数据 URL
+    const videoDataUrl = ref('')
+    
+    // 视频信息
+    const videoInfo = ref({
+      width: null,
+      height: null,
+      duration: null,
       size: null
     })
 
@@ -887,10 +933,12 @@ export default {
         // 从路由查询参数中获取agent类型
         const agentType = route.query.type || null
         
-        // 检查是否为图片文件
+        // 检查是否为图片或视频文件
         const lowerPath = filePath.toLowerCase()
         const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']
+        const videoExtensions = ['.mp4', '.webm', '.ogg', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.m4v', '.3gp']
         const isImage = imageExtensions.some(ext => lowerPath.endsWith(ext))
+        const isVideo = videoExtensions.some(ext => lowerPath.endsWith(ext))
         
         if (isImage) {
           // 对于图片文件，直接设置文件信息，不获取文本内容
@@ -929,8 +977,45 @@ export default {
             console.error('Failed to load image:', e)
             ElMessage.error('Failed to load image file')
           }
+        } else if (isVideo) {
+          // 对于视频文件，直接设置文件信息，不获取文本内容
+          currentFile.value = {
+            path: filePath,
+            type: 'video'
+          }
+          originalContent.value = '' // 视频文件没有文本内容
+          editorContent.value = ''
+          
+          // 清空旧的视频数据
+          if (videoDataUrl.value) {
+            URL.revokeObjectURL(videoDataUrl.value)
+            videoDataUrl.value = ''
+          }
+          videoInfo.value = { width: null, height: null, duration: null, size: null }
+          
+          try {
+            // 构建正确的API路径
+            const encodedPath = filePath.split('/').map(segment => encodeURIComponent(segment)).join('/')
+            const queryParams = agentType ? `?agent_type=${agentType}` : ''
+            const response = await fetch(`/api/agents/${props.agentName}/files/${encodedPath}${queryParams}`)
+            
+            if (response.ok) {
+              const blob = await response.blob()
+              videoDataUrl.value = URL.createObjectURL(blob)
+              // 保存视频大小信息
+              videoInfo.value.size = blob.size
+              previewMode.value = true // 视频文件自动进入预览模式
+              console.log('视频加载成功:', filePath, '大小:', blob.size)
+            } else {
+              console.error('Failed to load video:', response.status, response.statusText)
+              ElMessage.error('Failed to load video file')
+            }
+          } catch (e) {
+            console.error('Failed to load video:', e)
+            ElMessage.error('Failed to load video file')
+          }
         } else {
-          // 对于非图片文件，使用原有逻辑获取文本内容
+          // 对于非图片/视频文件，使用原有逻辑获取文本内容
           const fileData = await agentStore.fetchFileContent(props.agentName, filePath, agentType)
           if (fileData) {
             currentFile.value = {
@@ -940,12 +1025,17 @@ export default {
             originalContent.value = fileData.content
             editorContent.value = fileData.content
             
-            // 清空图片数据URL和信息
+            // 清空图片和视频数据URL和信息
             if (imageDataUrl.value) {
               URL.revokeObjectURL(imageDataUrl.value)
               imageDataUrl.value = ''
             }
+            if (videoDataUrl.value) {
+              URL.revokeObjectURL(videoDataUrl.value)
+              videoDataUrl.value = ''
+            }
             imageInfo.value = { width: null, height: null, size: null }
+            videoInfo.value = { width: null, height: null, duration: null, size: null }
             // 如果是 Mermaid HTML，则自动进入预览模式
             previewMode.value = isMermaidHtml.value
           }
@@ -1040,13 +1130,26 @@ export default {
         const ext = fileNameParts.length > 1 ? fileNameParts.pop().toLowerCase() : ''
         const fileName = fileNameParts.join('.')
         
-        // 对于图片文件，不创建默认内容，直接创建空文件
+        // 对于图片或视频文件，不创建默认内容，直接创建空文件
         const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico']
+        const videoExtensions = ['mp4', 'webm', 'ogg', 'avi', 'mov', 'mkv', 'flv', 'wmv', 'm4v', '3gp']
         if (imageExtensions.includes(ext)) {
           ElMessage.info('图片文件已创建，请使用外部工具编辑后上传')
           const result = await agentStore.saveFileContent(props.agentName, filePath, '')
           if (result) {
             ElMessage.success('图片文件占位符已创建')
+            newFileDialogVisible.value = false
+            await loadAgentFiles()
+          } else {
+            ElMessage.error(`Failed to create file: ${error.value}`)
+          }
+          isCreatingFile.value = false
+          return
+        } else if (videoExtensions.includes(ext)) {
+          ElMessage.info('视频文件已创建，请使用外部工具编辑后上传')
+          const result = await agentStore.saveFileContent(props.agentName, filePath, '')
+          if (result) {
+            ElMessage.success('视频文件占位符已创建')
             newFileDialogVisible.value = false
             await loadAgentFiles()
           } else {
@@ -1591,12 +1694,38 @@ export default {
       console.error('Image load error:', event)
     }
 
+    // 视频加载事件处理
+    const onVideoLoad = (event) => {
+      const video = event.target
+      videoInfo.value.width = video.videoWidth
+      videoInfo.value.height = video.videoHeight
+      videoInfo.value.duration = video.duration
+    }
+
+    const onVideoError = (event) => {
+      console.error('Video load error:', event)
+    }
+
     // 格式化文件大小
     const formatFileSize = (bytes) => {
       if (!bytes) return ''
       const sizes = ['B', 'KB', 'MB', 'GB']
       const i = Math.floor(Math.log(bytes) / Math.log(1024))
       return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
+    }
+
+    // 格式化时长
+    const formatDuration = (seconds) => {
+      if (!seconds || isNaN(seconds)) return ''
+      const hours = Math.floor(seconds / 3600)
+      const minutes = Math.floor((seconds % 3600) / 60)
+      const secs = Math.floor(seconds % 60)
+      
+      if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+      } else {
+        return `${minutes}:${secs.toString().padStart(2, '0')}`
+      }
     }
 
     onMounted(async () => {
@@ -1629,9 +1758,12 @@ export default {
       // 清理事件监听器
       document.removeEventListener('click', hideContextMenu)
       window.removeEventListener('message', handleMermaidMessage)
-      // 清理图片数据URL，防止内存泄漏
+      // 清理图片和视频数据URL，防止内存泄漏
       if (imageDataUrl.value) {
         URL.revokeObjectURL(imageDataUrl.value)
+      }
+      if (videoDataUrl.value) {
+        URL.revokeObjectURL(videoDataUrl.value)
       }
     })
 
@@ -1727,7 +1859,14 @@ export default {
       imageInfo,
       onImageLoad,
       onImageError,
-      formatFileSize
+      formatFileSize,
+      // 视频预览相关
+      isVideoFile,
+      videoDataUrl,
+      videoInfo,
+      onVideoLoad,
+      onVideoError,
+      formatDuration
     }
   }
 }
@@ -2109,6 +2248,61 @@ export default {
 }
 
 .image-dimensions, .image-size {
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 3px 6px;
+  border-radius: 4px;
+  margin: 2px 0;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+/* 视频预览样式 */
+.video-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  background-color: #f9f9f9;
+  padding: 20px;
+  overflow: auto;
+}
+
+.video-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.preview-video {
+  max-width: 100%;
+  max-height: calc(100% - 40px);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  background-color: black;
+}
+
+.video-info {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.video-filename {
+  font-size: 14px;
+  color: var(--text-color);
+  font-family: monospace;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.video-dimensions, .video-size, .video-duration {
   font-size: 12px;
   color: var(--text-color-secondary);
   background-color: rgba(255, 255, 255, 0.8);

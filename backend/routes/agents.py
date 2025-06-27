@@ -167,12 +167,14 @@ def get_file_content(agent_name, file_path):
     """获取文件内容"""
     agent_type = request.args.get('agent_type')  # 获取agent类型参数
     
-    # 检查是否为图片文件
+    # 检查是否为图片或视频文件
     image_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico']
+    video_extensions = ['.mp4', '.webm', '.ogg', '.avi', '.mov', '.mkv', '.flv', '.wmv', '.m4v', '.3gp']
     is_image = any(file_path.lower().endswith(ext) for ext in image_extensions)
+    is_video = any(file_path.lower().endswith(ext) for ext in video_extensions)
     
-    if is_image:
-        # 对于图片文件，直接返回二进制数据
+    if is_image or is_video:
+        # 对于图片或视频文件，直接返回二进制数据
         mofa_cli = get_mofa_cli()
         # 确定文件的完整路径
         candidate_dirs = [mofa_cli.agent_hub_dir, mofa_cli.examples_dir]
@@ -190,7 +192,8 @@ def get_file_content(agent_name, file_path):
             except Exception as e:
                 return jsonify({"success": False, "message": str(e)}), 500
         else:
-            return jsonify({"success": False, "message": "Image file not found"}), 404
+            file_type = "Video" if is_video else "Image"
+            return jsonify({"success": False, "message": f"{file_type} file not found"}), 404
     else:
         # 对于文本文件，使用原有逻辑
         mofa_cli = get_mofa_cli()
