@@ -8,6 +8,7 @@ import shutil
 import time
 from pathlib import Path
 import sys
+import requests
 
 class MofaCLI:
     def __init__(self, settings=None):
@@ -1287,3 +1288,243 @@ class MofaCLI:
             ext = os.path.splitext(name)[1][1:] or "txt"
             result.append({"name": name, "path": rel, "type": ext})
         return result
+
+    def get_available_nodes(self):
+        """获取所有可用的nodes列表及其描述"""
+        try:
+            nodes = []
+            
+            # 遍历agent-hub目录中的所有节点
+            if os.path.exists(self.agent_hub_dir):
+                for node_name in os.listdir(self.agent_hub_dir):
+                    node_path = os.path.join(self.agent_hub_dir, node_name)
+                    if os.path.isdir(node_path):
+                        node_info = {
+                            "name": node_name,
+                            "type": "agent-hub",
+                            "path": node_path,
+                            "description": ""
+                        }
+                        
+                        # 尝试从README.md获取描述
+                        readme_path = os.path.join(node_path, "README.md")
+                        if os.path.exists(readme_path):
+                            try:
+                                with open(readme_path, "r", encoding="utf-8") as f:
+                                    lines = f.readlines()
+                                    # 提取第一行作为描述（通常是标题）
+                                    for line in lines:
+                                        line = line.strip()
+                                        if line and not line.startswith('#'):
+                                            node_info["description"] = line[:100]  # 限制长度
+                                            break
+                                        elif line.startswith('# '):
+                                            node_info["description"] = line[2:].strip()[:100]
+                                            break
+                            except Exception as e:
+                                print(f"读取README失败: {e}")
+                        
+                        # 尝试从pyproject.toml获取更多信息
+                        pyproject_path = os.path.join(node_path, "pyproject.toml")
+                        if os.path.exists(pyproject_path):
+                            try:
+                                with open(pyproject_path, "r", encoding="utf-8") as f:
+                                    content = f.read()
+                                    # 简单提取description（如果有的话）
+                                    if 'description' in content and not node_info["description"]:
+                                        lines = content.split('\n')
+                                        for line in lines:
+                                            if 'description' in line and '=' in line:
+                                                desc = line.split('=')[1].strip().strip('"\'')
+                                                node_info["description"] = desc[:100]
+                                                break
+                            except Exception as e:
+                                print(f"读取pyproject.toml失败: {e}")
+                        
+                        # 如果没有描述，使用节点名称
+                        if not node_info["description"]:
+                            node_info["description"] = f"Agent node: {node_name}"
+                        
+                        nodes.append(node_info)
+            
+            return {
+                "success": True,
+                "nodes": sorted(nodes, key=lambda x: x["name"])
+            }
+        except Exception as e:
+            print(f"获取可用nodes时出错: {e}")
+            return {"success": False, "message": str(e)}
+
+    def generate_dataflow_with_gemini(self, selected_nodes, flow_description, flow_name):
+        """使用Gemini API基于选择的nodes和描述生成dataflow"""
+        try:
+            # 从设置中获取Gemini API key
+            from routes.settings import get_settings
+            settings = get_settings()
+            api_key = settings.get('gemini_api_key')
+            api_endpoint = settings.get('gemini_api_endpoint', 'https://generativelanguage.googleapis.com/v1beta')
+            
+            if not api_key:
+                return {"success": False, "message": "Gemini API key not configured"}
+            
+            # 构建nodes信息
+            nodes_info = []
+            for node_name in selected_nodes:
+                node_path = os.path.join(self.agent_hub_dir, node_name)
+                if os.path.exists(node_path):
+                    node_desc = ""
+                    readme_path = os.path.join(node_path, "README.md")
+                    if os.path.exists(readme_path):
+                        try:
+                            with open(readme_path, "r", encoding="utf-8") as f:
+                                content = f.read()
+                                # 取前500字符作为描述
+                                node_desc = content[:500]
+                        except:
+                            node_desc = f"Node: {node_name}"
+                    
+                    nodes_info.append({
+                        "name": node_name,
+                        "description": node_desc
+                    })
+            
+            # 构建prompt
+            prompt = f"""
+基于以下信息生成一个MoFA dataflow YAML配置文件：
+
+用户需求：{flow_description}
+
+可用的nodes：
+{json.dumps(nodes_info, ensure_ascii=False, indent=2)}
+
+请生成一个完整的dataflow YAML配置，遵循以下格式：
+- 每个node都应该有id, build, path, outputs, inputs等字段
+- 第一个node通常是terminal-input，用于接收用户输入
+- 最后一个node应该设置 IS_DATAFLOW_END: true
+- nodes之间通过inputs/outputs连接
+- build路径格式为: pip install -e ../../agent-hub/[node-name]
+- path通常与node名称相关
+
+参考格式：
+```yaml
+nodes:
+  - id: terminal-input
+    build: pip install -e ../../node-hub/terminal-input
+    path: dynamic
+    outputs:
+      - data
+    inputs:
+      result: some-node/output
+  - id: some-node
+    build: pip install -e ../../agent-hub/some-node
+    path: some-node
+    outputs:
+      - output
+    inputs:
+      input_data: terminal-input/data
+    env:
+      IS_DATAFLOW_END: true
+      WRITE_LOG: true
+```
+
+请只返回YAML配置内容，不要包含其他解释文字。
+"""
+
+            # 获取选择的AI模型
+            ai_model = settings.get('ai_model', 'gemini-2.0-flash')
+            
+            # 调用Gemini API
+            url = f"{api_endpoint}/models/{ai_model}:generateContent"
+            headers = {
+                'Content-Type': 'application/json'
+            }
+            
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ]
+            }
+            
+            response = requests.post(
+                f"{url}?key={api_key}",
+                headers=headers,
+                data=json.dumps(payload)
+            )
+            
+            if response.status_code != 200:
+                return {
+                    "success": False, 
+                    "message": f"Gemini API调用失败: {response.status_code} - {response.text}"
+                }
+            
+            result = response.json()
+            
+            # 提取生成的内容
+            if 'candidates' in result and len(result['candidates']) > 0:
+                generated_content = result['candidates'][0]['content']['parts'][0]['text']
+                
+                # 清理生成的内容，提取YAML部分
+                yaml_content = generated_content
+                if '```yaml' in yaml_content:
+                    yaml_content = yaml_content.split('```yaml')[1]
+                if '```' in yaml_content:
+                    yaml_content = yaml_content.split('```')[0]
+                yaml_content = yaml_content.strip()
+                
+                # 创建dataflow目录
+                dataflow_dir = os.path.join(self.examples_dir, flow_name)
+                if os.path.exists(dataflow_dir):
+                    return {"success": False, "message": f"Dataflow '{flow_name}' already exists"}
+                
+                os.makedirs(dataflow_dir, exist_ok=True)
+                
+                # 保存dataflow配置文件
+                dataflow_file_path = os.path.join(dataflow_dir, f"{flow_name}_dataflow.yml")
+                with open(dataflow_file_path, "w", encoding="utf-8") as f:
+                    f.write(yaml_content)
+                
+                # 创建README.md
+                readme_content = f"""# {flow_name} Dataflow
+
+## 描述
+{flow_description}
+
+## 使用的Nodes
+{', '.join(selected_nodes)}
+
+## 运行方式
+```bash
+cd {dataflow_dir}
+dora up
+dora build {flow_name}_dataflow.yml
+dora start {flow_name}_dataflow.yml
+```
+
+## 自动生成
+此dataflow由MoFA Stage基于用户需求自动生成。
+"""
+                
+                readme_path = os.path.join(dataflow_dir, "README.md")
+                with open(readme_path, "w", encoding="utf-8") as f:
+                    f.write(readme_content)
+                
+                return {
+                    "success": True,
+                    "message": f"Dataflow '{flow_name}' generated successfully",
+                    "dataflow_path": dataflow_dir,
+                    "yaml_content": yaml_content
+                }
+            else:
+                return {"success": False, "message": "Gemini API返回了空内容"}
+                
+        except Exception as e:
+            import traceback
+            trace = traceback.format_exc()
+            print(f"生成dataflow时出错: {str(e)}\n{trace}")
+            return {"success": False, "message": f"生成dataflow失败: {str(e)}"}

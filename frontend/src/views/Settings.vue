@@ -197,32 +197,59 @@
         </template>
 
         <el-form :model="settingsForm" label-position="top">
-          <el-form-item label="OpenAI API Key">
-            <el-input v-model="settingsForm.openai_api_key" type="password" show-password placeholder="sk-..." />
-          </el-form-item>
+          <!-- 隐藏的其他API配置 -->
+          <div style="display: none;">
+            <el-form-item label="OpenAI API Key">
+              <el-input v-model="settingsForm.openai_api_key" type="password" show-password placeholder="sk-..." />
+            </el-form-item>
 
-          <el-form-item label="OpenAI Base URL">
-            <el-input v-model="settingsForm.openai_base_url" placeholder="https://api.openai.com/v1" />
-          </el-form-item>
+            <el-form-item label="OpenAI Base URL">
+              <el-input v-model="settingsForm.openai_base_url" placeholder="https://api.openai.com/v1" />
+            </el-form-item>
 
-          <el-form-item label="Azure OpenAI API Key">
-            <el-input v-model="settingsForm.azure_openai_api_key" type="password" show-password />
-          </el-form-item>
+            <el-form-item label="Azure OpenAI API Key">
+              <el-input v-model="settingsForm.azure_openai_api_key" type="password" show-password />
+            </el-form-item>
 
-          <el-form-item label="Azure OpenAI Endpoint">
-            <el-input v-model="settingsForm.azure_openai_endpoint" placeholder="https://your-resource.openai.azure.com/" />
-          </el-form-item>
+            <el-form-item label="Azure OpenAI Endpoint">
+              <el-input v-model="settingsForm.azure_openai_endpoint" placeholder="https://your-resource.openai.azure.com/" />
+            </el-form-item>
 
-          <el-form-item label="Azure API Version">
-            <el-input v-model="settingsForm.azure_openai_api_version" placeholder="2023-05-15-preview" />
+            <el-form-item label="Azure API Version">
+              <el-input v-model="settingsForm.azure_openai_api_version" placeholder="2023-05-15-preview" />
+            </el-form-item>
+          </div>
+
+          <!-- AI 模型选择 -->
+          <el-form-item label="AI 模型">
+            <el-select 
+              v-model="settingsForm.ai_model" 
+              style="width: 100%" 
+              placeholder="选择或输入AI模型名称"
+              filterable
+              allow-create
+              default-first-option
+            >
+              <el-option label="Gemini 2.5 Flash" value="gemini-2.0-flash" />
+              <el-option label="Gemini 2.0 Flash" value="gemini-1.5-flash" />
+              <el-option label="Gemini 2.5 Pro" value="gemini-1.5-pro" />
+            </el-select>
+            <div class="form-help">
+              选择预设模型或输入自定义模型名称（如：gemini-2.0-flash、gemini-1.5-flash-latest 等）
+              <br/>
+              <small style="color: #909399;">
+              </small>
+            </div>
           </el-form-item>
 
           <el-form-item label="Gemini API Key">
             <el-input v-model="settingsForm.gemini_api_key" type="password" show-password placeholder="GEMINI_API_KEY" />
+            <div class="form-help">在 <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #409eff;">Google AI Studio</a> 获取您的 API Key</div>
           </el-form-item>
 
           <el-form-item label="Gemini Endpoint">
             <el-input v-model="settingsForm.gemini_api_endpoint" placeholder="https://generativelanguage.googleapis.com/v1beta" />
+            <div class="form-help">通常无需修改，保持默认值即可</div>
           </el-form-item>
         </el-form>
       </el-card>
@@ -304,6 +331,78 @@
           </el-form-item>
         </el-form>
       </el-card>
+
+      <!-- App Subtitle Settings -->
+      <el-card class="settings-card">
+        <template #header>
+          <div class="card-header">
+            <h3>{{ $t('settings.appSubtitleSettings') || '应用标语设置' }}</h3>
+          </div>
+        </template>
+
+        <el-form :model="settingsForm" label-position="top">
+          <el-form-item :label="$t('settings.subtitleMode') || '标语模式'">
+            <el-radio-group v-model="settingsForm.app_subtitle_mode">
+              <el-radio label="default">{{ $t('settings.defaultSubtitle') || '默认标语' }}</el-radio>
+              <el-radio label="random">{{ $t('settings.randomSubtitle') || '随机标语' }}</el-radio>
+              <el-radio label="custom">{{ $t('settings.customSubtitle') || '自定义标语' }}</el-radio>
+            </el-radio-group>
+            <div class="form-help">{{ $t('settings.subtitleModeHelp') || '选择标语显示模式：默认、随机选择或自定义' }}</div>
+          </el-form-item>
+
+          <el-form-item 
+            :label="$t('settings.customSubtitleText') || '自定义标语文本'" 
+            v-if="settingsForm.app_subtitle_mode === 'custom'"
+          >
+            <el-input 
+              v-model="settingsForm.app_subtitle_custom" 
+              :placeholder="$t('settings.customSubtitlePlaceholder') || '输入您的自定义标语'"
+              maxlength="50"
+              show-word-limit
+            />
+            <div class="form-help">{{ $t('settings.customSubtitleHelp') || '输入您想要显示的自定义标语，最多50个字符' }}</div>
+          </el-form-item>
+
+          <el-form-item :label="$t('settings.presetSubtitles') || '预设标语列表'">
+            <div class="preset-subtitles">
+              <div 
+                v-for="(preset, index) in settingsForm.app_subtitle_presets" 
+                :key="index"
+                class="preset-item"
+              >
+                <el-input 
+                  v-model="settingsForm.app_subtitle_presets[index]"
+                  :placeholder="$t('settings.presetSubtitlePlaceholder') || '预设标语'"
+                  maxlength="50"
+                />
+                <el-button 
+                  type="danger" 
+                  size="small" 
+                  @click="removePresetSubtitle(index)"
+                  :disabled="settingsForm.app_subtitle_presets.length <= 1"
+                >
+                  {{ $t('common.delete') || '删除' }}
+                </el-button>
+              </div>
+              <el-button 
+                type="primary" 
+                size="small" 
+                @click="addPresetSubtitle"
+                :disabled="settingsForm.app_subtitle_presets.length >= 10"
+              >
+                {{ $t('settings.addPreset') || '添加预设' }}
+              </el-button>
+            </div>
+            <div class="form-help" style="display: none">{{ $t('settings.presetSubtitlesHelp') || '管理预设标语列表，用于随机模式。最多10个预设。' }}</div>
+          </el-form-item>
+
+          <el-form-item :label="$t('settings.currentSubtitle') || '当前标语预览'">
+            <div class="subtitle-preview">
+              "{{ getCurrentSubtitlePreview() }}"
+            </div>
+          </el-form-item>
+        </el-form>
+      </el-card>
     </div>
   </div>
 </template>
@@ -359,7 +458,15 @@ export default {
       azure_openai_api_version: '2023-05-15-preview',
       gemini_api_key: '',
       gemini_api_endpoint: 'https://generativelanguage.googleapis.com/v1beta',
-      project_type: 'mofa'
+      project_type: 'mofa',
+      // ---- App Subtitle Settings ----
+      app_subtitle_mode: 'default',
+      app_subtitle_custom: '',
+      app_subtitle_presets: [
+        'Mission Control for MoFA',
+        'Enjoy the show',
+        'Control Panel for MoFA'
+      ]
     })
     
     const isLoading = computed(() => settingsStore.isLoading)
@@ -637,6 +744,33 @@ export default {
       // 移除键盘事件监听器
       document.removeEventListener('keydown', handleKeydown)
     })
+
+    // App subtitle related methods
+    const addPresetSubtitle = () => {
+      if (settingsForm.app_subtitle_presets.length < 10) {
+        settingsForm.app_subtitle_presets.push('')
+      }
+    }
+
+    const removePresetSubtitle = (index) => {
+      if (settingsForm.app_subtitle_presets.length > 1) {
+        settingsForm.app_subtitle_presets.splice(index, 1)
+      }
+    }
+
+    const getCurrentSubtitlePreview = () => {
+      switch (settingsForm.app_subtitle_mode) {
+        case 'custom':
+          return settingsForm.app_subtitle_custom || 'Enjoy the show'
+        case 'random':
+          const presets = settingsForm.app_subtitle_presets.filter(p => p.trim())
+          if (presets.length === 0) return 'Enjoy the show'
+          return presets[Math.floor(Math.random() * presets.length)]
+        case 'default':
+        default:
+          return 'Enjoy the show'
+      }
+    }
     
     return {
       settingsForm,
@@ -651,7 +785,10 @@ export default {
       selectCustomAgentHubPath,
       selectCustomExamplesPath,
       handleLanguageChange,
-      handleKeydown
+      handleKeydown,
+      addPresetSubtitle,
+      removePresetSubtitle,
+      getCurrentSubtitlePreview
     }
   }
 }
@@ -884,5 +1021,37 @@ export default {
 
 [data-theme="dark"] .el-input__wrapper.is-focus {
   box-shadow: 0 4px 16px rgba(107, 206, 210, 0.25);
+}
+
+/* App Subtitle Settings Styles */
+.preset-subtitles {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preset-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.preset-item .el-input {
+  flex: 1;
+}
+
+.subtitle-preview {
+  padding: 12px 16px;
+  background: rgba(107, 206, 210, 0.1);
+  border-left: 4px solid var(--mofa-teal);
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-color-secondary);
+  font-style: italic;
+}
+
+[data-theme="dark"] .subtitle-preview {
+  background: rgba(107, 206, 210, 0.15);
 }
 </style>

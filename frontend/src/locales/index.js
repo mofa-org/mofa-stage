@@ -2,7 +2,7 @@ export const messages = {
   en: {
     sidebar: {
       controlCenter: 'MoFA Stage Control',
-      agentsList: 'Agents Hub',
+      agentsList: 'MoFA Hub',
       dataflowOrchestration: 'Dataflow Orchestration',
       commandLine: 'Command Line',
       settings: 'Settings',
@@ -136,7 +136,21 @@ export const messages = {
       doraNodeHubPath: 'Node Hub Path',
       doraNodeHubPathHelp: 'Specify the Dora node-hub directory path (corresponds to MoFA\'s agent-hub)',
       doraExamplesPath: 'Examples Path',
-      doraExamplesPathHelp: 'Specify the Dora examples directory path'
+      doraExamplesPathHelp: 'Specify the Dora examples directory path',
+      appSubtitleSettings: 'App Subtitle Settings',
+      subtitleMode: 'Subtitle Mode',
+      defaultSubtitle: 'Default Subtitle',
+      randomSubtitle: 'Random Subtitle',
+      customSubtitle: 'Custom Subtitle',
+      subtitleModeHelp: 'Choose subtitle display mode: default, random selection, or custom',
+      customSubtitleText: 'Custom Subtitle Text',
+      customSubtitlePlaceholder: 'Enter your custom subtitle',
+      customSubtitleHelp: 'Enter your custom subtitle, up to 50 characters',
+      presetSubtitles: 'Preset Subtitles List',
+      presetSubtitlePlaceholder: 'Preset subtitle',
+      presetSubtitlesHelp: 'Manage preset subtitles list for random mode. Maximum 10 presets.',
+      addPreset: 'Add Preset',
+      currentSubtitle: 'Current Subtitle Preview'
     },
     terminal: {
       environmentInfo: 'Environment Information',
@@ -350,7 +364,21 @@ export const messages = {
       doraNodeHubPath: '节点Hub路径',
       doraNodeHubPathHelp: '指定Dora节点-hub目录路径（对应MoFA的agent-hub）',
       doraExamplesPath: 'Examples路径',
-      doraExamplesPathHelp: '指定Dora示例目录路径'
+      doraExamplesPathHelp: '指定Dora示例目录路径',
+      appSubtitleSettings: '应用标语设置',
+      subtitleMode: '标语模式',
+      defaultSubtitle: '默认标语',
+      randomSubtitle: '随机标语',
+      customSubtitle: '自定义标语',
+      subtitleModeHelp: '选择标语显示模式：默认、随机选择或自定义',
+      customSubtitleText: '自定义标语文本',
+      customSubtitlePlaceholder: '输入您的自定义标语',
+      customSubtitleHelp: '输入您想要显示的自定义标语，最多50个字符',
+      presetSubtitles: '预设标语列表',
+      presetSubtitlePlaceholder: '预设标语',
+      presetSubtitlesHelp: '管理预设标语列表，用于随机模式。最多10个预设。',
+      addPreset: '添加预设',
+      currentSubtitle: '当前标语预览'
     },
     terminal: {
       environmentInfo: '环境信息',
@@ -395,7 +423,7 @@ export const messages = {
     },
     agent: {
       list: 'Agent Hub',
-      create: '创建 Agent',
+      create: '创建 Dataflow',
       edit: '编辑 Agent',
       delete: '删除 Agent',
       deleteConfirm: '确定要删除 Agent "{name}" 吗？此操作不可恢复！',

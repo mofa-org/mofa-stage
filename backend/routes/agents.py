@@ -335,3 +335,28 @@ def rename_file_or_folder(agent_name, file_path):
             return jsonify({"success": False, "message": message}), 400
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+@agents_bp.route('/generate-dataflow', methods=['POST'])
+def generate_dataflow():
+    """基于用户选择的nodes和描述，使用Gemini API自动生成dataflow"""
+    data = request.json
+    selected_nodes = data.get('selected_nodes', [])
+    flow_description = data.get('flow_description', '')
+    flow_name = data.get('flow_name', '')
+    
+    if not selected_nodes or not flow_description or not flow_name:
+        return jsonify({
+            "success": False, 
+            "message": "Missing required parameters: selected_nodes, flow_description, flow_name"
+        }), 400
+    
+    mofa_cli = get_mofa_cli()
+    result = mofa_cli.generate_dataflow_with_gemini(selected_nodes, flow_description, flow_name)
+    return jsonify(result)
+
+@agents_bp.route('/available-nodes', methods=['GET'])
+def get_available_nodes():
+    """获取所有可用的nodes列表及其描述"""
+    mofa_cli = get_mofa_cli()
+    result = mofa_cli.get_available_nodes()
+    return jsonify(result)

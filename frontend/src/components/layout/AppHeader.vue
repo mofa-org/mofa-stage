@@ -4,7 +4,7 @@
       <img src="/mofa-logo.png" alt="MoFA Logo" class="app-logo" />
       <div class="brand-info">
         <h1 class="app-title">MoFA Stage</h1>
-        <p class="app-subtitle">Mission Control for MoFA</p>
+        <p class="app-subtitle">{{ currentSubtitle }}</p>
       </div>
     </div>
 
@@ -31,8 +31,9 @@
 <script>
 import { useRouter, useRoute } from 'vue-router'
 import { Setting } from '@element-plus/icons-vue'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useSettingsStore } from '../../store/settings'
 
 export default {
   name: 'AppHeader',
@@ -43,6 +44,11 @@ export default {
     const router = useRouter()
     const route = useRoute()
     const { t } = useI18n()
+    const settingsStore = useSettingsStore()
+    
+    const currentSubtitle = computed(() => {
+      return settingsStore.currentSubtitle || 'Enjoy the show'
+    })
     
     const pageTitle = computed(() => {
       const path = route.path
@@ -70,10 +76,16 @@ export default {
     const goToSettings = () => {
       router.push('/settings')
     }
+
+    // 初始化设置
+    onMounted(async () => {
+      await settingsStore.fetchSettings()
+    })
     
     return {
       goToSettings,
-      pageTitle
+      pageTitle,
+      currentSubtitle
     }
   }
 }

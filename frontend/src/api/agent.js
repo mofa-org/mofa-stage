@@ -118,5 +118,26 @@ export default {
     return axios.post(`${API_URL}/agents/${agentName}/files/${filePath}/rename`, { 
       new_name: newName 
     })
+  },
+
+  /**
+   * 获取所有可用的nodes列表
+   */
+  getAvailableNodes() {
+    return axios.get(`${API_URL}/agents/available-nodes`)
+  },
+
+  /**
+   * 基于选择的nodes和描述生成dataflow
+   * @param {Array} selectedNodes - 选择的node名称列表
+   * @param {string} flowDescription - flow的功能描述
+   * @param {string} flowName - flow的名称
+   */
+  generateDataflow(selectedNodes, flowDescription, flowName) {
+    return axios.post(`${API_URL}/agents/generate-dataflow`, {
+      selected_nodes: selectedNodes,
+      flow_description: flowDescription,
+      flow_name: flowName
+    })
   }
 }

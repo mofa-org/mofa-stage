@@ -45,16 +45,41 @@ export const useSettingsStore = defineStore('settings', {
         // 添加终端显示模式设置
         terminal_display_mode: 'both', // 'terminal', 'webssh', 'both'
         // ---- AI API Settings ----
+        ai_model: 'gemini-2.0-flash', // 默认使用Gemini 2.0 Flash
         openai_api_key: '',
         openai_base_url: 'https://api.openai.com/v1',
         azure_openai_api_key: '',
         azure_openai_endpoint: '',
         azure_openai_api_version: '2023-05-15-preview',
         gemini_api_key: '',
-        gemini_api_endpoint: 'https://generativelanguage.googleapis.com/v1beta'
+        gemini_api_endpoint: 'https://generativelanguage.googleapis.com/v1beta',
+        // ---- App Subtitle Settings ----
+        app_subtitle_mode: 'default', // 'default', 'random', 'custom'
+        app_subtitle_custom: '',
+        app_subtitle_presets: [
+          'Mission Control for MoFA',
+          'Enjoy the show',
+          'Control Panel for MoFA'
+        ]
       },
       isLoading: false,
       error: null
+    }
+  },
+
+  getters: {
+    // 获取当前应该显示的标语
+    currentSubtitle: (state) => {
+      switch (state.settings.app_subtitle_mode) {
+        case 'custom':
+          return state.settings.app_subtitle_custom || 'Mission Control for MoFA'
+        case 'random':
+          const presets = state.settings.app_subtitle_presets || ['Enjoy the show']
+          return presets[Math.floor(Math.random() * presets.length)]
+        case 'default':
+        default:
+          return 'Enjoy the show'
+      }
     }
   },
   
@@ -157,6 +182,28 @@ export const useSettingsStore = defineStore('settings', {
           
           if (this.settings.docker_container_name === undefined) {
             this.settings.docker_container_name = ''
+          }
+
+          // 确保标语设置有默认值
+          if (this.settings.app_subtitle_mode === undefined) {
+            this.settings.app_subtitle_mode = 'default'
+          }
+          
+          if (this.settings.app_subtitle_custom === undefined) {
+            this.settings.app_subtitle_custom = ''
+          }
+          
+          if (!this.settings.app_subtitle_presets || this.settings.app_subtitle_presets.length === 0) {
+            this.settings.app_subtitle_presets = [
+              'Mission Control for MoFA',
+              'Enjoy the show',
+              'Control Panel for MoFA'
+            ]
+          }
+          
+          // 确保AI模型设置有默认值
+          if (this.settings.ai_model === undefined) {
+            this.settings.ai_model = 'gemini-2.0-flash'
           }
           
           return this.settings

@@ -19,6 +19,10 @@
           <el-icon><Plus /></el-icon>
           {{ $t('agent.create') }}
         </el-button>
+        <el-button type="success" @click="handleGenerateDataflow" class="generate-btn">
+          <el-icon><MagicStick /></el-icon>
+          智能生成 Dataflow
+        </el-button>
       </div>
     </div>
 
@@ -285,7 +289,7 @@
 import { ref, computed, onMounted, inject, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAgentStore } from '../store/agent'
-import { Search, Plus, Edit, Document, VideoPlay, VideoPause, Delete, CopyDocument, Refresh, Close, View } from '@element-plus/icons-vue'
+import { Search, Plus, Edit, Document, VideoPlay, VideoPause, Delete, CopyDocument, Refresh, Close, View, MagicStick } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage, ElDrawer } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import SshTerminal from '../components/SshTerminal.vue'
@@ -304,6 +308,7 @@ export default {
     View,
     Refresh,
     Close,
+    MagicStick,
     SshTerminal
   },
   setup() {
@@ -620,6 +625,10 @@ export default {
       router.push('/agents/create')
     }
     
+    const handleGenerateDataflow = () => {
+      router.push('/agents/generate-dataflow')
+    }
+    
     const handleEditAgent = (agentName) => {
       // 根据当前标签页确定agent类型
       const agentType = activeTab.value === 'hub' ? 'agent-hub' : 'examples'
@@ -733,6 +742,7 @@ export default {
       isAgentRunning,
       agentDescription,
       handleCreateAgent,
+      handleGenerateDataflow,
       handleEditAgent,
       handleCopyAgent,
       handleDialogBeforeOpen,
@@ -820,7 +830,7 @@ export default {
   gap: 16px;
 }
 
-.create-btn {
+.create-btn, .generate-btn {
   border-radius: 0;
   padding: 12px 24px;
   font-weight: 600;

@@ -6,6 +6,7 @@ import AgentEdit from '../views/AgentEdit.vue'
 import AgentCreate from '../views/AgentCreate.vue'
 import Settings from '../views/Settings.vue'
 import Terminal from '../views/Terminal.vue'
+import DataflowGenerator from '../views/DataflowGenerator.vue'
 // 注释掉这两行，因为现在这两个组件在App.vue中直接使用
 // import WebSSH from '../views/WebSSH.vue'
 // import TtydTerminal from '../views/TtydTerminal.vue'
@@ -31,6 +32,11 @@ const router = createRouter({
       path: '/agents/create',
       name: 'agent-create',
       component: AgentCreate
+    },
+    {
+      path: '/agents/generate-dataflow',
+      name: 'DataflowGenerator',
+      component: DataflowGenerator
     },
     {
       path: '/agents/:agentName/edit',

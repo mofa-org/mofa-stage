@@ -11,9 +11,9 @@
   "use_relative_paths": false,
   "agent_hub_path": "/Users/liyao/code/bak_files/mofa/python/agent-hub",
   "examples_path": "/Users/liyao/code/bak_files/mofa/python/examples",
-  "custom_agent_hub_path": "/Users/liyao/code/bak_files/mofa/python/agent-hub2",
+  "custom_agent_hub_path": "/Users/liyao/code/bak_files/mofa/python/agent-hub",
   "custom_examples_path": "/Users/liyao/code/bak_files/mofa/python/examples",
-  "language": "en",
+  "language": "zh",
   "ssh": {
     "auto_connect": true,
     "hostname": "127.0.0.1",
@@ -25,6 +25,7 @@
   "ttyd_port": 7681,
   "mofa_mode": "system",
   "docker_container_name": "0bfdf2580246",
+  "ai_model": "gemini-2.0-flash",
   "gemini_api_key": "",
   "editor_type": "vscode",
   "editor_version": "classic",
@@ -34,5 +35,12 @@
   "azure_openai_endpoint": "",
   "azure_openai_api_version": "2023-05-15-preview",
   "gemini_api_endpoint": "https://generativelanguage.googleapis.com/v1beta",
-  "ttyd_command": "zsh"
+  "ttyd_command": "zsh",
+  "app_subtitle_mode": "default",
+  "app_subtitle_custom": "Enjoy the show",
+  "app_subtitle_presets": [
+    "Mission Control for MoFA",
+    "Enjoy the show",
+    "Control Panel for MoFA"
+  ]
 }

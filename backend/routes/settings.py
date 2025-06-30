@@ -183,6 +183,22 @@ def get_settings():
                     # 使用自定义路径
                     settings["examples_path"] = settings.get("custom_examples_path", CUSTOM_EXAMPLES_PATH)
             
+            # ------------------------------------------------------------------
+            # 强制同步逻辑：当custom路径存在时，强制覆盖对应的常规路径
+            # ------------------------------------------------------------------
+            custom_agent_hub = settings.get("custom_agent_hub_path", "").strip()
+            custom_examples = settings.get("custom_examples_path", "").strip()
+            
+            if custom_agent_hub:
+                # 当custom_agent_hub_path不为空时，强制同步到agent_hub_path
+                settings["agent_hub_path"] = custom_agent_hub
+                logger.info(f"强制同步agent_hub_path: {custom_agent_hub}")
+                
+            if custom_examples:
+                # 当custom_examples_path不为空时，强制同步到examples_path
+                settings["examples_path"] = custom_examples
+                logger.info(f"强制同步examples_path: {custom_examples}")
+            
             return settings
     except Exception as e:
         print(f"Error reading settings file: {e}")
@@ -289,6 +305,22 @@ def api_save_settings():
             else:
                 # 使用自定义路径
                 new_settings["examples_path"] = new_settings.get("custom_examples_path", CUSTOM_EXAMPLES_PATH)
+        
+        # ------------------------------------------------------------------
+        # 强制同步逻辑：当custom路径存在时，强制覆盖对应的常规路径
+        # ------------------------------------------------------------------
+        custom_agent_hub = new_settings.get("custom_agent_hub_path", "").strip()
+        custom_examples = new_settings.get("custom_examples_path", "").strip()
+        
+        if custom_agent_hub:
+            # 当custom_agent_hub_path不为空时，强制同步到agent_hub_path
+            new_settings["agent_hub_path"] = custom_agent_hub
+            logger.info(f"保存时强制同步agent_hub_path: {custom_agent_hub}")
+            
+        if custom_examples:
+            # 当custom_examples_path不为空时，强制同步到examples_path
+            new_settings["examples_path"] = custom_examples
+            logger.info(f"保存时强制同步examples_path: {custom_examples}")
         
         # Save the settings to the file
         if not save_settings_to_file(new_settings):

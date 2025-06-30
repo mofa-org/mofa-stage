@@ -16,6 +16,7 @@ export const useAgentStore = defineStore('agent', {
     runningAgents: {}, // 保存正在运行的 agent 进程 ID
     agentLogs: {}, // 保存每个agent的日志
     processOutputs: {}, // 保存进程输出
+    availableNodes: [], // 可用的nodes列表
   }),
   
   getters: {
@@ -378,28 +379,68 @@ export const useAgentStore = defineStore('agent', {
       try {
         const response = await agentApi.renameFileOrFolder(agentName, filePath, newName)
         if (response.data && response.data.success) {
-          // 更新当前文件相关状态
-          if (this.currentFile && this.currentFile.path === filePath) {
-            this.currentFile.path = response.data.new_path
-          }
-          return {
-            success: true,
-            newPath: response.data.new_path,
-            message: response.data.message
-          }
+          // 重新加载文件列表
+          await this.fetchAgentFiles(agentName)
+          return true
         } else {
-          throw new Error(response.data.message || `Failed to rename: ${filePath}`)
+          throw new Error(`Failed to rename: ${filePath}`)
         }
       } catch (error) {
-        this.error = error.response?.data?.message || error.message || `Failed to rename: ${filePath}`
+        this.error = error.message || `Failed to rename: ${filePath}`
         console.error(error)
-        return {
-          success: false,
-          error: this.error
-        }
+        return false
       } finally {
         this.isLoading = false
       }
     },
+
+    async fetchAvailableNodes() {
+      this.isLoading = true
+      this.error = null
+      try {
+        const response = await agentApi.getAvailableNodes()
+        if (response.data && response.data.success) {
+          this.availableNodes = response.data.nodes
+          return response.data.nodes
+        } else {
+          throw new Error('Failed to fetch available nodes')
+        }
+      } catch (error) {
+        this.error = error.message || 'Failed to fetch available nodes'
+        console.error(error)
+        return []
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    async generateDataflow(selectedNodes, flowDescription, flowName) {
+      this.isLoading = true
+      this.error = null
+      try {
+        const response = await agentApi.generateDataflow(selectedNodes, flowDescription, flowName)
+        if (response.data && response.data.success) {
+          // 重新加载agents列表
+          await this.fetchAgents()
+          return {
+            success: true,
+            message: response.data.message,
+            dataflowPath: response.data.dataflow_path,
+            yamlContent: response.data.yaml_content
+          }
+        } else {
+          throw new Error(response.data.message || 'Failed to generate dataflow')
+        }
+      } catch (error) {
+        this.error = error.message || 'Failed to generate dataflow'
+        console.error(error)
+        return {
+          success: false,
+          message: this.error
+        }
+      } finally {
+        this.isLoading = false
+      }
+    }
   }
 })
