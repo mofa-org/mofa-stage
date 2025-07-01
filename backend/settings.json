@@ -26,7 +26,7 @@
   "mofa_mode": "system",
   "docker_container_name": "0bfdf2580246",
   "ai_model": "gemini-2.0-flash",
-  "gemini_api_key": "191100Ly",
+  "gemini_api_key": "",
   "editor_type": "vscode",
   "editor_version": "classic",
   "openai_api_key": "123",
