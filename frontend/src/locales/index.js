@@ -225,7 +225,7 @@ export const messages = {
   zh: {
     sidebar: {
       controlCenter: 'MoFA Stage 控制中心',
-      agentsList: 'Agents 列表',
+      agentsList: 'MoFA Hub',
       dataflowOrchestration: '数据流编排',
       commandLine: '命令行',
       settings: '设置',
