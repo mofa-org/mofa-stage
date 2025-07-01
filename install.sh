@@ -34,6 +34,7 @@ ZH_BACKEND_DEPS_FAIL="后端依赖安装失败"
 ZH_FRONTEND_INSTALL="安装前端依赖..."
 ZH_FRONTEND_DIR_NOT_FOUND="找不到frontend目录!"
 ZH_INSTALL_NODEJS="请安装nodejs"
+ZH_INSTALL_NODEJS_BREW="macOS系统，用brew安装Node.js..."
 ZH_NODE_VERSION="Node.js版本:"
 ZH_NPM_VERSION="npm版本:"
 ZH_NPM_INSTALL="npm install..."
@@ -91,6 +92,7 @@ EN_BACKEND_DEPS_FAIL="Backend dependencies installation failed"
 EN_FRONTEND_INSTALL="Installing frontend dependencies..."
 EN_FRONTEND_DIR_NOT_FOUND="Frontend directory not found!"
 EN_INSTALL_NODEJS="Please install nodejs"
+EN_INSTALL_NODEJS_BREW="macOS system, using brew to install Node.js..."
 EN_NODE_VERSION="Node.js version:"
 EN_NPM_VERSION="npm version:"
 EN_NPM_INSTALL="npm install..."
@@ -214,7 +216,7 @@ install_backend() {
     
     # 装依赖
     print_color_msg "$GREEN" "$ZH_PIP_INSTALL" "$EN_PIP_INSTALL"
-    pip3 install -r requirements.txt
+    pip3 install -r requirements.txt --break-system-packages
     
     # 检查结果
     if [ $? -eq 0 ]; then
@@ -238,9 +240,29 @@ install_frontend() {
     # 检查Node
     node_ver=$(node -v 2>/dev/null)
     if [ $? -ne 0 ]; then
-        print_color_msg "$RED" "$ZH_INSTALL_NODEJS" "$EN_INSTALL_NODEJS"
-        echo "https://nodejs.org/"
-        exit 1
+        # 在macOS上自动用brew安装Node.js
+        if [ "$sys" = "Darwin" ]; then
+            # 检查brew
+            if command -v brew &> /dev/null; then
+                print_color_msg "$GREEN" "$ZH_INSTALL_NODEJS_BREW" "$EN_INSTALL_NODEJS_BREW"
+                brew install node
+                # 重新检查Node
+                node_ver=$(node -v 2>/dev/null)
+                if [ $? -ne 0 ]; then
+                    print_color_msg "$RED" "$ZH_INSTALL_NODEJS" "$EN_INSTALL_NODEJS"
+                    echo "https://nodejs.org/"
+                    exit 1
+                fi
+            else
+                print_color_msg "$RED" "$ZH_INSTALL_BREW" "$EN_INSTALL_BREW"
+                print_msg "$ZH_VISIT: https://brew.sh/" "$EN_VISIT: https://brew.sh/"
+                exit 1
+            fi
+        else
+            print_color_msg "$RED" "$ZH_INSTALL_NODEJS" "$EN_INSTALL_NODEJS"
+            echo "https://nodejs.org/"
+            exit 1
+        fi
     fi
     
     print_color_msg "$YELLOW" "$ZH_NODE_VERSION $node_ver" "$EN_NODE_VERSION $node_ver"

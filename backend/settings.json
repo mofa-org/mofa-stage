@@ -13,7 +13,7 @@
   "examples_path": "/Users/liyao/code/bak_files/mofa/python/examples",
   "custom_agent_hub_path": "/Users/liyao/code/bak_files/mofa/python/agent-hub",
   "custom_examples_path": "/Users/liyao/code/bak_files/mofa/python/examples",
-  "language": "zh",
+  "language": "en",
   "ssh": {
     "auto_connect": true,
     "hostname": "127.0.0.1",
@@ -26,7 +26,7 @@
   "mofa_mode": "system",
   "docker_container_name": "0bfdf2580246",
   "ai_model": "gemini-2.0-flash",
-  "gemini_api_key": "",
+  "gemini_api_key": "191100Ly",
   "editor_type": "vscode",
   "editor_version": "classic",
   "openai_api_key": "123",

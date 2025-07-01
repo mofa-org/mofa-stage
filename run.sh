@@ -151,13 +151,13 @@ start_backend() {
     fi
     cd "$SCRIPT_DIR/backend"
     
-    # 安装 Python 依赖
-    if [ $current_lang -eq $LANG_ZH ]; then
-        print_info "$ZH_INSTALL_PYTHON_DEPS"
-    else
-        print_info "$EN_INSTALL_PYTHON_DEPS"
-    fi
-    pip3 install -r requirements.txt
+    # 安装 Python 依赖 - 已在install.sh中完成，跳过
+    # if [ $current_lang -eq $LANG_ZH ]; then
+    #     print_info "$ZH_INSTALL_PYTHON_DEPS"
+    # else
+    #     print_info "$EN_INSTALL_PYTHON_DEPS"
+    # fi
+    # pip3 install -r requirements.txt
     
     # 在后台启动 Flask 服务
     python3 app.py &
@@ -178,15 +178,15 @@ start_frontend() {
     fi
     cd "$SCRIPT_DIR/frontend"
     
-    # 检查并安装 Node.js 依赖
-    if [ ! -d "node_modules" ]; then
-        if [ $current_lang -eq $LANG_ZH ]; then
-            print_info "$ZH_INSTALL_FRONTEND_DEPS"
-        else
-            print_info "$EN_INSTALL_FRONTEND_DEPS"
-        fi
-        npm install
-    fi
+    # 检查并安装 Node.js 依赖 - 已在install.sh中完成，跳过
+    # if [ ! -d "node_modules" ]; then
+    #     if [ $current_lang -eq $LANG_ZH ]; then
+    #         print_info "$ZH_INSTALL_FRONTEND_DEPS"
+    #     else
+    #         print_info "$EN_INSTALL_FRONTEND_DEPS"
+    #     fi
+    #     npm install
+    # fi
     
     # 在后台启动 Vite 开发服务器
     npm run dev &
