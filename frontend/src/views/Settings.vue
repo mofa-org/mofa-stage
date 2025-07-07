@@ -160,7 +160,8 @@
       <el-card class="settings-card">
         <template #header>
           <div class="card-header">
-            <h3>{{ $t('settings.sshSettings') || 'SSH Settings' }}</h3>
+            <!-- <h3>{{ $t('settings.sshSettings') || 'SSH Settings' }}</h3> -->
+            <h3>{{ $t('settings.sshsetting') || 'Remote SSH Connection Settings' }}</h3>
           </div>
         </template>
 

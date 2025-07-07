@@ -150,7 +150,8 @@ export const messages = {
       presetSubtitlePlaceholder: 'Preset subtitle',
       presetSubtitlesHelp: 'Manage preset subtitles list for random mode. Maximum 10 presets.',
       addPreset: 'Add Preset',
-      currentSubtitle: 'Current Subtitle Preview'
+      currentSubtitle: 'Current Subtitle Preview',
+      sshsetting: 'Remote SSH Connection Settings'
     },
     terminal: {
       environmentInfo: 'Environment Information',
@@ -378,7 +379,8 @@ export const messages = {
       presetSubtitlePlaceholder: '预设标语',
       presetSubtitlesHelp: '管理预设标语列表，用于随机模式。最多10个预设。',
       addPreset: '添加预设',
-      currentSubtitle: '当前标语预览'
+      currentSubtitle: '当前标语预览',
+      sshsetting: '远程SSH连接设置'
     },
     terminal: {
       environmentInfo: '环境信息',

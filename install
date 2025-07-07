@@ -72,8 +72,8 @@ ZH_FUTURE_BUILD="以后要构建生产版本: cd frontend && npm run build"
 ZH_ACCESS_URL="访问地址: http://localhost:3000"
 ZH_HAVE_FUN="祝您使用愉快!"
 ZH_RUN_SERVICES="是否现在启动服务? (Y/n, 默认: Y):"
-ZH_RUN_PERMISSION_DENIED="run.sh脚本没有执行权限!"
-ZH_RUN_PERMISSION_FIX="请运行以下命令赋予run.sh权限:"
+ZH_RUN_PERMISSION_DENIED="run脚本没有执行权限!"
+ZH_RUN_PERMISSION_FIX="请运行以下命令赋予run权限:"
 ZH_STARTING_SERVICES="正在启动服务..."
 
 # 英文
@@ -130,8 +130,8 @@ EN_FUTURE_BUILD="For future production builds: cd frontend && npm run build"
 EN_ACCESS_URL="Access URL: http://localhost:3000"
 EN_HAVE_FUN="Have fun!"
 EN_RUN_SERVICES="Start services now? (Y/n, default: Y):"
-EN_RUN_PERMISSION_DENIED="run.sh script does not have execute permission!"
-EN_RUN_PERMISSION_FIX="Please run the following command to grant run.sh permissions:"
+EN_RUN_PERMISSION_DENIED="run script does not have execute permission!"
+EN_RUN_PERMISSION_FIX="Please run the following command to grant run permissions:"
 EN_STARTING_SERVICES="Starting services..."
 
 # 显示语言选择函数
@@ -435,21 +435,21 @@ main() {
     read -r RUN_REPLY
     # 默认为Y，只有明确输入n或N时才跳过
     if [ "$RUN_REPLY" != "n" ] && [ "$RUN_REPLY" != "N" ]; then
-        # 检查run.sh权限
-        if [ -f "run.sh" ]; then
-            if [ ! -x "run.sh" ]; then
+        # 检查run权限
+        if [ -f "run" ]; then
+            if [ ! -x "run" ]; then
                 print_color_msg "$RED" "$ZH_RUN_PERMISSION_DENIED" "$EN_RUN_PERMISSION_DENIED"
                 print_color_msg "$YELLOW" "$ZH_RUN_PERMISSION_FIX" "$EN_RUN_PERMISSION_FIX"
-                echo "chmod +x run.sh"
+                echo "chmod +x run"
                 exit 1
             fi
             
             print_color_msg "$GREEN" "$ZH_STARTING_SERVICES" "$EN_STARTING_SERVICES"
-            # 将语言选择传递给run.sh
+            # 将语言选择传递给run
             export MOFA_LANG=$current_lang
-            exec ./run.sh
+            exec ./run
         else
-            print_color_msg "$RED" "run.sh 脚本不存在!" "run.sh script not found!"
+            print_color_msg "$RED" "run 脚本不存在!" "run script not found!"
         fi
     fi
 }
