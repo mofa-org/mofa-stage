@@ -35,6 +35,7 @@ ZH_FRONTEND_INSTALL="安装前端依赖..."
 ZH_FRONTEND_DIR_NOT_FOUND="找不到frontend目录!"
 ZH_INSTALL_NODEJS="请安装nodejs"
 ZH_INSTALL_NODEJS_BREW="macOS系统，用brew安装Node.js..."
+ZH_INSTALL_NODEJS_APT="Debian/Ubuntu系统，用apt安装Node.js..."
 ZH_NODE_VERSION="Node.js版本:"
 ZH_NPM_VERSION="npm版本:"
 ZH_NPM_INSTALL="npm install..."
@@ -93,6 +94,7 @@ EN_FRONTEND_INSTALL="Installing frontend dependencies..."
 EN_FRONTEND_DIR_NOT_FOUND="Frontend directory not found!"
 EN_INSTALL_NODEJS="Please install nodejs"
 EN_INSTALL_NODEJS_BREW="macOS system, using brew to install Node.js..."
+EN_INSTALL_NODEJS_APT="Debian/Ubuntu system, using apt to install Node.js..."
 EN_NODE_VERSION="Node.js version:"
 EN_NPM_VERSION="npm version:"
 EN_NPM_INSTALL="npm install..."
@@ -246,19 +248,30 @@ install_frontend() {
             if command -v brew &> /dev/null; then
                 print_color_msg "$GREEN" "$ZH_INSTALL_NODEJS_BREW" "$EN_INSTALL_NODEJS_BREW"
                 brew install node
-                # 重新检查Node
-                node_ver=$(node -v 2>/dev/null)
-                if [ $? -ne 0 ]; then
-                    print_color_msg "$RED" "$ZH_INSTALL_NODEJS" "$EN_INSTALL_NODEJS"
-                    echo "https://nodejs.org/"
-                    exit 1
-                fi
             else
                 print_color_msg "$RED" "$ZH_INSTALL_BREW" "$EN_INSTALL_BREW"
                 print_msg "$ZH_VISIT: https://brew.sh/" "$EN_VISIT: https://brew.sh/"
                 exit 1
             fi
+        elif [ "$sys" = "Linux" ]; then
+            if [ -f /etc/debian_version ] || [ -f /etc/ubuntu_version ]; then
+                print_color_msg "$GREEN" "$ZH_INSTALL_NODEJS_APT" "$EN_INSTALL_NODEJS_APT"
+                sudo apt-get update
+                sudo apt-get install -y nodejs npm
+            else
+                print_color_msg "$RED" "$ZH_INSTALL_NODEJS" "$EN_INSTALL_NODEJS"
+                echo "https://nodejs.org/"
+                exit 1
+            fi
         else
+            print_color_msg "$RED" "$ZH_INSTALL_NODEJS" "$EN_INSTALL_NODEJS"
+            echo "https://nodejs.org/"
+            exit 1
+        fi
+
+        # 重新检查Node
+        node_ver=$(node -v 2>/dev/null)
+        if [ $? -ne 0 ]; then
             print_color_msg "$RED" "$ZH_INSTALL_NODEJS" "$EN_INSTALL_NODEJS"
             echo "https://nodejs.org/"
             exit 1

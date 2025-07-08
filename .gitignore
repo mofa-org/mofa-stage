@@ -15,6 +15,7 @@ __pycache__/
 .project # Eclipse
 .classpath # Eclipse
 .cproject # Eclipse
+.claude/
 
 # Build and distribution directories
 build/
