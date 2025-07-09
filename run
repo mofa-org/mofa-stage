@@ -34,6 +34,14 @@ ZH_BACKEND_RUNNING="后端服务运行在"
 ZH_FRONTEND_RUNNING="前端服务运行在"
 ZH_PRESS_CTRL_C="按 Ctrl+C 停止所有服务"
 ZH_SELECT_LANGUAGE="请选择语言 / Please select language:"
+ZH_KILL_PORTS_PROMPT="检测到以下端口被占用，是否释放这些端口？"
+ZH_PORT_DESC_3000="前端服务 (Vite)"
+ZH_PORT_DESC_5001="WebSSH 服务"
+ZH_PORT_DESC_5002="后端 API 服务"
+ZH_PORT_DESC_7681="ttyd 终端服务"
+ZH_CONFIRM_KILL="确认释放？(y/n): "
+ZH_PORT_RELEASED="释放了端口"
+ZH_PORT_SKIPPED="跳过端口释放"
 
 # 英文语言包
 EN_INFO="[INFO]"
@@ -55,6 +63,14 @@ EN_BACKEND_RUNNING="Backend service running at"
 EN_FRONTEND_RUNNING="Frontend service running at"
 EN_PRESS_CTRL_C="Press Ctrl+C to stop all services"
 EN_SELECT_LANGUAGE="Please select language:"
+EN_KILL_PORTS_PROMPT="The following ports are in use. Do you want to release them?"
+EN_PORT_DESC_3000="Frontend service (Vite)"
+EN_PORT_DESC_5001="WebSSH service"
+EN_PORT_DESC_5002="Backend API service"
+EN_PORT_DESC_7681="ttyd terminal service"
+EN_CONFIRM_KILL="Confirm release? (y/n): "
+EN_PORT_RELEASED="Released port"
+EN_PORT_SKIPPED="Skipped port release"
 
 # 显示语言选择函数
 select_language() {
@@ -124,6 +140,76 @@ check_command() {
     fi
 }
 
+# 检查端口占用并询问用户
+check_and_kill_ports() {
+    local ports=(3000 5001 5002 7681)
+    local port_descs=()
+    local occupied_ports=()
+    
+    # 端口描述
+    if [ $current_lang -eq $LANG_ZH ]; then
+        port_descs[3000]="$ZH_PORT_DESC_3000"
+        port_descs[5001]="$ZH_PORT_DESC_5001"
+        port_descs[5002]="$ZH_PORT_DESC_5002"
+        port_descs[7681]="$ZH_PORT_DESC_7681"
+    else
+        port_descs[3000]="$EN_PORT_DESC_3000"
+        port_descs[5001]="$EN_PORT_DESC_5001"
+        port_descs[5002]="$EN_PORT_DESC_5002"
+        port_descs[7681]="$EN_PORT_DESC_7681"
+    fi
+    
+    # 检查哪些端口被占用
+    for port in ${ports[@]}; do
+        pid=$(lsof -t -i:$port 2>/dev/null || true)
+        if [ -n "$pid" ]; then
+            occupied_ports+=($port)
+        fi
+    done
+    
+    # 如果有端口被占用，询问用户
+    if [ ${#occupied_ports[@]} -gt 0 ]; then
+        if [ $current_lang -eq $LANG_ZH ]; then
+            echo -e "${YELLOW}$ZH_KILL_PORTS_PROMPT${NC}"
+        else
+            echo -e "${YELLOW}$EN_KILL_PORTS_PROMPT${NC}"
+        fi
+        
+        # 显示占用的端口信息
+        for port in ${occupied_ports[@]}; do
+            echo "  - $port: ${port_descs[$port]}"
+        done
+        
+        # 询问用户
+        if [ $current_lang -eq $LANG_ZH ]; then
+            read -p "$ZH_CONFIRM_KILL" confirm
+        else
+            read -p "$EN_CONFIRM_KILL" confirm
+        fi
+        
+        if [[ $confirm == "y" || $confirm == "Y" ]]; then
+            # 释放端口
+            for port in ${occupied_ports[@]}; do
+                pid=$(lsof -t -i:$port 2>/dev/null)
+                if [ -n "$pid" ]; then
+                    kill -9 $pid
+                    if [ $current_lang -eq $LANG_ZH ]; then
+                        print_info "$ZH_PORT_RELEASED $port"
+                    else
+                        print_info "$EN_PORT_RELEASED $port"
+                    fi
+                fi
+            done
+        else
+            if [ $current_lang -eq $LANG_ZH ]; then
+                print_info "$ZH_PORT_SKIPPED"
+            else
+                print_info "$EN_PORT_SKIPPED"
+            fi
+        fi
+    fi
+}
+
 # 初始化语言选择 - 优先使用环境变量，否则询问用户
 if [ ! -z "$MOFA_LANG" ]; then
     current_lang=$MOFA_LANG
@@ -133,6 +219,9 @@ fi
 
 # 权限检查
 check_permissions
+
+# 检查并释放端口
+check_and_kill_ports
 
 # 检查 Python 和 Node.js
 check_command python3
