@@ -25,6 +25,16 @@ ZH_SYSTEM_TYPE="系统类型:"
 ZH_PERMISSION_CHECK="检查脚本权限..."
 ZH_PERMISSION_DENIED="脚本没有执行权限!"
 ZH_PERMISSION_FIX="请运行以下命令赋予权限:"
+ZH_DOCKER_DETECTED="检测到 Docker 已安装"
+ZH_INSTALL_METHOD="请选择安装方式:"
+ZH_LOCAL_INSTALL="本地安装（需要 Python/Node.js）"
+ZH_DOCKER_INSTALL="Docker 安装（推荐，无需本地环境）"
+ZH_DOCKER_NOT_FOUND="未检测到 Docker，将使用本地安装方式"
+ZH_DOCKER_INSTALLING="使用 Docker 方式安装..."
+ZH_DOCKER_PULL="拉取最新镜像..."
+ZH_DOCKER_BUILD_LOCAL="本地构建 Docker 镜像..."
+ZH_DOCKER_SUCCESS="Docker 部署成功！"
+ZH_DOCKER_FAIL="Docker 部署失败"
 ZH_BACKEND_INSTALL="正在安装后端依赖..."
 ZH_BACKEND_DIR_NOT_FOUND="找不到backend目录!"
 ZH_PYTHON_VERSION="Python版本:"
@@ -84,6 +94,16 @@ EN_SYSTEM_TYPE="System type:"
 EN_PERMISSION_CHECK="Checking script permissions..."
 EN_PERMISSION_DENIED="Script does not have execute permission!"
 EN_PERMISSION_FIX="Please run the following command to grant permissions:"
+EN_DOCKER_DETECTED="Docker detected"
+EN_INSTALL_METHOD="Please select installation method:"
+EN_LOCAL_INSTALL="Local installation (requires Python/Node.js)"
+EN_DOCKER_INSTALL="Docker installation (recommended, no local environment needed)"
+EN_DOCKER_NOT_FOUND="Docker not found, will use local installation"
+EN_DOCKER_INSTALLING="Installing with Docker..."
+EN_DOCKER_PULL="Pulling latest image..."
+EN_DOCKER_BUILD_LOCAL="Building Docker image locally..."
+EN_DOCKER_SUCCESS="Docker deployment successful!"
+EN_DOCKER_FAIL="Docker deployment failed"
 EN_BACKEND_INSTALL="Installing backend dependencies..."
 EN_BACKEND_DIR_NOT_FOUND="Backend directory not found!"
 EN_PYTHON_VERSION="Python version:"
@@ -420,39 +440,136 @@ install_ttyd() {
     fi
 }
 
-# 主流程
-main() {
-    # 后端
-    install_backend
-    
-    # 前端
-    install_frontend
-    
-    # ttyd - 可选
-    install_ttyd
-   
-    echo
-    print_msg "$ZH_BUILD_PROD" "$EN_BUILD_PROD"
-    print_color_msg "$YELLOW" "$ZH_BUILD_PROD_CONFIRM" "$EN_BUILD_PROD_CONFIRM"
-    read -r REPLY
-    # 默认为N，只有明确输入y或Y时才构建生产版本
-    if [ "$REPLY" = "y" ] || [ "$REPLY" = "Y" ]; then
-        build_frontend
-        
-        print_color_msg "$GREEN" "$ZH_COMPLETE" "$EN_COMPLETE"
-        print_color_msg "$YELLOW" "$ZH_START_BACKEND" "$EN_START_BACKEND"
-        print_color_msg "$YELLOW" "$ZH_FRONTEND_DEPLOY" "$EN_FRONTEND_DEPLOY"
-        print_msg "$ZH_NGINX_CONFIG" "$EN_NGINX_CONFIG"
-        print_msg "$ZH_SIMPLE_SERVER" "$EN_SIMPLE_SERVER"
+# Docker相关函数
+check_docker() {
+    if command -v docker &> /dev/null; then
+        return 0
     else
-        print_color_msg "$GREEN" "$ZH_INSTALL_COMPLETE" "$EN_INSTALL_COMPLETE"
-        print_color_msg "$YELLOW" "$ZH_START_BACKEND" "$EN_START_BACKEND"
-        print_color_msg "$YELLOW" "$ZH_FRONTEND_DEV" "$EN_FRONTEND_DEV"
-        print_color_msg "$YELLOW" "$ZH_FUTURE_BUILD" "$EN_FUTURE_BUILD"
+        return 1
+    fi
+}
+
+select_install_method() {
+    if check_docker; then
+        print_color_msg "$GREEN" "$ZH_DOCKER_DETECTED" "$EN_DOCKER_DETECTED"
+        echo
+        print_msg "$ZH_INSTALL_METHOD" "$EN_INSTALL_METHOD"
+        echo "1. $( [ $current_lang -eq $LANG_ZH ] && echo "$ZH_LOCAL_INSTALL" || echo "$EN_LOCAL_INSTALL" )"
+        echo "2. $( [ $current_lang -eq $LANG_ZH ] && echo "$ZH_DOCKER_INSTALL" || echo "$EN_DOCKER_INSTALL" )"
+        echo
+        read -p "$( [ $current_lang -eq $LANG_ZH ] && echo "选择 (1/2, 默认: 2): " || echo "Select (1/2, default: 2): " )" install_choice
+        
+        if [ "$install_choice" = "1" ]; then
+            return 1  # 本地安装
+        else
+            return 0  # Docker安装
+        fi
+    else
+        print_color_msg "$YELLOW" "$ZH_DOCKER_NOT_FOUND" "$EN_DOCKER_NOT_FOUND"
+        sleep 2
+        return 1  # 本地安装
+    fi
+}
+
+install_with_docker() {
+    print_color_msg "$GREEN" "$ZH_DOCKER_INSTALLING" "$EN_DOCKER_INSTALLING"
+    
+    # 检查是否有docker-compose文件
+    if [ -f "docker-compose.yml" ]; then
+        # 使用docker-compose
+        docker-compose up -d
+        if [ $? -eq 0 ]; then
+            print_color_msg "$GREEN" "$ZH_DOCKER_SUCCESS" "$EN_DOCKER_SUCCESS"
+            return 0
+        fi
     fi
     
-    print_color_msg "$GREEN" "$ZH_ACCESS_URL" "$EN_ACCESS_URL"
-    print_msg "$ZH_HAVE_FUN" "$EN_HAVE_FUN"
+    # 单独部署前端容器
+    print_color_msg "$YELLOW" "$ZH_DOCKER_PULL" "$EN_DOCKER_PULL"
+    docker pull liyao1119/mofa-stage-frontend:latest
+    
+    if [ $? -ne 0 ]; then
+        # 如果拉取失败，尝试本地构建
+        print_color_msg "$YELLOW" "$ZH_DOCKER_BUILD_LOCAL" "$EN_DOCKER_BUILD_LOCAL"
+        cd frontend
+        if [ -f "Dockerfile" ]; then
+            docker build -t mofa-stage-frontend:latest .
+            cd ..
+        else
+            print_color_msg "$RED" "$ZH_DOCKER_FAIL" "$EN_DOCKER_FAIL"
+            return 1
+        fi
+    fi
+    
+    # 运行容器
+    # 先检查是否已存在同名容器
+    if docker ps -a | grep -q mofa-frontend; then
+        docker stop mofa-frontend 2>/dev/null || true
+        docker rm mofa-frontend 2>/dev/null || true
+    fi
+    
+    docker run -d -p 3000:80 --name mofa-frontend \
+        --add-host=host.docker.internal:host-gateway \
+        liyao1119/mofa-stage-frontend:latest
+    
+    if [ $? -eq 0 ]; then
+        print_color_msg "$GREEN" "$ZH_DOCKER_SUCCESS" "$EN_DOCKER_SUCCESS"
+        echo
+        print_color_msg "$YELLOW" "$ZH_START_BACKEND" "$EN_START_BACKEND"
+        print_color_msg "$GREEN" "$ZH_ACCESS_URL" "$EN_ACCESS_URL"
+        
+        # 仍然需要安装后端依赖
+        echo
+        print_color_msg "$YELLOW" "安装后端Python依赖..." "Installing backend Python dependencies..."
+        install_backend
+        
+        return 0
+    else
+        print_color_msg "$RED" "$ZH_DOCKER_FAIL" "$EN_DOCKER_FAIL"
+        return 1
+    fi
+}
+
+# 主流程
+main() {
+    # 检查安装方式
+    if select_install_method; then
+        # Docker 安装流程
+        install_with_docker
+    else
+        # 原有的本地安装流程
+        # 后端
+        install_backend
+        
+        # 前端
+        install_frontend
+        
+        # ttyd - 可选
+        install_ttyd
+       
+        echo
+        print_msg "$ZH_BUILD_PROD" "$EN_BUILD_PROD"
+        print_color_msg "$YELLOW" "$ZH_BUILD_PROD_CONFIRM" "$EN_BUILD_PROD_CONFIRM"
+        read -r REPLY
+        # 默认为N，只有明确输入y或Y时才构建生产版本
+        if [ "$REPLY" = "y" ] || [ "$REPLY" = "Y" ]; then
+            build_frontend
+            
+            print_color_msg "$GREEN" "$ZH_COMPLETE" "$EN_COMPLETE"
+            print_color_msg "$YELLOW" "$ZH_START_BACKEND" "$EN_START_BACKEND"
+            print_color_msg "$YELLOW" "$ZH_FRONTEND_DEPLOY" "$EN_FRONTEND_DEPLOY"
+            print_msg "$ZH_NGINX_CONFIG" "$EN_NGINX_CONFIG"
+            print_msg "$ZH_SIMPLE_SERVER" "$EN_SIMPLE_SERVER"
+        else
+            print_color_msg "$GREEN" "$ZH_INSTALL_COMPLETE" "$EN_INSTALL_COMPLETE"
+            print_color_msg "$YELLOW" "$ZH_START_BACKEND" "$EN_START_BACKEND"
+            print_color_msg "$YELLOW" "$ZH_FRONTEND_DEV" "$EN_FRONTEND_DEV"
+            print_color_msg "$YELLOW" "$ZH_FUTURE_BUILD" "$EN_FUTURE_BUILD"
+        fi
+        
+        print_color_msg "$GREEN" "$ZH_ACCESS_URL" "$EN_ACCESS_URL"
+        print_msg "$ZH_HAVE_FUN" "$EN_HAVE_FUN"
+    fi
     
     # 询问是否启动服务
     echo

@@ -41,7 +41,23 @@ MoFA_Stage is a web-based development tool for managing and editing Agents and D
 
 ## Quick Start
 
-### Environment Requirements
+### 🐳 Docker Deployment (Recommended)
+
+For the fastest setup with no environment conflicts, use Docker:
+
+```bash
+# One-line deployment
+docker run -d -p 3000:80 liyao1119/mofa-stage-frontend
+
+# Then start backend
+cd backend && python app.py
+```
+
+See [Docker Quick Start Guide](DOCKER_QUICKSTART.md) for detailed instructions.
+
+### Traditional Installation
+
+#### Environment Requirements
 
 **System Support**
 - Linux (supports apt-get and yum package managers)
@@ -53,22 +69,23 @@ MoFA_Stage is a web-based development tool for managing and editing Agents and D
 - Node.js 14 or higher
 - MoFA framework installed
 
-### Installation and Run Scripts
+#### Installation and Run Scripts
 
 The project provides two scripts:
 
-- **install.sh**: One-click installation of all dependencies
+- **install**: One-click installation of all dependencies
   ```bash
-  chmod +x install.sh
-  ./install.sh
+  chmod +x install
+  ./install
   ```
-  Automatically installs backend/frontend dependencies, and installs ttyd and builds the frontend as needed.
+  Automatically installs backend/frontend dependencies, with options for Docker or traditional installation.
 
-- **run.sh**: One-click service startup
+- **run**: One-click service startup
   ```bash
-  chmod +x run.sh
-  ./run.sh
+  chmod +x run
+  ./run
   ```
+  Supports both Docker and traditional deployment modes.
 
 ### Development Mode
 

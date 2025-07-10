@@ -41,7 +41,23 @@ MoFA_Stage 是一个 Web 界面的开发工具，用于管理和编辑 MoFA 框�
 
 ## 快速开始
 
-### 环境要求
+### 🐳 Docker 部署（推荐）
+
+使用 Docker 可以避免所有环境问题，实现最快速的部署：
+
+```bash
+# 一行命令部署前端
+docker run -d -p 3000:80 liyao1119/mofa-stage-frontend
+
+# 启动后端
+cd backend && python app.py
+```
+
+详细说明请查看 [Docker 快速部署指南](DOCKER_QUICKSTART.md)。
+
+### 传统安装方式
+
+#### 环境要求
 
 **系统支持**
 - Linux（支持 apt-get 和 yum 包管理系统）
@@ -53,22 +69,23 @@ MoFA_Stage 是一个 Web 界面的开发工具，用于管理和编辑 MoFA 框�
 - Node.js 14 或更高
 - 已安装 MoFA 框架
 
-### 安装和运行脚本
+#### 安装和运行脚本
 
 项目提供了两个脚本：
 
-- **install.sh**: 一键安装所有依赖
+- **install**: 一键安装所有依赖
   ```bash
-  chmod +x install.sh
-  ./install.sh
+  chmod +x install
+  ./install
   ```
-  自动安装后端/前端依赖，并根据需要安装 ttyd、构建前端。
+  自动安装后端/前端依赖，支持选择 Docker 或传统安装方式。
 
-- **run.sh**: 一键启动服务
+- **run**: 一键启动服务
   ```bash
-  chmod +x run.sh
-  ./run.sh
+  chmod +x run
+  ./run
   ```
+  支持 Docker 和传统部署模式。
 
 
 ### 开发模式

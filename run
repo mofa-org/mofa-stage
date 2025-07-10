@@ -42,6 +42,16 @@ ZH_PORT_DESC_7681="ttyd 终端服务"
 ZH_CONFIRM_KILL="确认释放？(y/n): "
 ZH_PORT_RELEASED="释放了端口"
 ZH_PORT_SKIPPED="跳过端口释放"
+ZH_DOCKER_MODE="Docker 运行模式"
+ZH_LOCAL_MODE="本地运行模式"
+ZH_SELECT_RUN_MODE="请选择运行模式:"
+ZH_DOCKER_NOT_RUNNING="Docker 服务未运行，将使用本地模式"
+ZH_STARTING_DOCKER="使用 Docker 模式启动服务..."
+ZH_DOCKER_FRONTEND_EXISTS="检测到已运行的前端容器"
+ZH_DOCKER_FRONTEND_RESTART="是否重启前端容器? (Y/n):"
+ZH_DOCKER_FRONTEND_STARTING="启动前端容器..."
+ZH_DOCKER_FRONTEND_SUCCESS="前端容器启动成功"
+ZH_DOCKER_FRONTEND_FAIL="前端容器启动失败"
 
 # 英文语言包
 EN_INFO="[INFO]"
@@ -71,6 +81,16 @@ EN_PORT_DESC_7681="ttyd terminal service"
 EN_CONFIRM_KILL="Confirm release? (y/n): "
 EN_PORT_RELEASED="Released port"
 EN_PORT_SKIPPED="Skipped port release"
+EN_DOCKER_MODE="Docker run mode"
+EN_LOCAL_MODE="Local run mode"
+EN_SELECT_RUN_MODE="Please select run mode:"
+EN_DOCKER_NOT_RUNNING="Docker service not running, will use local mode"
+EN_STARTING_DOCKER="Starting services with Docker mode..."
+EN_DOCKER_FRONTEND_EXISTS="Frontend container already running"
+EN_DOCKER_FRONTEND_RESTART="Restart frontend container? (Y/n):"
+EN_DOCKER_FRONTEND_STARTING="Starting frontend container..."
+EN_DOCKER_FRONTEND_SUCCESS="Frontend container started successfully"
+EN_DOCKER_FRONTEND_FAIL="Frontend container failed to start"
 
 # 显示语言选择函数
 select_language() {
@@ -210,6 +230,167 @@ check_and_kill_ports() {
     fi
 }
 
+# 检查 Docker 是否可用
+check_docker() {
+    if command -v docker &> /dev/null; then
+        # 尝试运行docker ps，如果失败可能是权限问题或服务未启动
+        if docker ps &> /dev/null; then
+            return 0
+        else
+            # Docker已安装但服务未启动
+            if [ "$(uname)" = "Darwin" ]; then
+                # macOS - 尝试启动Docker Desktop
+                if [ $current_lang -eq $LANG_ZH ]; then
+                    print_info "检测到Docker未运行，正在启动Docker Desktop..."
+                else
+                    print_info "Docker not running, starting Docker Desktop..."
+                fi
+                
+                # 启动Docker Desktop
+                open -a Docker
+                
+                # 等待Docker启动
+                local count=0
+                while ! docker ps &> /dev/null && [ $count -lt 30 ]; do
+                    if [ $count -eq 0 ]; then
+                        if [ $current_lang -eq $LANG_ZH ]; then
+                            echo -n "等待Docker启动"
+                        else
+                            echo -n "Waiting for Docker to start"
+                        fi
+                    fi
+                    echo -n "."
+                    sleep 2
+                    count=$((count + 1))
+                done
+                echo
+                
+                if docker ps &> /dev/null; then
+                    if [ $current_lang -eq $LANG_ZH ]; then
+                        print_info "Docker Desktop已启动"
+                    else
+                        print_info "Docker Desktop started"
+                    fi
+                    return 0
+                else
+                    if [ $current_lang -eq $LANG_ZH ]; then
+                        print_error "Docker Desktop启动失败，请手动启动"
+                    else
+                        print_error "Failed to start Docker Desktop, please start manually"
+                    fi
+                    return 1
+                fi
+            else
+                # Linux系统
+                if [ $current_lang -eq $LANG_ZH ]; then
+                    print_info "Docker已安装但服务未启动，请运行: sudo systemctl start docker"
+                else
+                    print_info "Docker installed but service not started, run: sudo systemctl start docker"
+                fi
+                return 1
+            fi
+        fi
+    else
+        return 1
+    fi
+}
+
+# 选择运行模式
+select_run_mode() {
+    # 如果有环境变量，直接使用
+    if [ ! -z "$MOFA_RUN_MODE" ]; then
+        if [ "$MOFA_RUN_MODE" = "docker" ]; then
+            return 0  # Docker 模式
+        else
+            return 1  # 本地模式
+        fi
+    fi
+    
+    # 检查Docker是否可用
+    if check_docker; then
+        if [ $current_lang -eq $LANG_ZH ]; then
+            echo -e "${YELLOW}$ZH_SELECT_RUN_MODE${NC}"
+            echo "1. $ZH_LOCAL_MODE"
+            echo "2. $ZH_DOCKER_MODE (推荐)"
+            read -p "选择 (1/2, 默认: 2): " mode_choice
+        else
+            echo -e "${YELLOW}$EN_SELECT_RUN_MODE${NC}"
+            echo "1. $EN_LOCAL_MODE"
+            echo "2. $EN_DOCKER_MODE (Recommended)"
+            read -p "Select (1/2, default: 2): " mode_choice
+        fi
+        
+        # 默认选择Docker模式
+        if [ -z "$mode_choice" ] || [ "$mode_choice" = "2" ]; then
+            return 0  # Docker 模式
+        else
+            return 1  # 本地模式
+        fi
+    else
+        if [ $current_lang -eq $LANG_ZH ]; then
+            print_info "$ZH_DOCKER_NOT_RUNNING"
+        else
+            print_info "$EN_DOCKER_NOT_RUNNING"
+        fi
+        sleep 2
+        return 1  # 本地模式
+    fi
+}
+
+# Docker 模式运行前端
+run_frontend_with_docker() {
+    if [ $current_lang -eq $LANG_ZH ]; then
+        print_info "$ZH_STARTING_DOCKER"
+    else
+        print_info "$EN_STARTING_DOCKER"
+    fi
+    
+    # 检查是否已有运行的容器
+    if docker ps -a | grep -q mofa-frontend; then
+        if [ $current_lang -eq $LANG_ZH ]; then
+            print_info "$ZH_DOCKER_FRONTEND_EXISTS"
+            read -p "$ZH_DOCKER_FRONTEND_RESTART" restart_choice
+        else
+            print_info "$EN_DOCKER_FRONTEND_EXISTS"
+            read -p "$EN_DOCKER_FRONTEND_RESTART" restart_choice
+        fi
+        
+        if [ "$restart_choice" != "n" ] && [ "$restart_choice" != "N" ]; then
+            docker stop mofa-frontend 2>/dev/null
+            docker rm mofa-frontend 2>/dev/null
+        else
+            return 0
+        fi
+    fi
+    
+    # 启动前端容器
+    if [ $current_lang -eq $LANG_ZH ]; then
+        print_info "$ZH_DOCKER_FRONTEND_STARTING"
+    else
+        print_info "$EN_DOCKER_FRONTEND_STARTING"
+    fi
+    
+    docker run -d -p 3000:80 --name mofa-frontend \
+        --add-host=host.docker.internal:host-gateway \
+        liyao1119/mofa-stage-frontend:latest
+    
+    if [ $? -eq 0 ]; then
+        if [ $current_lang -eq $LANG_ZH ]; then
+            print_info "$ZH_DOCKER_FRONTEND_SUCCESS"
+        else
+            print_info "$EN_DOCKER_FRONTEND_SUCCESS"
+        fi
+        return 0
+    else
+        if [ $current_lang -eq $LANG_ZH ]; then
+            print_error "$ZH_DOCKER_FRONTEND_FAIL"
+        else
+            print_error "$EN_DOCKER_FRONTEND_FAIL"
+        fi
+        return 1
+    fi
+}
+
 # 初始化语言选择 - 优先使用环境变量，否则询问用户
 if [ ! -z "$MOFA_LANG" ]; then
     current_lang=$MOFA_LANG
@@ -219,14 +400,6 @@ fi
 
 # 权限检查
 check_permissions
-
-# 检查并释放端口
-check_and_kill_ports
-
-# 检查 Python 和 Node.js
-check_command python3
-check_command node
-check_command npm
 
 # 获取脚本所在目录的绝对路径
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -239,14 +412,6 @@ start_backend() {
         print_info "$EN_STARTING_BACKEND"
     fi
     cd "$SCRIPT_DIR/backend"
-    
-    # 安装 Python 依赖 - 已在install.sh中完成，跳过
-    # if [ $current_lang -eq $LANG_ZH ]; then
-    #     print_info "$ZH_INSTALL_PYTHON_DEPS"
-    # else
-    #     print_info "$EN_INSTALL_PYTHON_DEPS"
-    # fi
-    # pip3 install -r requirements.txt
     
     # 在后台启动 Flask 服务
     python app.py &
@@ -266,16 +431,6 @@ start_frontend() {
         print_info "$EN_STARTING_FRONTEND"
     fi
     cd "$SCRIPT_DIR/frontend"
-    
-    # 检查并安装 Node.js 依赖 - 已在install.sh中完成，跳过
-    # if [ ! -d "node_modules" ]; then
-    #     if [ $current_lang -eq $LANG_ZH ]; then
-    #         print_info "$ZH_INSTALL_FRONTEND_DEPS"
-    #     else
-    #         print_info "$EN_INSTALL_FRONTEND_DEPS"
-    #     fi
-    #     npm install
-    # fi
     
     # 在后台启动 Vite 开发服务器
     npm run dev &
@@ -311,22 +466,71 @@ cleanup() {
 # 注册清理函数
 trap cleanup SIGINT SIGTERM
 
-# 启动服务
-start_backend
+# 检查并释放端口
+check_and_kill_ports
 
-start_frontend
+# 选择运行模式
+if select_run_mode; then
+    # Docker 模式
+    # 后端仍需本地运行
+    check_command python3
+    
+    # Docker运行前端
+    run_frontend_with_docker
+    
+    # 启动后端
+    start_backend
+else
+    # 本地模式
+    # 检查 Python 和 Node.js
+    check_command python3
+    check_command node
+    check_command npm
+    
+    # 启动服务
+    start_backend
+    start_frontend
+fi
+
+# 打开浏览器的函数
+open_browser() {
+    local url="$1"
+    
+    # 等待一下确保服务已经启动
+    sleep 2
+    
+    # 根据操作系统选择打开方式
+    if [ "$(uname)" = "Darwin" ]; then
+        # macOS
+        open "$url"
+    elif [ "$(uname)" = "Linux" ]; then
+        # Linux
+        if command -v xdg-open &> /dev/null; then
+            xdg-open "$url"
+        elif command -v gnome-open &> /dev/null; then
+            gnome-open "$url"
+        elif command -v kde-open &> /dev/null; then
+            kde-open "$url"
+        fi
+    fi
+}
+
+# 服务已在前面根据模式启动
 
 if [ $current_lang -eq $LANG_ZH ]; then
     print_info "$ZH_ALL_SERVICES_STARTED"
-    print_info "$ZH_BACKEND_RUNNING http://localhost:5000"
-    print_info "$ZH_FRONTEND_RUNNING http://localhost:5173"
+    print_info "$ZH_BACKEND_RUNNING http://localhost:5002"
+    print_info "$ZH_FRONTEND_RUNNING http://localhost:3000"
     print_info "$ZH_PRESS_CTRL_C"
 else
     print_info "$EN_ALL_SERVICES_STARTED"
-    print_info "$EN_BACKEND_RUNNING http://localhost:5000"
-    print_info "$EN_FRONTEND_RUNNING http://localhost:5173"
+    print_info "$EN_BACKEND_RUNNING http://localhost:5002"
+    print_info "$EN_FRONTEND_RUNNING http://localhost:3000"
     print_info "$EN_PRESS_CTRL_C"
 fi
+
+# 自动打开浏览器
+open_browser "http://localhost:3000" &
 
 # 保持脚本运行
 wait 
