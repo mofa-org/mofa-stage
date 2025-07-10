@@ -142,7 +142,7 @@ check_command() {
 
 # 检查端口占用并询问用户
 check_and_kill_ports() {
-    local ports=(3000 5001 5002 7681)
+    local ports=(3000 5001 5002)
     local port_descs=()
     local occupied_ports=()
     
@@ -249,7 +249,7 @@ start_backend() {
     # pip3 install -r requirements.txt
     
     # 在后台启动 Flask 服务
-    python3 app.py &
+    python app.py &
     BACKEND_PID=$!
     if [ $current_lang -eq $LANG_ZH ]; then
         print_info "$ZH_BACKEND_STARTED $BACKEND_PID)"

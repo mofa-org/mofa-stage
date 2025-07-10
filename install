@@ -239,15 +239,21 @@ install_frontend() {
         exit 1; 
     }
     
-    # 检查Node
+    # 检查Node并强制使用LTS
     node_ver=$(node -v 2>/dev/null)
-    if [ $? -ne 0 ]; then
+    if [ $? -ne 0 ] || [ "$FORCE_NODE_LTS" = "1" ]; then
         # 在macOS上自动用brew安装Node.js
         if [ "$sys" = "Darwin" ]; then
             # 检查brew
             if command -v brew &> /dev/null; then
+                # 如果已有Node.js且要求强制LTS，先卸载
+                if [ "$FORCE_NODE_LTS" = "1" ] && command -v node &> /dev/null; then
+                    print_color_msg "$YELLOW" "卸载现有Node.js..." "Removing existing Node.js..."
+                    brew uninstall --ignore-dependencies node 2>/dev/null || true
+                fi
+                
                 print_color_msg "$GREEN" "$ZH_INSTALL_NODEJS_BREW" "$EN_INSTALL_NODEJS_BREW"
-                brew install node
+                brew install node@lts
             else
                 print_color_msg "$RED" "$ZH_INSTALL_BREW" "$EN_INSTALL_BREW"
                 print_msg "$ZH_VISIT: https://brew.sh/" "$EN_VISIT: https://brew.sh/"
@@ -255,9 +261,15 @@ install_frontend() {
             fi
         elif [ "$sys" = "Linux" ]; then
             if [ -f /etc/debian_version ] || [ -f /etc/ubuntu_version ]; then
+                # 如果要求强制LTS，先卸载现有版本
+                if [ "$FORCE_NODE_LTS" = "1" ] && command -v node &> /dev/null; then
+                    print_color_msg "$YELLOW" "卸载现有Node.js..." "Removing existing Node.js..."
+                    sudo apt-get remove -y nodejs npm 2>/dev/null || true
+                fi
+                
                 print_color_msg "$GREEN" "$ZH_INSTALL_NODEJS_APT" "$EN_INSTALL_NODEJS_APT"
-                sudo apt-get update
-                sudo apt-get install -y nodejs npm
+                curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+                sudo apt-get install -y nodejs
             else
                 print_color_msg "$RED" "$ZH_INSTALL_NODEJS" "$EN_INSTALL_NODEJS"
                 echo "https://nodejs.org/"
