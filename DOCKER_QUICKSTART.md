@@ -26,17 +26,15 @@ cd backend
 python app.py
 ```
 
-#### 方法二：使用预构建镜像（待上传，not working）
+#### 方法二：使用Docker Hub镜像（最简单）
 ```bash
-# 直接运行前端容器
-cd mofa-stage/frontend
-
+# 直接拉取并运行
 docker run -d -p 3000:80 --name mofa-frontend \
   --add-host=host.docker.internal:host-gateway \
-  ghcr.io/bh3gei/mofa-stage-frontend:latest
+  bh3gei/mofa-stage-frontend:latest
 
 # 启动后端
-cd ../backend
+cd backend
 python app.py
 ```
 
