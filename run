@@ -207,7 +207,7 @@ check_and_kill_ports() {
             read -p "$EN_CONFIRM_KILL" confirm
         fi
         
-        if [[ $confirm == "y" || $confirm == "Y" ]]; then
+        if [[ -z "$confirm" || $confirm == "y" || $confirm == "Y" ]]; then
             # 释放端口
             for port in ${occupied_ports[@]}; do
                 pid=$(lsof -t -i:$port 2>/dev/null || true)
