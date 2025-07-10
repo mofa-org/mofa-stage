@@ -22,7 +22,7 @@ cd frontend
 ./docker-build.sh
 
 # 启动后端（另一个终端）
-cd ../backend
+cd backend
 python app.py
 ```
 
