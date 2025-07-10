@@ -1,6 +1,16 @@
 # 构建阶段
 FROM node:lts-alpine AS builder
 
+# 安装中文字符集和locale支持
+RUN apk add --no-cache tzdata \
+    && apk add --no-cache gcompat \
+    && apk add --no-cache musl-locales musl-locales-lang
+
+# 设置环境变量
+ENV LANG=zh_CN.UTF-8 \
+    LANGUAGE=zh_CN.UTF-8 \
+    LC_ALL=zh_CN.UTF-8
+
 WORKDIR /app
 
 # 复制依赖文件
@@ -17,6 +27,16 @@ RUN npm run build
 
 # 运行阶段
 FROM nginx:alpine
+
+# 安装中文字符集和locale支持
+RUN apk add --no-cache tzdata \
+    && apk add --no-cache gcompat \
+    && apk add --no-cache musl-locales musl-locales-lang
+
+# 设置环境变量
+ENV LANG=zh_CN.UTF-8 \
+    LANGUAGE=zh_CN.UTF-8 \
+    LC_ALL=zh_CN.UTF-8
 
 # 复制构建产物
 COPY --from=builder /app/dist /usr/share/nginx/html
