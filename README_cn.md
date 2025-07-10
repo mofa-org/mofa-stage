@@ -39,29 +39,8 @@ MoFA_Stage 是一个 Web 界面的开发工具，用于管理和编辑 MoFA 框�
 - ttyd（推荐）
 - code-server（可选）
 
-## 快速开始
 
-### Docker 部署（推荐）
-
-使用 Docker 可以避免所有环境问题，实现最快速的部署：
-
-```bash
-# 直接运行安装脚本即可选择docker部署
-./install
-./run
-
-也可以单独配置：
-
-# 一行命令部署前端
-docker run -d -p 3000:80 liyao1119/mofa-stage-frontend
-
-# 启动后端
-cd backend && python app.py
-```
-
-详细说明请查看 [Docker 快速部署指南](DOCKER_QUICKSTART.md)。
-
-### 传统安装方式
+### 快速开始
 
 #### 环境要求
 
@@ -84,17 +63,36 @@ cd backend && python app.py
   chmod +x install
   ./install
   ```
-  自动安装后端/前端依赖，支持选择 Docker 或传统安装方式。
+  自动安装后端/前端依赖，支持选择 Docker 或传统安装方式。本地部署时，应选择非docker部署。
 
 - **run**: 一键启动服务
   ```bash
   chmod +x run
   ./run
   ```
-  支持 Docker 和传统部署模式。
+  支持 Docker 和传统部署模式。本地部署时，应选择非docker部署。
 
+### 关于Docker 部署（推荐）
 
-### 开发模式
+使用 Docker 可以避免所有环境问题，实现最快速的部署：
+
+```bash
+# 直接运行安装脚本即可选择docker部署
+./install
+./run
+
+# 也可以单独配置：
+
+# 一行命令部署前端
+docker run -d -p 3000:80 liyao1119/mofa-stage-frontend
+
+# 启动后端
+cd backend && python app.py
+```
+
+详细说明请查看 [Docker 快速部署指南](DOCKER_QUICKSTART.md)。
+
+### 开发模式（手动启动）
 
 1. 启动后端
 ```bash
