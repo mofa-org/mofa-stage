@@ -19,11 +19,17 @@ COPY package*.json ./
 # 安装依赖
 RUN npm ci
 
-# 复制源代码
+# 复制源代码 - 确保国际化文件被正确复制
 COPY . .
+
+# 验证国际化文件存在
+RUN ls -la src/locales/ && cat src/locales/index.js | head -20
 
 # 构建生产版本
 RUN npm run build
+
+# 验证构建产物中的国际化文件
+RUN ls -la dist/assets/ | grep -E "\.(js|css)$" | head -5
 
 # 运行阶段
 FROM nginx:alpine

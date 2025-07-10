@@ -5,7 +5,7 @@
         <h1 class="page-title">System Configuration</h1>
         <p class="page-subtitle">Manage your environment settings and preferences</p>
         <div class="keyboard-hint">
-          <span class="hint-text">💡 使用 {{ isMac ? 'Cmd+S' : 'Ctrl+S' }} 快速保存设置</span>
+          <span class="hint-text">💡 Use {{ isMac ? 'Cmd+S' : 'Ctrl+S' }} to save settings</span>
         </div>
       </div>
       <div class="page-actions">

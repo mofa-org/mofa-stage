@@ -21,7 +21,7 @@
     "svg-pan-zoom": "^3.6.2",
     "vscode": "npm:@codingame/monaco-vscode-api@^17.2.0",
     "vue": "^3.3.8",
-    "vue-i18n": "^12.0.0-alpha.2",
+    "vue-i18n": "^9.14.1",
     "vue-router": "^4.2.5",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0"
