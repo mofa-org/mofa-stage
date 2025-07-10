@@ -11,16 +11,15 @@ if (!messages || !messages.zh || !messages.en) {
   console.log('✅ i18n messages loaded:', Object.keys(messages))
 }
 
-// Create i18n instance with default locale
+// Create i18n instance with default locale - Vue I18n v9 configuration
 export const i18n = createI18n({
-  legacy: false,
+  legacy: false, // Use Composition API
   locale: initialLocale,
   fallbackLocale: 'zh',
   messages,
+  globalInjection: true, // Enable global $t function
   silentTranslationWarn: false,
-  silentFallbackWarn: false,
-  missingWarn: true,
-  fallbackWarn: true
+  silentFallbackWarn: false
 })
 
 // Set language and ensure it's stored in both localStorage and applies immediately
@@ -37,6 +36,7 @@ export function setLanguage(lang) {
   document.documentElement.setAttribute('lang', lang)
   
   console.log(`✅ Language changed to: ${lang}`)
+  console.log('🧪 Test translation:', i18n.global.t('settings.save'))
 }
 
 export function getLanguage() {

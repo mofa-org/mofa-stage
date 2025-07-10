@@ -2,7 +2,7 @@
 
 English | [中文](README_cn.md)
 
-MoFA_Stage is a web-based development tool for managing and editing Agents and Dataflows in the MoFA framework.
+MoFA_Stage is a web-based development tool for managing and editing Nodes and Dataflows in the MoFA framework.
 
 ## Features
 
@@ -36,26 +36,11 @@ MoFA_Stage is a web-based development tool for managing and editing Agents and D
 - Monaco editor
 
 **Third-party Services**
-- ttyd (recommanded)
+- ttyd (recommended)
 - code-server (optional)
 
-## Quick Start
 
-### 🐳 Docker Deployment (Recommended)
-
-For the fastest setup with no environment conflicts, use Docker:
-
-```bash
-# One-line deployment
-docker run -d -p 3000:80 liyao1119/mofa-stage-frontend
-
-# Then start backend
-cd backend && python app.py
-```
-
-See [Docker Quick Start Guide](DOCKER_QUICKSTART.md) for detailed instructions.
-
-### Traditional Installation
+### Quick Start
 
 #### Environment Requirements
 
@@ -78,16 +63,74 @@ The project provides two scripts:
   chmod +x install
   ./install
   ```
-  Automatically installs backend/frontend dependencies, with options for Docker or traditional installation.
+  Automatically installs backend/frontend dependencies with options for Docker or traditional installation. After installation, it will prompt whether to run, selecting yes will execute the run script. For local deployment, choose non-docker deployment.
 
 - **run**: One-click service startup
   ```bash
   chmod +x run
   ./run
   ```
-  Supports both Docker and traditional deployment modes.
+  Supports both Docker and traditional deployment modes. For local deployment, choose non-docker deployment.
 
-### Development Mode
+##### Docker Deployment (Recommended)
+
+###### Using Docker avoids all environment issues for the fastest deployment:
+
+```bash
+# Simply run the installation script to choose docker deployment
+./install
+./run
+
+# Or configure separately:
+
+# One-line frontend deployment
+docker run -d -p 3000:80 liyao1119/mofa-stage-frontend
+
+# Start backend
+cd backend && python app.py
+```
+
+**🚀 Quick Start (30-second deployment)**
+
+**Method 1: Using Official Image (Recommended)**
+
+```bash
+# 1. Pull and start frontend
+docker run -d -p 3000:80 --name mofa-frontend \
+  --add-host=host.docker.internal:host-gateway \
+  liyao1119/mofa-stage-frontend:latest
+
+# 2. Clone repository and start backend
+git clone https://github.com/mofa-org/mofa-stage.git
+cd mofa-stage/backend
+pip install -r requirements.txt
+python app.py
+
+# 3. Access system
+# Open browser: http://localhost:3000
+```
+
+**Method 2: Local Build**
+
+```bash
+# 1. Clone code
+git clone https://github.com/mofa-org/mofa-stage.git
+cd mofa-stage
+
+# 2. Use installation script (supports Docker mode selection)
+./install
+
+# 3. Start services
+./run
+```
+
+**📋 System Requirements**
+
+- Docker Desktop ([Download](https://www.docker.com/products/docker-desktop/))
+- Python 3.8+ (backend only)
+- 4GB available memory
+
+### Development Mode (Manual Startup)
 
 1. Start the backend
 ```bash
@@ -174,14 +217,75 @@ done
 
 ### Port Description
 
-- 3000: Frontend service
-- 5001: WebSSH service
-- 5002: Main backend API
-- 7681: ttyd terminal
+| Service | Port | Description |
+|---------|------|-------------|
+| Frontend | 3000 | Web interface |
+| Backend API | 5002 | Flask service |
+| WebSSH | 5001 | SSH terminal |
+| ttyd | 7681 | Web terminal |
+| VS Code | 8080 | Code editor |
 
 ### ttyd Installation Failure
 
 If ttyd automatic installation fails, you can refer to the [ttyd GitHub page](https://github.com/tsl0922/ttyd) for manual installation.
+
+### Docker-Specific Issues
+
+**Q: Port already in use?**
+```bash
+# Check process using port 3000
+lsof -i :3000
+# Or change port mapping
+docker run -d -p 8000:80 ...
+```
+
+**Q: Container cannot connect to backend?**
+Make sure backend service is running:
+```bash
+cd backend && python app.py
+```
+
+**Q: How to update to latest version?**
+```bash
+docker pull liyao1119/mofa-stage-frontend:latest
+docker stop mofa-frontend
+docker rm mofa-frontend
+# Re-run docker run command
+```
+
+**Q: How to view container logs?**
+```bash
+docker logs mofa-frontend
+```
+
+## Docker Advanced Configuration
+
+### Custom Build
+
+```bash
+cd frontend
+# Build after modifying configuration
+docker build -t my-mofa-frontend .
+docker run -d -p 3000:80 my-mofa-frontend
+```
+
+### Troubleshooting
+
+1. **Check if Docker is running properly**
+   ```bash
+   docker ps
+   ```
+
+2. **Check network connections**
+   ```bash
+   curl http://localhost:3000
+   curl http://localhost:5002/api/settings
+   ```
+
+3. **Restart container**
+   ```bash
+   docker restart mofa-frontend
+   ```
 
 ## Directory Structure
 
