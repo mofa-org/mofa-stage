@@ -216,6 +216,7 @@ mofa-stage/
 ```
 
 ## User Journey
+<img width="914" height="586" alt="image" src="https://github.com/user-attachments/assets/ae9ae4bc-8fd2-4da4-8d79-714f72fa4205" />
 
 ```mermaid
 graph TD
