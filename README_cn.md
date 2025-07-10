@@ -63,7 +63,7 @@ MoFA_Stage 是一个 Web 界面的开发工具，用于管理和编辑 MoFA 框�
   chmod +x install
   ./install
   ```
-  自动安装后端/前端依赖，支持选择 Docker 或传统安装方式。本地部署时，应选择非docker部署。
+  自动安装后端/前端依赖，支持选择 Docker 或传统安装方式。运行后会提示是否运行，选择是则执行run脚本。本地部署时，应选择非docker部署。
 
 - **run**: 一键启动服务
   ```bash
