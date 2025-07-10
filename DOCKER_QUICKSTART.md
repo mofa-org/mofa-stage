@@ -57,7 +57,8 @@ A: 用Docker就不需要本地npm install了，所有依赖都在容器内安装
 
 Q: 需要先卸载本地的Node吗？
 A: 不需要. Docker和本地环境完全隔离。
-## Docker解决环境问题！
+
+## Docker解决环境问题
 
 **即使本地Node.js版本有冲突、npm依赖有问题，Docker也能让前端正常运行。**
 - ✅ 容器内自带Node.js LTS版本
