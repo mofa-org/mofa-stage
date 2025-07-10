@@ -210,9 +210,9 @@ check_and_kill_ports() {
         if [[ $confirm == "y" || $confirm == "Y" ]]; then
             # 释放端口
             for port in ${occupied_ports[@]}; do
-                pid=$(lsof -t -i:$port 2>/dev/null)
+                pid=$(lsof -t -i:$port 2>/dev/null || true)
                 if [ -n "$pid" ]; then
-                    kill -9 $pid
+                    kill -9 $pid 2>/dev/null || true
                     if [ $current_lang -eq $LANG_ZH ]; then
                         print_info "$ZH_PORT_RELEASED $port"
                     else

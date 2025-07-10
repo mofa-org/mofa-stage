@@ -1,7 +1,7 @@
 <template>
   <header class="header">
     <div class="logo-section">
-      <img src="/mofa-logo.png" alt="MoFA Logo" class="app-logo" />
+      <img :src="logoUrl" alt="MoFA Logo" class="app-logo" />
       <div class="brand-info">
         <h1 class="app-title">MoFA Stage</h1>
         <p class="app-subtitle">{{ currentSubtitle }}</p>
@@ -34,6 +34,7 @@ import { Setting } from '@element-plus/icons-vue'
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '../../store/settings'
+import logoUrl from '../../assets/mofa-logo.png'
 
 export default {
   name: 'AppHeader',
@@ -85,7 +86,8 @@ export default {
     return {
       goToSettings,
       pageTitle,
-      currentSubtitle
+      currentSubtitle,
+      logoUrl
     }
   }
 }
