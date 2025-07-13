@@ -163,6 +163,18 @@ export default {
     embedded: {
       type: Boolean,
       default: false
+    },
+    presetWorkingDir: {
+      type: String,
+      default: ''
+    },
+    presetCommand: {
+      type: String,
+      default: ''
+    },
+    presetTabTitle: {
+      type: String,
+      default: ''
     }
   },
   components: {
@@ -287,7 +299,11 @@ export default {
         
         // Automatically open a tab when initialized
         if (sessions.value.length === 0) {
-          addDefaultTab()
+          // In embedded mode with preset command, the watch will handle tab creation
+          // In non-embedded mode or without preset command, create default tab
+          if (!props.embedded || !props.presetCommand) {
+            addDefaultTab()
+          }
         }
         
         isInitialized.value = true
@@ -522,17 +538,36 @@ export default {
       }
     };
 
-    // Add a default tab with default settings
+    // Add a default tab with default settings or preset commands
     const addDefaultTab = () => {
       const newId = nextTabId.value++;
       const newName = `tab-${newId}`;
-      const baseUrl = getTtydBaseUrl();
+      let baseUrl = getTtydBaseUrl();
+      
+      // Use preset values if provided
+      const workingDir = props.presetWorkingDir || '';
+      const command = props.presetCommand || '';
+      const title = props.presetTabTitle || `Terminal ${newId}`;
+      
+      // Append query parameters for custom settings
+      const queryParams = new URLSearchParams();
+      
+      if (workingDir) {
+        queryParams.append('cwd', workingDir);
+      }
+      
+      if (command) {
+        queryParams.append('cmd', command);
+      }
+      
+      const queryString = queryParams.toString();
+      const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
       
       const newSession = {
         id: newId,
         name: newName,
-        title: `Terminal ${newId}`,
-        url: baseUrl,
+        title: title,
+        url: url,
         status: 'connecting',
       };
 
@@ -803,6 +838,23 @@ export default {
         }
       }
     };
+
+    // Watch for preset command changes to create new tabs automatically
+    watch(() => [props.presetCommand, props.presetWorkingDir], ([newCommand, newWorkingDir]) => {
+      if (newCommand && props.embedded) {
+        // Clear existing sessions and create a new one with the preset command
+        sessions.value = [];
+        addDefaultTab();
+      }
+    }, { immediate: false });
+
+    // Watch for props changes and auto-create tab if preset values are provided initially
+    watch(() => props.presetCommand, (newCommand) => {
+      if (newCommand && props.embedded && sessions.value.length === 0) {
+        // If we have a preset command but no sessions yet, create one
+        addDefaultTab();
+      }
+    }, { immediate: true });
 
     return {
       showNewTabDialog,

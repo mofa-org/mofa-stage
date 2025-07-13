@@ -593,15 +593,16 @@ class MofaCLI:
             # 新的运行方式：使用单个命令执行所有 dora 操作
             print(f"Running dora commands in {example_path}...")
             
-            # 创建一个单一的命令，执行所有 dora 操作
-            dora_cmd = f"cd {example_path} && echo '=== Running dora up ===' && dora up && echo '\n=== Building dataflow {dataflow_file} ===' && dora build {dataflow_file} && echo '\n=== Starting dataflow {dataflow_file} ===' && dora start {dataflow_file}"
+            # 使用标准的dora四步命令（与TtydTerminal保持一致）
+            dora_cmd = f"cd {example_path} && dora up && dora build {dataflow_file} && dora start {dataflow_file}"
             
             # 初始化输出行列表
             output_lines = [
-                f"Running dora commands in {example_path}...",
+                f"Starting dataflow example: {example_name}",
+                f"Working directory: {example_path}",
                 f"Dataflow file: {dataflow_file}",
-                "Command: dora up && dora build && dora start",
-                "----------------------------------------"
+                f"Command: cd {example_path} && dora up && dora build {dataflow_file} && dora start {dataflow_file}",
+                "=" * 60
             ]
             
             # 在后台运行 dora 命令
@@ -609,8 +610,10 @@ class MofaCLI:
                 dora_cmd,
                 shell=True, 
                 stdout=subprocess.PIPE, 
-                stderr=subprocess.PIPE,
+                stderr=subprocess.STDOUT,  # 将stderr重定向到stdout，统一处理
                 text=True,
+                bufsize=0,  # 无缓冲
+                universal_newlines=True,
                 cwd=example_path  # 设置工作目录
             )
             
@@ -686,48 +689,48 @@ class MofaCLI:
             # 读取新的输出
             new_output = []
             
-            # 非阻塞地读取所有可用的输出
-            def read_output(pipe, prefix=""):
-                output = []
-                try:
-                    # 将文件描述符设置为非阻塞模式
-                    import fcntl
-                    import os
-                    fd = pipe.fileno()
-                    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-                    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-                    
-                    # 尝试读取所有可用的输出
-                    while True:
-                        try:
-                            line = pipe.readline()
-                            if not line:
-                                break
-                            line = line.strip()
-                            if prefix:
-                                line = f"{prefix}{line}"
-                            output.append(line)
-                        except:
+            # 非阻塞地读取stdout输出
+            try:
+                # 将文件描述符设置为非阻塞模式
+                import fcntl
+                import os
+                fd = process.stdout.fileno()
+                fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+                fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+                
+                # 尝试读取所有可用的输出
+                while True:
+                    try:
+                        line = process.stdout.readline()
+                        if not line:
                             break
-                except Exception as e:
-                    output.append(f"Error reading output: {str(e)}")
-                return output
+                        line = line.strip()
+                        if line:  # 只添加非空行
+                            new_output.append(line)
+                    except Exception:
+                        break
+            except Exception as e:
+                new_output.append(f"Error reading output: {str(e)}")
             
-            # 读取标准输出和错误输出
-            stdout_lines = read_output(process.stdout)
-            stderr_lines = read_output(process.stderr, prefix="ERROR: ")
-            
-            # 合并输出
-            new_output = stdout_lines + stderr_lines
+            # 将新输出添加到累积输出中
             process_info["output_lines"].extend(new_output)
+            
+            # 调试信息
+            if new_output:
+                print(f"读取到新输出 ({len(new_output)} 行): {new_output[:3]}...")  # 只打印前3行
             
             # 检查进程是否已经结束
             is_running = process.poll() is None
+            
+            # 调试信息
+            total_lines = len(process_info["output_lines"])
+            print(f"Agent {agent_name}: 运行状态={is_running}, 总输出行数={total_lines}, 新输出行数={len(new_output)}")
             
             return {
                 "success": True,
                 "is_running": is_running,
                 "new_output": new_output,
+                "output": "\n".join(process_info["output_lines"]),  # 添加完整输出字符串
                 "all_output": process_info["output_lines"],
                 "process_type": process_info["type"],
                 "start_time": process_info["start_time"],

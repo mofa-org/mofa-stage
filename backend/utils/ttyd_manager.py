@@ -258,6 +258,69 @@ def start_ttyd():
         logger.error(f"Failed to start ttyd: {e}")
         return False
 
+def start_ttyd_with_command(working_dir, command):
+    """Start ttyd with a specific command to execute"""
+    global ttyd_process
+    
+    # First, ensure ttyd is installed
+    if not is_ttyd_installed():
+        logger.info("ttyd is not installed. Attempting to install it...")
+        if not install_ttyd():
+            logger.error("Failed to install ttyd. Please install it manually.")
+            return False
+    
+    # Stop any existing ttyd process
+    stop_ttyd()
+    
+    # Get settings
+    settings = get_settings()
+    ttyd_port = settings.get('ttyd_port', 7681)
+    
+    # Validate working directory
+    if not os.path.exists(working_dir):
+        logger.error(f"Working directory does not exist: {working_dir}")
+        return False
+    
+    # Prepare ttyd command with the specific command to run
+    # We'll wrap the command in a shell that will keep the terminal open
+    wrapped_command = f'bash -c "echo Starting dataflow...; {command}; echo; echo Command finished. Press any key to continue...; read -n 1"'
+    
+    cmd = [
+        'ttyd',
+        '-p', str(ttyd_port),
+        '-W',  # Allow write access
+        '-w', working_dir,  # Set working directory
+        'bash', '-c', wrapped_command
+    ]
+    
+    logger.info(f"Starting ttyd with command: {' '.join(cmd)}")
+    logger.info(f"Working directory: {working_dir}")
+    logger.info(f"Executing: {command}")
+    
+    try:
+        # Open log file
+        log_fd = open(log_file, 'w')
+        
+        # Start ttyd process
+        ttyd_process = subprocess.Popen(
+            cmd,
+            cwd=working_dir,
+            stdout=log_fd,
+            stderr=log_fd,
+            start_new_session=True  # Detach from parent process
+        )
+        
+        # Write PID to file
+        with open(pid_file, 'w') as f:
+            f.write(str(ttyd_process.pid))
+        
+        logger.info(f"ttyd started with PID {ttyd_process.pid} on port {ttyd_port}")
+        return True
+    
+    except Exception as e:
+        logger.error(f"Failed to start ttyd with command: {e}")
+        return False
+
 def restart_ttyd():
     """Restart the ttyd service"""
     stop_ttyd()

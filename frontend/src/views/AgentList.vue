@@ -46,7 +46,7 @@
             <el-card v-for="agent in filteredHubAgents" :key="agent" class="agent-card">
         <template #header>
           <div class="agent-card-header">
-            <h3 class="agent-card-title">{{ agent }}</h3>
+            <h3 class="agent-card-title clickable-title" @click="handleEditAgent(agent)">{{ agent }}</h3>
             <div class="agent-status" v-if="isAgentRunning(agent)">
               <el-tag type="success" size="small">{{ $t('agent.running') }}</el-tag>
             </div>
@@ -96,7 +96,7 @@
             <el-card v-for="agent in filteredExampleAgents" :key="agent" class="agent-card">
               <template #header>
                 <div class="agent-card-header">
-                  <h3 class="agent-card-title">{{ agent }}</h3>
+                  <h3 class="agent-card-title clickable-title" @click="handleEditAgent(agent)">{{ agent }}</h3>
                   <div class="agent-status" v-if="isAgentRunning(agent)">
                     <el-tag type="success" size="small">{{ $t('agent.running') }}</el-tag>
                   </div>
@@ -1069,6 +1069,15 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   text-overflow: ellipsis;
+}
+
+.clickable-title {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.clickable-title:hover {
+  color: var(--el-color-primary);
 }
 
 .agent-card-body {

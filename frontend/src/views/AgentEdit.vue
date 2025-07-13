@@ -31,7 +31,12 @@
             <el-icon><Document /></el-icon>
             Save
           </el-button>
-          <el-button v-if="!isAgentRunning" class="custom-run-btn" @click="runAgent">
+          <el-button 
+            v-if="!isAgentRunning" 
+            class="custom-run-btn" 
+            @click="runAgent"
+            :disabled="isNodeAgent"
+          >
             <el-icon><VideoPlay /></el-icon>
             Run
           </el-button>
@@ -455,6 +460,80 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- Dataflow运行输出弹窗 -->
+    <el-dialog 
+      v-model="dataflowOutputDialogVisible" 
+      :title="`Dataflow Output - ${agentName}`"
+      width="80%"
+      top="5vh"
+      @close="closeDataflowOutputDialog"
+    >
+      <div class="dataflow-output-content">
+        <!-- 控制按钮 -->
+        <div class="dataflow-controls">
+          <el-button-group>
+            <el-button 
+              type="primary" 
+              size="small" 
+              @click="fetchDataflowOutput" 
+              :loading="dataflowOutputLoading"
+            >
+              <el-icon><Refresh /></el-icon>
+              刷新
+            </el-button>
+            <el-button 
+              size="small" 
+              @click="toggleDataflowAutoRefresh"
+              :type="autoRefreshDataflowOutput ? 'success' : 'info'"
+            >
+              <el-icon><VideoPlay v-if="!autoRefreshDataflowOutput" /><VideoPause v-else /></el-icon>
+              {{ autoRefreshDataflowOutput ? '停止自动刷新' : '自动刷新' }}
+            </el-button>
+            <el-button 
+              size="small" 
+              @click="clearDataflowOutput"
+            >
+              <el-icon><Delete /></el-icon>
+              清空
+            </el-button>
+            <el-button 
+              type="danger" 
+              size="small" 
+              @click="stopAgent"
+              v-if="isAgentRunning"
+            >
+              <el-icon><VideoPause /></el-icon>
+              停止运行
+            </el-button>
+          </el-button-group>
+        </div>
+        
+        <!-- 输出内容 -->
+        <div class="dataflow-output-container">
+          <el-card class="output-card" body-style="padding: 0;">
+            <div class="output-header">
+              <span class="output-title">实时输出</span>
+              <el-tag 
+                :type="isAgentRunning ? 'success' : 'info'" 
+                size="small"
+              >
+                {{ isAgentRunning ? '运行中' : '已停止' }}
+              </el-tag>
+            </div>
+            <div class="output-body">
+              <pre class="output-content" v-loading="dataflowOutputLoading">{{ dataflowOutput || '暂无输出...' }}</pre>
+            </div>
+          </el-card>
+        </div>
+      </div>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="closeDataflowOutputDialog">关闭</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -528,6 +607,19 @@ export default {
     const activeYamlTab = ref('yaml')
     const showYamlTabs = ref(false)
     const isAgentRunning = computed(() => agentStore.isAgentRunning(props.agentName))
+    
+    // 判断是否为dataflow类型（examples目录下的agent）
+    const isDataflowAgent = computed(() => agentStore.exampleAgents.includes(props.agentName))
+    
+    // 判断是否在编辑node（agent-hub中的原子agent）
+    const isNodeAgent = computed(() => agentStore.hubAgents.includes(props.agentName))
+    
+    // dataflow运行结果弹窗相关
+    const dataflowOutputDialogVisible = ref(false)
+    const dataflowOutput = ref('')
+    const dataflowOutputLoading = ref(false)
+    const autoRefreshDataflowOutput = ref(false)
+    const dataflowAutoRefreshInterval = ref(null)
     
     // 是否使用新版编辑器
     const useNewEditor = computed(() => settingsStore.settings.editor_version === 'new')
@@ -1464,6 +1556,61 @@ export default {
     }
 
     const runAgent = async () => {
+      // 如果是dataflow类型，生成dora命令并复制到剪贴板
+      if (isDataflowAgent.value) {
+        try {
+          // 获取dataflow文件信息
+          const response = await fetch(`/api/agents/${props.agentName}/dataflow-file`)
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success) {
+              const dataflowFile = data.dataflow_file
+              const agentPath = data.agent_path
+              
+              // 构建完整的dora 4步命令
+              const doraCommand = `cd ${agentPath} && dora up && dora build ${dataflowFile} && dora start ${dataflowFile}`
+              
+              // 复制到剪贴板
+              try {
+                await navigator.clipboard.writeText(doraCommand)
+                
+                // 自动展开终端
+                showTerminal.value = true
+                
+                ElMessage.success({
+                  message: `Dora command copied to clipboard! Paste it in the terminal below.`,
+                  duration: 5000,
+                  showClose: true
+                })
+              } catch (err) {
+                // 如果剪贴板API失败，显示命令让用户手动复制
+                ElMessage({
+                  message: `Please copy this command to terminal: ${doraCommand}`,
+                  type: 'info',
+                  duration: 10000,
+                  showClose: true
+                })
+                
+                // 还是展开终端
+                showTerminal.value = true
+              }
+              
+              return
+            }
+          }
+          
+          // 如果获取dataflow文件失败，显示错误
+          ElMessage.error('Failed to get dataflow file information')
+          return
+          
+        } catch (error) {
+          ElMessage.error(`Failed to prepare dataflow execution: ${error.message}`)
+          return
+        }
+      }
+      
+      // 原有的agent运行逻辑（非dataflow类型）
       const result = await agentStore.runAgent(props.agentName)
       if (result.success) {
         ElMessage.success(`Agent ${props.agentName} started successfully`)
@@ -1476,9 +1623,73 @@ export default {
       const result = await agentStore.stopAgent(props.agentName)
       if (result.success) {
         ElMessage.success(`Agent ${props.agentName} stopped successfully`)
+        
+        // 如果是dataflow类型，停止自动刷新并关闭弹窗
+        if (isDataflowAgent.value) {
+          stopDataflowOutputRefresh()
+        }
       } else {
         ElMessage.error(`Failed to stop Agent: ${result.error}`)
       }
+    }
+
+    // dataflow输出相关方法
+    const fetchDataflowOutput = async () => {
+      if (!isDataflowAgent.value) return
+      
+      dataflowOutputLoading.value = true
+      try {
+        const response = await fetch(`/api/agents/${props.agentName}/process-output`)
+        const data = await response.json()
+        
+        if (data.success && data.output) {
+          dataflowOutput.value = data.output
+        } else if (data.error) {
+          dataflowOutput.value = `Error: ${data.error}`
+        }
+      } catch (error) {
+        dataflowOutput.value = `Network Error: ${error.message}`
+      } finally {
+        dataflowOutputLoading.value = false
+      }
+    }
+
+    const startDataflowOutputRefresh = () => {
+      if (dataflowAutoRefreshInterval.value) return
+      
+      // 立即获取一次输出
+      fetchDataflowOutput()
+      
+      // 启动自动刷新
+      autoRefreshDataflowOutput.value = true
+      dataflowAutoRefreshInterval.value = setInterval(() => {
+        fetchDataflowOutput()
+      }, 2000) // 每2秒刷新一次
+    }
+
+    const stopDataflowOutputRefresh = () => {
+      autoRefreshDataflowOutput.value = false
+      if (dataflowAutoRefreshInterval.value) {
+        clearInterval(dataflowAutoRefreshInterval.value)
+        dataflowAutoRefreshInterval.value = null
+      }
+    }
+
+    const toggleDataflowAutoRefresh = () => {
+      if (autoRefreshDataflowOutput.value) {
+        stopDataflowOutputRefresh()
+      } else {
+        startDataflowOutputRefresh()
+      }
+    }
+
+    const clearDataflowOutput = () => {
+      dataflowOutput.value = ''
+    }
+
+    const closeDataflowOutputDialog = () => {
+      dataflowOutputDialogVisible.value = false
+      stopDataflowOutputRefresh()
     }
 
     // 监听搜索词变化
@@ -1765,6 +1976,8 @@ export default {
       if (videoDataUrl.value) {
         URL.revokeObjectURL(videoDataUrl.value)
       }
+      // 清理dataflow输出定时器
+      stopDataflowOutputRefresh()
     })
 
     return {
@@ -1866,7 +2079,20 @@ export default {
       videoInfo,
       onVideoLoad,
       onVideoError,
-      formatDuration
+      formatDuration,
+      // dataflow输出相关
+      isDataflowAgent,
+      isNodeAgent,
+      dataflowOutputDialogVisible,
+      dataflowOutput,
+      dataflowOutputLoading,
+      autoRefreshDataflowOutput,
+      fetchDataflowOutput,
+      startDataflowOutputRefresh,
+      stopDataflowOutputRefresh,
+      toggleDataflowAutoRefresh,
+      clearDataflowOutput,
+      closeDataflowOutputDialog
     }
   }
 }
@@ -2667,5 +2893,87 @@ export default {
   bottom: 0;
   z-index: 9998;
   background: transparent;
+}
+
+/* Dataflow输出弹窗样式 */
+.dataflow-output-content {
+  height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dataflow-controls {
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.dataflow-output-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+.output-card {
+  height: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.output-header {
+  padding: 12px 16px;
+  background: var(--fill-color-light);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.output-title {
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.output-body {
+  height: calc(100% - 48px);
+  overflow: hidden;
+}
+
+.output-content {
+  height: 100%;
+  margin: 0;
+  padding: 16px;
+  background: #1a1a1a;
+  color: #f0f0f0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* 深色主题下的输出样式调整 */
+[data-theme="dark"] .output-content {
+  background: #0d1117;
+  color: #c9d1d9;
+}
+
+/* 输出滚动条样式 */
+.output-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.output-content::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+.output-content::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.output-content::-webkit-scrollbar-thumb:hover {
+  background: #777;
 }
 </style>

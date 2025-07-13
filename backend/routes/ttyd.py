@@ -7,7 +7,7 @@ import logging
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.ttyd_manager import (
-    start_ttyd, stop_ttyd, restart_ttyd, get_ttyd_status, is_ttyd_installed, install_ttyd
+    start_ttyd, stop_ttyd, restart_ttyd, get_ttyd_status, is_ttyd_installed, install_ttyd, start_ttyd_with_command
 )
 
 # Configure logging
@@ -71,6 +71,41 @@ def restart():
         return jsonify({
             'success': False,
             'message': 'Failed to restart ttyd service'
+        }), 500
+
+@ttyd_bp.route('/start-with-command', methods=['POST'])
+def start_with_command():
+    """Start ttyd with a specific command to execute"""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({
+            'success': False,
+            'message': 'Request body must be JSON'
+        }), 400
+    
+    working_dir = data.get('working_dir')
+    command = data.get('command')
+    
+    if not working_dir or not command:
+        return jsonify({
+            'success': False,
+            'message': 'working_dir and command are required'
+        }), 400
+    
+    result = start_ttyd_with_command(working_dir, command)
+    
+    if result:
+        status = get_ttyd_status()
+        return jsonify({
+            'success': True,
+            'message': 'ttyd started with command successfully',
+            'status': status
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'message': 'Failed to start ttyd with command'
         }), 500
 
 @ttyd_bp.route('/install', methods=['POST'])
