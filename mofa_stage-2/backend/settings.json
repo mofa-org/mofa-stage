@@ -1,0 +1,52 @@
+{
+  "mofa_env_path": "",
+  "mofa_dir": "/Users/liyao/Code/mofa/mofa_old/mofa",
+  "project_type": "mofa",
+  "theme": "light",
+  "editor_font_size": 14,
+  "editor_tab_size": 4,
+  "use_system_mofa": true,
+  "use_default_agent_hub_path": false,
+  "use_default_examples_path": false,
+  "use_relative_paths": false,
+  "agent_hub_path": "/Users/liyao/Code/mofa/mofa_old/mofa/python/agent-hub",
+  "examples_path": "/Users/liyao/Code/mofa/mofa_old/mofa/python/examples",
+  "custom_agent_hub_paths": [
+    "/Users/liyao/code/bak_files/mofa/python/agent-hub"
+  ],
+  "custom_examples_paths": [
+    "/Users/liyao/code/bak_files/mofa/python/examples"
+  ],
+  "language": "zh",
+  "ssh": {
+    "auto_connect": true,
+    "hostname": "127.0.0.1",
+    "password": "test",
+    "port": 22,
+    "username": "test"
+  },
+  "terminal_display_mode": "ttyd",
+  "ttyd_port": 7681,
+  "mofa_mode": "system",
+  "docker_container_name": "0bfdf2580246",
+  "ai_model": "gemini-2.0-flash",
+  "gemini_api_key": "AIzaSyAsrvs6_pUHeD5wW0pSg3PN22gkJslswhw",
+  "editor_type": "vscode",
+  "editor_version": "classic",
+  "openai_api_key": "123",
+  "openai_base_url": "https://api.openai.com/v1",
+  "azure_openai_api_key": "",
+  "azure_openai_endpoint": "",
+  "azure_openai_api_version": "2023-05-15-preview",
+  "gemini_api_endpoint": "https://generativelanguage.googleapis.com/v1beta",
+  "ttyd_command": "zsh",
+  "app_subtitle_mode": "default",
+  "app_subtitle_custom": "Enjoy the show",
+  "app_subtitle_presets": [
+    "Mission Control for MoFA",
+    "Enjoy the show",
+    "Control Panel for MoFA"
+  ],
+  "custom_agent_hub_path": "/Users/liyao/Code/mofa/mofa_old/mofa/python/agent-hub",
+  "custom_examples_path": "/Users/liyao/Code/mofa/mofa_old/mofa/python/examples"
+}

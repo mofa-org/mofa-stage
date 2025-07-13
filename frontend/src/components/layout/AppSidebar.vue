@@ -42,7 +42,7 @@
     <div class="sidebar-footer" v-if="!isCollapsed">
       <div class="version-info">
         <span class="version-label">MoFA Stage</span>
-        <span class="version-number">v0.5.0</span>
+        <span class="version-number">v0.5.2</span>
       </div>
     </div>
   </div>
