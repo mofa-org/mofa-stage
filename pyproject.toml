@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mofa-stage"
+version = "0.1.1"
+description = "Web-based development tool for managing and editing Nodes and Dataflows in the MoFA framework"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "MoFA Team", email = "mofa-dev@example.com"}
+]
+maintainers = [
+    {name = "MoFA Team", email = "mofa-dev@example.com"}
+]
+keywords = ["mofa", "ai-agent", "development-tool", "web-ui", "stage"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Framework :: Flask",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Environment :: Web Environment",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "mofa-ai>=0.2.7",
+    "click>=8.0.0",
+    "psutil>=5.9.0",
+    "flask>=2.3.3",
+    "flask-cors>=4.0.0",
+    "pyyaml>=6.0.1",
+    "toml>=0.10.2",
+    "python-dotenv>=1.0.0",
+    "paramiko>=3.3.1",
+    "flask-sock>=0.6.0",
+    "webssh>=1.6.2",
+    "requests>=2.31.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/mofa-org/mofa-stage"
+Documentation = "https://github.com/mofa-org/mofa-stage#readme"
+Repository = "https://github.com/mofa-org/mofa-stage"
+"Bug Reports" = "https://github.com/mofa-org/mofa-stage/issues"
+
+[project.scripts]
+mofa-stage = "mofa_stage.cli:main"
+
+[tool.setuptools]
+packages = ["mofa_stage"]
+package-dir = {"mofa_stage" = "."}
+include-package-data = true
+
+[tool.setuptools.package-data]
+mofa_stage = [
+    "backend/*",
+    "backend/*/*",
+    "backend/*/*/*",
+    "frontend/*",
+    "frontend/*/*",
+    "frontend/*/*/*",
+    "frontend/*/*/*/*",
+    "install",
+    "run",
+    "README.md",
+    "README_cn.md",
+]

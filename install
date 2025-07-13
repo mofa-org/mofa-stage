@@ -82,7 +82,7 @@ ZH_FRONTEND_DEV="前端开发模式: cd frontend && npm run dev"
 ZH_FUTURE_BUILD="以后要构建生产版本: cd frontend && npm run build"
 ZH_ACCESS_URL="访问地址: http://localhost:3000"
 ZH_HAVE_FUN="祝您使用愉快!"
-ZH_RUN_SERVICES="是否现在启动服务? (Y/n, 默认: Y):"
+ZH_RUN_SERVICES="是否现在启动服务? (y/N, 默认: N):"
 ZH_RUN_PERMISSION_DENIED="run脚本没有执行权限!"
 ZH_RUN_PERMISSION_FIX="请运行以下命令赋予run权限:"
 ZH_STARTING_SERVICES="正在启动服务..."
@@ -151,7 +151,7 @@ EN_FRONTEND_DEV="Frontend development mode: cd frontend && npm run dev"
 EN_FUTURE_BUILD="For future production builds: cd frontend && npm run build"
 EN_ACCESS_URL="Access URL: http://localhost:3000"
 EN_HAVE_FUN="Have fun!"
-EN_RUN_SERVICES="Start services now? (Y/n, default: Y):"
+EN_RUN_SERVICES="Start services now? (y/N, default: N):"
 EN_RUN_PERMISSION_DENIED="run script does not have execute permission!"
 EN_RUN_PERMISSION_FIX="Please run the following command to grant run permissions:"
 EN_STARTING_SERVICES="Starting services..."
@@ -668,8 +668,8 @@ main() {
     echo
     print_color_msg "$YELLOW" "$ZH_RUN_SERVICES" "$EN_RUN_SERVICES"
     read -r RUN_REPLY
-    # 默认为Y，只有明确输入n或N时才跳过
-    if [ "$RUN_REPLY" != "n" ] && [ "$RUN_REPLY" != "N" ]; then
+    # 默认为N，只有明确输入y或Y时才启动
+    if [ "$RUN_REPLY" = "y" ] || [ "$RUN_REPLY" = "Y" ]; then
         # 检查run权限
         if [ -f "run" ]; then
             if [ ! -x "run" ]; then

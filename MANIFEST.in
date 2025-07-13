@@ -1,0 +1,21 @@
+include README.md
+include README_cn.md
+include install
+include run
+recursive-include backend *
+recursive-include frontend *
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude *~
+global-exclude *.so
+global-exclude .DS_Store
+global-exclude node_modules
+global-exclude .claude
+global-exclude .cursor
+global-exclude .git
+global-exclude .vscode
+global-exclude *.egg-info
+prune frontend/node_modules
+prune .claude
+prune .cursor
+prune .git
