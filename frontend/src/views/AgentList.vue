@@ -176,7 +176,10 @@
       v-model="logDrawerVisible"
       :title="`${selectedAgentName} ${$t('agent.runningLogs')}`"
       direction="rtl"
-      size="50%">
+      size="50%"
+      :modal="true"
+      :append-to-body="true"
+      :lock-scroll="false">
       <div class="log-container">
         <div class="log-controls">
           <el-input v-model="logSearchText" placeholder="搜索日志..." clearable class="log-search">
@@ -205,8 +208,8 @@
             <el-collapse-item v-for="(section, index) in filteredLogs" :key="index" :name="index.toString()">
               <template #title>
                 <div class="log-section-title">
-                  <span v-html="highlightSearchText(section.title)"></span>
-                  <span class="log-time">{{ section.time }}</span>
+                  <div class="log-title-text" v-html="highlightSearchText(section.title)"></div>
+                  <div class="log-time" v-if="section.time">{{ section.time }}</div>
                 </div>
               </template>
               <pre class="log-content" v-html="highlightSearchText(section.content)"></pre>
@@ -962,6 +965,33 @@ export default {
   overflow: auto;
 }
 
+.structured-logs :deep(.el-collapse) {
+  border: none;
+}
+
+.structured-logs :deep(.el-collapse-item__header) {
+  padding: 8px 16px;
+  background-color: var(--el-fill-color-lighter);
+  border-bottom: 1px solid var(--el-border-color-light);
+  font-weight: 500;
+  min-height: auto;
+  line-height: normal;
+}
+
+.structured-logs :deep(.el-collapse-item__arrow) {
+  margin: 0 8px 0 0;
+  align-self: flex-start;
+  margin-top: 6px;
+}
+
+.structured-logs :deep(.el-collapse-item__wrap) {
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.structured-logs :deep(.el-collapse-item__content) {
+  padding: 0;
+}
+
 .log-controls {
   display: flex;
   gap: 10px;
@@ -1004,14 +1034,27 @@ export default {
 .log-section-title {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   width: 100%;
+  padding: 4px 0;
+  gap: 12px;
+}
+
+.log-title-text {
+  flex: 1;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+  min-width: 0;
 }
 
 .log-time {
-  font-size: 0.85em;
+  font-size: 0.8em;
   color: #8a8a8a;
-  margin-left: 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  align-self: flex-start;
+  margin-top: 2px;
 }
 
 .log-content {
