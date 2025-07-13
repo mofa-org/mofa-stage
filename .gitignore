@@ -67,3 +67,4 @@ backend/config/ssh_config.json
 
 # Publish script (contains sensitive token)
 publish.sh
+publish.sh
