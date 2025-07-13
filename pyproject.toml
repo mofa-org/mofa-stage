@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mofa-stage"
-version = "0.1.1"
+version = "0.5.0"
 description = "Web-based development tool for managing and editing Nodes and Dataflows in the MoFA framework"
 readme = "README.md"
 license = {text = "MIT"}
