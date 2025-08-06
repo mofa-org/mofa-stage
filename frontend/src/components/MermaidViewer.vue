@@ -10,7 +10,7 @@ export default {
   props: {
     code: { type: String, default: '' }
   },
-  emits: ['nodeClick'],
+  emits: ['node-click'],
   watch: {
     code: {
       handler() { this.render() },
@@ -51,7 +51,7 @@ export default {
                 const textEl = nodeEl.querySelector('text')
                 const label = textEl ? textEl.textContent.trim() : null
                 if (label) {
-                  this.$emit('nodeClick', label)
+                  this.$emit('node-click', label)
                 }
               })
             })

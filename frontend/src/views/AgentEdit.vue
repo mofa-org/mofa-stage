@@ -27,6 +27,21 @@
             <el-icon><Setting /></el-icon>
             配置
           </el-button>
+          <el-button 
+            @click="toggleVariableMonitor" 
+            :type="showVariableMonitor ? 'primary' : 'default'"
+            size="small">
+            <el-icon><View /></el-icon>
+            变量
+          </el-button>
+          <el-button 
+            v-if="nodeMonitorWindows.size > 0" 
+            @click="closeAllNodeMonitors"
+            type="warning"
+            size="small">
+            <el-icon><Close /></el-icon>
+            关闭节点监控 ({{ nodeMonitorWindows.size }})
+          </el-button>
           <el-button class="custom-save-btn" @click="saveCurrentFile" :disabled="!hasChanges" :loading="isSaving">
             <el-icon><Document /></el-icon>
             Save
@@ -146,7 +161,7 @@
                 <el-button-group>
                   <!-- 预览切换按钮，仅在支持预览的文件类型中显示 -->
                   <el-button 
-                    v-if="isMarkdownFile || isMermaidHtml || isImageFile || isVideoFile"
+                    v-if="isMarkdownFile || isMermaidHtml || isImageFile || isVideoFile || isDuckDBFile || isDuckDBWALFile"
                     size="small"
                     @click="togglePreviewMode"
                     :type="previewMode ? 'primary' : 'default'">
@@ -241,6 +256,183 @@
                           </div>
                           <div v-if="videoInfo.size" class="video-size">
                             {{ formatFileSize(videoInfo.size) }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- DuckDB数据库预览 -->
+                    <div v-else-if="isDuckDBFile || isDuckDBWALFile" class="duckdb-preview">
+                      <div class="duckdb-container">
+                        <!-- DuckDB 头部信息 -->
+                        <div class="duckdb-header">
+                          <h3>
+                            <el-icon class="duckdb-icon"><DataAnalysis /></el-icon>
+                            {{ isDuckDBWALFile ? 'DuckDB Write-Ahead Log' : 'DuckDB Database' }}
+                          </h3>
+                          <div class="duckdb-path">{{ currentFile.path }}</div>
+                        </div>
+
+                        <!-- DuckDB WAL 文件说明 -->
+                        <div v-if="isDuckDBWALFile" class="wal-info">
+                          <el-alert type="info" :closable="false" show-icon>
+                            <template #title>
+                              DuckDB Write-Ahead Log (WAL) 文件
+                            </template>
+                            <p>这是DuckDB的事务日志文件，用于保证数据库的持久性和一致性。</p>
+                            <ul>
+                              <li>包含未提交的事务记录</li>
+                              <li>在数据库恢复时自动使用</li>
+                              <li>不应手动修改此文件</li>
+                              <li>由DuckDB自动管理</li>
+                            </ul>
+                          </el-alert>
+                        </div>
+
+                        <!-- DuckDB 数据库内容 -->
+                        <div v-else class="duckdb-content">
+                          <!-- 加载状态 -->
+                          <div v-if="duckdbData.loading" class="loading-state">
+                            <el-loading-spinner />
+                            <p>正在加载数据库内容...</p>
+                          </div>
+
+                          <!-- 错误状态 -->
+                          <div v-else-if="duckdbData.error" class="error-state">
+                            <el-alert type="error" :closable="false">
+                              <template #title>加载失败</template>
+                              {{ duckdbData.error }}
+                            </el-alert>
+                          </div>
+
+                          <!-- 数据库统计信息 -->
+                          <div v-else-if="duckdbData.stats" class="db-stats">
+                            <el-card class="stats-card">
+                              <template #header>
+                                <div class="card-header">
+                                  <el-icon><DataBoard /></el-icon>
+                                  <span>数据库统计</span>
+                                </div>
+                              </template>
+                              <el-row :gutter="20">
+                                <el-col :span="8">
+                                  <div class="stat-item">
+                                    <div class="stat-value">{{ duckdbData.stats.total_records || 0 }}</div>
+                                    <div class="stat-label">总记录数</div>
+                                  </div>
+                                </el-col>
+                                <el-col :span="8">
+                                  <div class="stat-item">
+                                    <div class="stat-value">{{ duckdbData.stats.total_nodes || 0 }}</div>
+                                    <div class="stat-label">节点数量</div>
+                                  </div>
+                                </el-col>
+                                <el-col :span="8">
+                                  <div class="stat-item">
+                                    <div class="stat-value">{{ duckdbData.tables.length }}</div>
+                                    <div class="stat-label">数据表</div>
+                                  </div>
+                                </el-col>
+                              </el-row>
+                            </el-card>
+
+                            <!-- 数据表列表 -->
+                            <el-card v-if="duckdbData.tables.length > 0" class="tables-card">
+                              <template #header>
+                                <div class="card-header">
+                                  <el-icon><Grid /></el-icon>
+                                  <span>数据节点</span>
+                                </div>
+                              </template>
+                              <div class="tables-list">
+                                <el-collapse v-model="activeTablePanels" accordion>
+                                  <el-collapse-item 
+                                    v-for="table in duckdbData.tables" 
+                                    :key="table.node_name"
+                                    :name="table.node_name"
+                                  >
+                                    <template #title>
+                                      <div class="table-title">
+                                        <el-icon><Box /></el-icon>
+                                        <span class="table-name">{{ table.node_name }}</span>
+                                        <el-tag size="small" type="info">{{ table.record_count }} 条记录</el-tag>
+                                      </div>
+                                    </template>
+                                    
+                                    <!-- 表数据预览 -->
+                                    <div v-if="duckdbData.previewData[table.node_name]" class="table-preview">
+                                      <div class="preview-variables">
+                                        <div 
+                                          v-for="(variable, varName) in duckdbData.previewData[table.node_name]"
+                                          :key="varName"
+                                          class="variable-item"
+                                        >
+                                          <div class="variable-header">
+                                            <span class="variable-name">{{ varName }}</span>
+                                            <el-tag :type="variable.type === 'input' ? 'success' : 'warning'" size="small">
+                                              {{ variable.type }}
+                                            </el-tag>
+                                          </div>
+                                          <div class="variable-value">
+                                            <pre>{{ variable.display_value || JSON.stringify(variable.value, null, 2) }}</pre>
+                                          </div>
+                                          <div class="variable-meta">
+                                            <span class="variable-time">{{ new Date(variable.time).toLocaleString() }}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <!-- 历史记录 -->
+                                      <div v-if="duckdbData.historyData[table.node_name]" class="history-section">
+                                        <h4 class="history-title">📋 历史记录</h4>
+                                        <div class="history-table">
+                                          <el-table 
+                                            :data="duckdbData.historyData[table.node_name]" 
+                                            size="small" 
+                                            stripe
+                                            :max-height="300"
+                                          >
+                                            <el-table-column prop="time" label="时间" width="160" show-overflow-tooltip />
+                                            <el-table-column label="输入变量" width="120">
+                                              <template #default="scope">
+                                                {{ scope.row.input_name || '-' }}
+                                              </template>
+                                            </el-table-column>
+                                            <el-table-column label="输入值" min-width="150">
+                                              <template #default="scope">
+                                                <div v-if="scope.row.input_value !== null && scope.row.input_value !== undefined" class="table-value">
+                                                  <pre>{{ JSON.stringify(scope.row.input_value, null, 2) }}</pre>
+                                                </div>
+                                                <span v-else class="null-value">-</span>
+                                              </template>
+                                            </el-table-column>
+                                            <el-table-column label="输出变量" width="120">
+                                              <template #default="scope">
+                                                {{ scope.row.output_name || '-' }}
+                                              </template>
+                                            </el-table-column>
+                                            <el-table-column label="输出值" min-width="150">
+                                              <template #default="scope">
+                                                <div v-if="scope.row.output_value !== null && scope.row.output_value !== undefined" class="table-value">
+                                                  <pre>{{ JSON.stringify(scope.row.output_value, null, 2) }}</pre>
+                                                </div>
+                                                <span v-else class="null-value">-</span>
+                                              </template>
+                                            </el-table-column>
+                                          </el-table>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </el-collapse-item>
+                                </el-collapse>
+                              </div>
+                            </el-card>
+                          </div>
+
+                          <!-- 空状态 -->
+                          <div v-else class="empty-database">
+                            <el-empty description="数据库为空或无法访问">
+                              <el-button type="primary" @click="loadDuckDBData">重新加载</el-button>
+                            </el-empty>
                           </div>
                         </div>
                       </div>
@@ -340,6 +532,37 @@
           </div>
         </div>
         </transition>
+        
+        <!-- 变量监控悬浮窗口 -->
+        <VariableMonitor 
+          ref="variableMonitorRef"
+          :visible="showVariableMonitor"
+          :default-width="variableMonitorWidth"
+          :default-height="variableMonitorHeight"
+          :default-x="variableMonitorX"
+          :default-y="variableMonitorY"
+          :agent-name="agentName"
+          :agent-type="agentType"
+          @close="handleVariableMonitorClose"
+          @minimize="handleVariableMonitorMinimize"
+          @position-change="handleVariableMonitorPositionChange"
+          @size-change="handleVariableMonitorSizeChange"
+        />
+
+        <!-- 节点变量监控窗口群 -->
+        <NodeVariableMonitor
+          v-for="[nodeId, windowConfig] in nodeMonitorWindows"
+          :key="nodeId"
+          v-if="windowConfig && windowConfig.visible"
+          :node-info="windowConfig.nodeInfo"
+          :window-config="windowConfig"
+          :visible="windowConfig.visible"
+          @close="handleNodeMonitorClose"
+          @minimize="handleNodeMonitorMinimize"
+          @position-change="handleNodeMonitorPositionChange"
+          @size-change="handleNodeMonitorSizeChange"
+        />
+
       </div>
       
       <!-- 全局终端面板 -->
@@ -538,16 +761,18 @@
 </template>
 
 <script lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAgentStore } from '../store/agent'
 import { useSettingsStore } from '../store/settings'
 import CodeEditor from '../components/editor/CodeEditor.vue'
-import { Document, ArrowLeft, VideoPlay, VideoPause, Search, Plus, Minus, Refresh, Download, Setting, ArrowUp, ArrowRight, Close, View, Hide, Delete, CopyDocument, Edit, Folder, FolderAdd } from '@element-plus/icons-vue'
+import { Document, ArrowLeft, VideoPlay, VideoPause, Search, Plus, Minus, Refresh, Download, Setting, ArrowUp, ArrowRight, Close, View, Hide, Delete, CopyDocument, Edit, Folder, FolderAdd, DataAnalysis, DataBoard, Grid, Box } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MarkdownIt from 'markdown-it'
 import MermaidViewer from '../components/MermaidViewer.vue'
 import VSCodeEmbed from '../components/editor/VSCodeEmbed.vue'
+import VariableMonitor from '../components/editor/VariableMonitor.vue'
+import NodeVariableMonitor from '../components/editor/NodeVariableMonitor.vue'
 import vscodeApi from '../api/vscode'
 import TtydTerminal from './TtydTerminal.vue'
 
@@ -575,8 +800,14 @@ export default {
     Edit,
     Folder,
     FolderAdd,
+    DataAnalysis,
+    DataBoard,
+    Grid,
+    Box,
     MermaidViewer,
     VSCodeEmbed,
+    VariableMonitor,
+    NodeVariableMonitor,
     TtydTerminal
   },
   props: {
@@ -595,6 +826,7 @@ export default {
     // 状态变量
     const isLoading = computed(() => agentStore.isLoading)
     const error = computed(() => agentStore.error)
+    const agentType = computed(() => route.query.type || 'examples')
     const fileTree = ref(null)
     const fileSearchQuery = ref('')
     const fileTreeData = ref([])
@@ -647,6 +879,17 @@ export default {
       newName: ''
     })
     const isRenaming = ref(false)
+
+    // 变量监控窗口相关状态
+    const showVariableMonitor = ref(false)
+    const variableMonitorWidth = ref(320)
+    const variableMonitorHeight = ref(400)
+    const variableMonitorX = ref(100)
+    const variableMonitorY = ref(100)
+
+    // 节点变量监控窗口管理
+    const nodeMonitorWindows = reactive(new Map()) // 存储每个节点的监控窗口状态
+    const nextZIndex = ref(1001) // 管理窗口层级
 
     // 计算属性
     const defaultProps = {
@@ -712,6 +955,20 @@ export default {
       return videoExtensions.some(ext => lowerPath.endsWith(ext))
     })
 
+    // 新增：检测DuckDB文件
+    const isDuckDBFile = computed(() => {
+      if (!currentFile.value) return false
+      const lowerPath = currentFile.value.path.toLowerCase()
+      return lowerPath.endsWith('.duckdb') || lowerPath.endsWith('.db')
+    })
+
+    // 新增：检测DuckDB WAL文件
+    const isDuckDBWALFile = computed(() => {
+      if (!currentFile.value) return false
+      const lowerPath = currentFile.value.path.toLowerCase()
+      return lowerPath.endsWith('.duckdb.wal') || lowerPath.endsWith('.db.wal')
+    })
+
     // 获取图片文件的数据 URL
     const imageDataUrl = ref('')
     
@@ -721,6 +978,19 @@ export default {
       height: null,
       size: null
     })
+
+    // DuckDB数据相关
+    const duckdbData = ref({
+      loading: false,
+      error: null,
+      tables: [],
+      stats: null,
+      previewData: {},
+      historyData: {}
+    })
+
+    // DuckDB表格展开面板
+    const activeTablePanels = ref([])
 
     // 获取视频文件的数据 URL
     const videoDataUrl = ref('')
@@ -1106,8 +1376,30 @@ export default {
             console.error('Failed to load video:', e)
             ElMessage.error('Failed to load video file')
           }
+        } else if (lowerPath.endsWith('.duckdb') || lowerPath.endsWith('.db')) {
+          // 对于DuckDB文件，显示数据库内容而不是二进制文件内容
+          currentFile.value = {
+            path: filePath,
+            type: 'database'
+          }
+          originalContent.value = '# DuckDB Database File\n# Use the preview mode to explore the database content.'
+          editorContent.value = '# DuckDB Database File\n# Use the preview mode to explore the database content.'
+          
+          // 加载DuckDB数据
+          await loadDuckDBData()
+          
+          // 自动进入预览模式
+          previewMode.value = true
+        } else if (lowerPath.endsWith('.duckdb.wal') || lowerPath.endsWith('.db.wal')) {
+          // 对于WAL文件，显示说明信息
+          currentFile.value = {
+            path: filePath,
+            type: 'wal'
+          }
+          originalContent.value = '# DuckDB Write-Ahead Log (WAL) File\n# This is a transaction log file used by DuckDB for durability.\n# It contains uncommitted transactions and should not be modified manually.\n# WAL files are automatically managed by DuckDB.'
+          editorContent.value = '# DuckDB Write-Ahead Log (WAL) File\n# This is a transaction log file used by DuckDB for durability.\n# It contains uncommitted transactions and should not be modified manually.\n# WAL files are automatically managed by DuckDB.'
         } else {
-          // 对于非图片/视频文件，使用原有逻辑获取文本内容
+          // 对于非图片/视频/数据库文件，使用原有逻辑获取文本内容
           const fileData = await agentStore.fetchFileContent(props.agentName, filePath, agentType)
           if (fileData) {
             currentFile.value = {
@@ -1780,7 +2072,66 @@ export default {
       try {
         const fileData = await agentStore.fetchFileContent(props.agentName, selectedMermaidHtml.value)
         if (fileData) {
-          mermaidHtmlContent.value = fileData.content
+          // 注入节点点击处理脚本到HTML内容中
+          const scriptStart = '<script>';
+          const scriptEnd = '</' + 'script>';
+          
+          const scriptContent = `
+              // 等待DOM加载完成后添加节点点击监听
+              document.addEventListener('DOMContentLoaded', function() {
+                console.log('MermaidViewer iframe script loaded');
+                // 查找所有mermaid节点 - 使用更广泛的选择器
+                // 尝试更广泛的选择器来找到Mermaid节点
+                const nodes = document.querySelectorAll('g, rect, [class*="node"], .node, .flowchart-node, [id*="flowchart"], [data-id]');
+                console.log('Found mermaid nodes:', nodes.length);
+                console.log('All elements in page:', document.querySelectorAll('*').length);
+                console.log('All g elements:', document.querySelectorAll('g').length);
+                console.log('All rect elements:', document.querySelectorAll('rect').length);
+                nodes.forEach(nodeEl => {
+                  nodeEl.style.cursor = 'pointer';
+                  nodeEl.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const textEl = nodeEl.querySelector('text, span, .nodeLabel');
+                    let nodeId = null;
+                    
+                    if (textEl) {
+                      nodeId = textEl.textContent.trim();
+                    } else {
+                      // 尝试从节点ID获取
+                      const id = nodeEl.id || nodeEl.getAttribute('id');
+                      if (id) {
+                        nodeId = id.replace(/^flowchart-/, '').replace(/-\\\\d+$/, '');
+                      }
+                    }
+                    
+                    if (nodeId) {
+                      console.log('Clicking node:', nodeId);
+                      // 向父窗口发送消息
+                      window.parent.postMessage({
+                        type: 'mermaid-node-click',
+                        nodeId: nodeId
+                      }, '*');
+                    } else {
+                      console.log('No nodeId found for clicked element:', nodeEl);
+                    }
+                  });
+                });
+              });
+          `;
+          
+          const injectedScript = scriptStart + scriptContent + scriptEnd;
+          
+          // 将脚本注入到HTML内容的body结束标签前
+          let content = fileData.content;
+          const bodyEndTag = '</' + 'body>';
+          if (content.includes(bodyEndTag)) {
+            content = content.replace(bodyEndTag, injectedScript + bodyEndTag);
+          } else {
+            // 如果没有body结束标签，直接添加到末尾
+            content += injectedScript;
+          }
+          
+          mermaidHtmlContent.value = content;
         }
              } catch (err) {
          ElMessage.error(`加载 HTML 失败: ${err.message}`)
@@ -1821,6 +2172,155 @@ export default {
       window.addEventListener('mouseup', onUp)
     }
 
+    // 变量监控窗口相关方法
+    const toggleVariableMonitor = () => {
+      showVariableMonitor.value = !showVariableMonitor.value
+    }
+
+    const handleVariableMonitorClose = () => {
+      showVariableMonitor.value = false
+    }
+
+    const handleVariableMonitorMinimize = (minimized) => {
+      // 可以在这里处理最小化状态，比如记录到本地存储
+      console.log('变量监控窗口最小化状态:', minimized)
+    }
+
+    const handleVariableMonitorPositionChange = (position) => {
+      variableMonitorX.value = position.x
+      variableMonitorY.value = position.y
+    }
+
+    const handleVariableMonitorSizeChange = (size) => {
+      variableMonitorWidth.value = size.width
+      variableMonitorHeight.value = size.height
+    }
+
+    // 解析节点信息
+    const parseNodeInfo = (lines, start, end, nodeId) => {
+      const nodeInfo = {
+        id: nodeId,
+        type: '',
+        inputs: [],
+        outputs: [],
+        config: {}
+      }
+
+      for (let i = start; i <= end; i++) {
+        const line = lines[i]
+        const trimmed = line.trim()
+
+        // 解析节点类型
+        if (trimmed.startsWith('type:')) {
+          nodeInfo.type = trimmed.substring(5).trim()
+        }
+        // 解析输入变量
+        else if (trimmed.startsWith('inputs:')) {
+          // 查找inputs列表
+          for (let j = i + 1; j <= end; j++) {
+            const inputLine = lines[j]
+            const inputTrimmed = inputLine.trim()
+            if (inputTrimmed.startsWith('- ') && !inputTrimmed.includes(':')) {
+              nodeInfo.inputs.push(inputTrimmed.substring(2).trim())
+            } else if (!inputTrimmed.startsWith(' ') && inputTrimmed !== '') {
+              break
+            }
+          }
+        }
+        // 解析输出变量
+        else if (trimmed.startsWith('outputs:')) {
+          // 查找outputs列表
+          for (let j = i + 1; j <= end; j++) {
+            const outputLine = lines[j]
+            const outputTrimmed = outputLine.trim()
+            if (outputTrimmed.startsWith('- ') && !outputTrimmed.includes(':')) {
+              nodeInfo.outputs.push(outputTrimmed.substring(2).trim())
+            } else if (!outputTrimmed.startsWith(' ') && outputTrimmed !== '') {
+              break
+            }
+          }
+        }
+      }
+
+      return nodeInfo
+    }
+
+    // 显示节点变量监控窗口
+    const showNodeVariableMonitor = (nodeId, nodeInfo) => {
+      console.log('showNodeVariableMonitor called with:', nodeId, nodeInfo)
+      console.log('Current nodeMonitorWindows size:', nodeMonitorWindows.size)
+      
+      // 检查是否已经存在该节点的监控窗口
+      if (nodeMonitorWindows.has(nodeId)) {
+        // 如果存在，提升其层级并显示
+        const existing = nodeMonitorWindows.get(nodeId)
+        existing.zIndex = nextZIndex.value++
+        existing.visible = true
+        console.log('Updated existing window for node:', nodeId)
+        return
+      }
+
+      // 创建新的监控窗口配置
+      const windowConfig = {
+        id: nodeId,
+        nodeInfo: nodeInfo,
+        visible: true,
+        minimized: false,
+        x: 150 + (nodeMonitorWindows.size * 30), // 错开位置
+        y: 150 + (nodeMonitorWindows.size * 30),
+        width: 350,
+        height: 450,
+        zIndex: nextZIndex.value++
+      }
+
+      // 添加到窗口管理器
+      nodeMonitorWindows.set(nodeId, windowConfig)
+      console.log('Created new window for node:', nodeId, 'Total windows:', nodeMonitorWindows.size)
+      console.log('Window config:', windowConfig)
+    }
+
+    // 处理节点监控窗口关闭
+    const handleNodeMonitorClose = (nodeId) => {
+      if (nodeMonitorWindows.has(nodeId)) {
+        const window = nodeMonitorWindows.get(nodeId)
+        window.visible = false
+      }
+    }
+
+    // 处理节点监控窗口最小化
+    const handleNodeMonitorMinimize = (nodeId, minimized) => {
+      if (nodeMonitorWindows.has(nodeId)) {
+        const window = nodeMonitorWindows.get(nodeId)
+        window.minimized = minimized
+      }
+    }
+
+    // 处理节点监控窗口位置变化
+    const handleNodeMonitorPositionChange = (nodeId, position) => {
+      if (nodeMonitorWindows.has(nodeId)) {
+        const window = nodeMonitorWindows.get(nodeId)
+        window.x = position.x
+        window.y = position.y
+      }
+    }
+
+    // 处理节点监控窗口大小变化
+    const handleNodeMonitorSizeChange = (nodeId, size) => {
+      if (nodeMonitorWindows.has(nodeId)) {
+        const window = nodeMonitorWindows.get(nodeId)
+        window.width = size.width
+        window.height = size.height
+      }
+    }
+
+    // 关闭所有节点监控窗口
+    const closeAllNodeMonitors = () => {
+      nodeMonitorWindows.forEach(window => {
+        window.visible = false
+      })
+    }
+
+
     // 拖拽调整文件树侧边栏宽度
     const startResizeFileSidebar = (e) => {
       e.preventDefault()
@@ -1839,12 +2339,14 @@ export default {
 
     // add ref to CodeEditor
     const codeEditorRef = ref(null)
+    const variableMonitorRef = ref(null)
 
     const handleMermaidNodeClick = (nodeId) => {
       if (!codeEditorRef.value) return
       
       const lines = editorContent.value.split('\n')
       let start = -1
+      let nodeInfo = null
       
       // 查找包含指定nodeId的行
       for (let i = 0; i < lines.length; i++) {
@@ -1873,11 +2375,26 @@ export default {
         }
       }
       
+      // 解析节点信息
+      nodeInfo = parseNodeInfo(lines, start, end, nodeId)
+      nodeInfo.agentName = props.agentName // 添加agent名称
+      
       // monaco uses 1-based line numbers
       codeEditorRef.value.selectLines(start + 1, end + 2)
       
       // Switch to YAML tab if graph tab is active
       if (showYamlTabs.value) activeYamlTab.value = 'yaml'
+      
+      // 直接弹出变量监控窗口并自动发现变量
+      showVariableMonitor.value = true
+      
+      // 延迟一下让窗口打开，然后自动发现变量
+      setTimeout(() => {
+        // 触发自动发现变量（需要在VariableMonitor组件中添加方法引用）
+        if (variableMonitorRef.value && variableMonitorRef.value.autoDiscoverVariables) {
+          variableMonitorRef.value.autoDiscoverVariables()
+        }
+      }, 300)
     }
 
     // 监听来自Mermaid HTML iframe的消息
@@ -1936,6 +2453,83 @@ export default {
         return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
       } else {
         return `${minutes}:${secs.toString().padStart(2, '0')}`
+      }
+    }
+
+    // 加载DuckDB数据
+    const loadDuckDBData = async () => {
+      if (!isDuckDBFile.value || !currentFile.value) return
+      
+      duckdbData.value.loading = true
+      duckdbData.value.error = null
+      
+      try {
+        // 获取当前文件的完整路径
+        const agentType = route.query.type || null
+        let fullFilePath = currentFile.value.path
+        
+        // 如果是相对路径，需要构建完整路径
+        // 对于hello_world agent，路径可能是相对的
+        if (!fullFilePath.startsWith('/')) {
+          // 构建基于agent的完整路径
+          if (agentType === 'examples') {
+            fullFilePath = `/Users/liyao/Code/mofa/mofa_old/mofa/python/examples/${props.agentName}/${fullFilePath}`
+          } else {
+            // 其他类型的agent，可能需要不同的路径构建逻辑
+            fullFilePath = `/path/to/agents/${props.agentName}/${fullFilePath}`
+          }
+        }
+        
+        console.log('Loading DuckDB data for file:', fullFilePath)
+        
+        // 使用新的API接口，传递文件路径参数
+        const queryParam = encodeURIComponent(fullFilePath)
+        
+        // 获取数据库统计信息
+        const statsResponse = await fetch(`/api/agents/duckdb/file/stats?path=${queryParam}`)
+        const statsData = await statsResponse.json()
+        
+        if (statsData.success) {
+          duckdbData.value.stats = statsData.stats
+        }
+
+        // 获取所有表和节点
+        const tablesResponse = await fetch(`/api/agents/duckdb/file/nodes?path=${queryParam}`)
+        const tablesData = await tablesResponse.json()
+        
+        if (tablesData.success) {
+          duckdbData.value.tables = tablesData.nodes || []
+          
+          // 为每个表获取预览数据和历史记录
+          for (const table of duckdbData.value.tables) {
+            try {
+              // 获取变量数据
+              const previewResponse = await fetch(`/api/agents/duckdb/file/node/${table.node_name}/variables?path=${queryParam}`)
+              const previewData = await previewResponse.json()
+              
+              if (previewData.success) {
+                duckdbData.value.previewData[table.node_name] = previewData.variables
+              }
+
+              // 获取历史记录
+              const historyResponse = await fetch(`/api/agents/duckdb/file/node/${table.node_name}/history?path=${queryParam}&limit=20`)
+              const historyData = await historyResponse.json()
+              
+              if (historyData.success) {
+                duckdbData.value.historyData[table.node_name] = historyData.history
+              }
+            } catch (err) {
+              console.warn(`Failed to load data for ${table.node_name}:`, err)
+            }
+          }
+        } else {
+          duckdbData.value.error = tablesData.message || 'Failed to load database nodes'
+        }
+      } catch (error) {
+        console.error('Failed to load DuckDB data:', error)
+        duckdbData.value.error = error.message || 'Failed to load database data'
+      } finally {
+        duckdbData.value.loading = false
       }
     }
 
@@ -2012,6 +2606,7 @@ export default {
       mermaidCode,
       useNewEditor,
       agentFolderPath,
+      agentType,
       vscodeBaseUrl,
       vscodeStatus,
       startVSCodeServer,
@@ -2043,6 +2638,7 @@ export default {
       startResizeMermaid,
       startResizeFileSidebar,
       codeEditorRef,
+      variableMonitorRef,
       handleMermaidNodeClick,
       // 新建文件夹相关
       newFolderDialogVisible,
@@ -2080,6 +2676,12 @@ export default {
       onVideoLoad,
       onVideoError,
       formatDuration,
+      // DuckDB预览相关
+      isDuckDBFile,
+      isDuckDBWALFile,
+      duckdbData,
+      activeTablePanels,
+      loadDuckDBData,
       // dataflow输出相关
       isDataflowAgent,
       isNodeAgent,
@@ -2092,7 +2694,25 @@ export default {
       stopDataflowOutputRefresh,
       toggleDataflowAutoRefresh,
       clearDataflowOutput,
-      closeDataflowOutputDialog
+      closeDataflowOutputDialog,
+      // 变量监控窗口相关
+      showVariableMonitor,
+      variableMonitorWidth,
+      variableMonitorHeight,
+      variableMonitorX,
+      variableMonitorY,
+      toggleVariableMonitor,
+      handleVariableMonitorClose,
+      handleVariableMonitorMinimize,
+      handleVariableMonitorPositionChange,
+      handleVariableMonitorSizeChange,
+      // 节点变量监控窗口相关
+      nodeMonitorWindows,
+      handleNodeMonitorClose,
+      handleNodeMonitorMinimize,
+      handleNodeMonitorPositionChange,
+      handleNodeMonitorSizeChange,
+      closeAllNodeMonitors
     }
   }
 }
@@ -2844,6 +3464,7 @@ export default {
   transform: scaleX(0);
 }
 
+
 /* 切换栏图标动画优化 */
 .toggle-icon {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -2975,5 +3596,252 @@ export default {
 
 .output-content::-webkit-scrollbar-thumb:hover {
   background: #777;
+}
+
+/* DuckDB 预览样式 */
+.duckdb-preview {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #f9f9f9;
+  overflow: hidden;
+}
+
+.duckdb-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow: auto;
+}
+
+.duckdb-header {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.duckdb-header h3 {
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  color: #333;
+}
+
+.duckdb-icon {
+  font-size: 24px;
+  color: #409eff;
+}
+
+.duckdb-path {
+  font-size: 12px;
+  color: #999;
+  font-family: monospace;
+  background-color: #f5f5f5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.wal-info {
+  margin-bottom: 20px;
+}
+
+.wal-info ul {
+  margin: 10px 0 0 0;
+  padding-left: 20px;
+}
+
+.wal-info li {
+  margin-bottom: 5px;
+}
+
+.duckdb-content {
+  flex: 1;
+  overflow: auto;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #666;
+}
+
+.loading-state p {
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.error-state {
+  margin-bottom: 20px;
+}
+
+.db-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stats-card, .tables-card {
+  margin-bottom: 20px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #409eff;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.tables-list {
+  margin-top: 15px;
+}
+
+.table-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.table-name {
+  flex: 1;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.table-preview {
+  padding: 15px;
+  background: #fafafa;
+  border-radius: 6px;
+}
+
+.preview-variables {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.variable-item {
+  background: white;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.variable-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.variable-name {
+  font-weight: 600;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.variable-value {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+  font-family: monospace;
+  font-size: 12px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.variable-value pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.variable-meta {
+  font-size: 12px;
+  color: #999;
+  text-align: right;
+}
+
+.variable-time {
+  font-family: monospace;
+}
+
+.empty-database {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: #666;
+}
+
+/* 历史记录样式 */
+.history-section {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #ebeef5;
+}
+
+.history-title {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.history-table {
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #ebeef5;
+}
+
+.table-value {
+  max-width: 200px;
+  overflow: hidden;
+}
+
+.table-value pre {
+  margin: 0;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 100px;
+  overflow-y: auto;
+  background: #f5f7fa;
+  padding: 8px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.null-value {
+  color: #909399;
+  font-style: italic;
 }
 </style>
