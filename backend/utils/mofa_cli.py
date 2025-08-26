@@ -97,7 +97,35 @@ class MofaCLI:
         # 存储正在运行的进程信息
         self._running_processes = {}
         
-        # 存储所有可能的目录路径，用于搜索
+        # 分别存储hub和example类型的额外目录
+        self.additional_hub_dirs = []
+        self.additional_example_dirs = []
+        
+        # 添加设置中的额外hub目录
+        additional_hub_dirs = self.settings.get('additional_hub_dirs', [])
+        for additional_dir in additional_hub_dirs:
+            if additional_dir and os.path.exists(additional_dir):
+                self.additional_hub_dirs.append(additional_dir)
+        
+        # 添加设置中的额外example目录
+        additional_example_dirs = self.settings.get('additional_example_dirs', [])
+        for additional_dir in additional_example_dirs:
+            if additional_dir and os.path.exists(additional_dir):
+                self.additional_example_dirs.append(additional_dir)
+        
+        # 合并所有扫描目录
+        self.all_scan_dirs = [
+            self.agent_hub_dir,
+            self.examples_dir,
+        ] + self.additional_hub_dirs + self.additional_example_dirs
+        
+        # 过滤掉None值和重复项
+        self.all_scan_dirs = list(set([d for d in self.all_scan_dirs if d is not None]))
+        
+        # Agent位置缓存 - 记录每个agent的实际路径
+        self.agent_location_cache = {}  # agent_name -> 实际完整路径的映射
+        
+        # 原有的目录定义，保持兼容性
         self.agent_dirs = [self.agent_hub_dir]  # agent-hub目录
         self.example_dirs = [self.examples_dir]  # examples目录
         
@@ -266,33 +294,43 @@ class MofaCLI:
             except Exception as cli_err:
                 print(f"CLI 命令出错: {cli_err}")
             
-            # 2. 扫描 agent-hub 目录（原子化单位）
-            print(f"扫描 agent-hub 目录: {self.agent_hub_dir}")
-            if os.path.exists(self.agent_hub_dir) and os.path.isdir(self.agent_hub_dir):
-                try:
-                    for item in os.listdir(self.agent_hub_dir):
-                        item_path = os.path.join(self.agent_hub_dir, item)
-                        if os.path.isdir(item_path) and not item.startswith('.'):
-                            hub_agents.add(item)
-                    print(f"从 agent-hub 目录读取到 {len(hub_agents)} 个原子化Agent")
-                except Exception as dir_err:
-                    print(f"读取 agent-hub 目录时出错: {dir_err}")
-            else:
-                print(f"agent-hub 目录不存在或无法访问: {self.agent_hub_dir}")
+            # 2. 扫描所有配置的目录并构建位置缓存
+            print(f"开始扫描所有目录: {self.all_scan_dirs}")
+            self.agent_location_cache.clear()  # 清空缓存，重新构建
             
-            # 3. 扫描 examples 目录
-            print(f"扫描 examples 目录: {self.examples_dir}")
-            if os.path.exists(self.examples_dir) and os.path.isdir(self.examples_dir):
-                try:
-                    for item in os.listdir(self.examples_dir):
-                        item_path = os.path.join(self.examples_dir, item)
-                        if os.path.isdir(item_path) and not item.startswith('.'):
-                            example_agents.add(item)
-                    print(f"从 examples 目录读取到 {len(example_agents)} 个dataflow示例")
-                except Exception as dir_err:
-                    print(f"读取 examples 目录时出错: {dir_err}")
-            else:
-                print(f"examples 目录不存在或无法访问: {self.examples_dir}")
+            for scan_dir in self.all_scan_dirs:
+                if os.path.exists(scan_dir) and os.path.isdir(scan_dir):
+                    try:
+                        print(f"扫描目录: {scan_dir}")
+                        for item in os.listdir(scan_dir):
+                            item_path = os.path.join(scan_dir, item)
+                            if os.path.isdir(item_path) and not item.startswith('.'):
+                                # 记录agent的实际位置
+                                self.agent_location_cache[item] = item_path
+                                
+                                # 根据目录位置分类到不同集合
+                                if scan_dir == self.agent_hub_dir:
+                                    hub_agents.add(item)
+                                elif scan_dir == self.examples_dir:
+                                    example_agents.add(item)
+                                else:
+                                    # 其他目录的agent，根据配置分类
+                                    if scan_dir in self.additional_hub_dirs:
+                                        hub_agents.add(item)
+                                    elif scan_dir in self.additional_example_dirs:
+                                        example_agents.add(item)
+                                    else:
+                                        # 默认归类为hub_agents
+                                        hub_agents.add(item)
+                                    
+                        print(f"从 {scan_dir} 目录读取到 {len(os.listdir(scan_dir) if os.path.exists(scan_dir) else 0)} 项")
+                    except Exception as dir_err:
+                        print(f"读取目录 {scan_dir} 时出错: {dir_err}")
+                else:
+                    print(f"目录不存在或无法访问: {scan_dir}")
+            
+            print(f"构建完成位置缓存，共 {len(self.agent_location_cache)} 个agent")
+            print(f"agent-hub类型: {len(hub_agents)} 个, examples类型: {len(example_agents)} 个")
             
             if self.mofa_mode == 'docker':
                 # 分别列举 container 内的两级目录
@@ -528,13 +566,14 @@ class MofaCLI:
         这个方法专门用于运行 agent-hub 中的原子化agent
         """
         try:
-            # 首先检查这个agent是否存在于agent-hub目录中
-            agent_path = os.path.join(self.agent_hub_dir, agent_name)
-            if not os.path.exists(agent_path) or not os.path.isdir(agent_path):
+            # 使用缓存查找agent的实际路径
+            agent_path = self._find_agent_path(agent_name)
+            if not agent_path:
                 return {
                     "success": False, 
-                    "message": f"Agent {agent_name} not found in agent-hub directory. If this is an example, use run_example instead."
+                    "message": f"Agent {agent_name} not found in any configured directory. If this is an example, use run_example instead."
                 }
+            print(f"找到 agent {agent_name} 在路径: {agent_path}")
             
             # 使用适合原子化agent的命令运行
             cmd = f"cd {self.mofa_dir} && mofa run --agent-name {agent_name}"
@@ -570,13 +609,14 @@ class MofaCLI:
         """
         print(f"\n\n===== 开始运行 example: {example_name} =====")
         try:
-            # 首先检查这个示例是否存在于examples目录中
-            example_path = os.path.join(self.examples_dir, example_name)
-            if not os.path.exists(example_path) or not os.path.isdir(example_path):
+            # 使用缓存查找示例的实际路径
+            example_path = self._find_agent_path(example_name)
+            if not example_path:
                 return {
                     "success": False, 
-                    "message": f"Example {example_name} not found in examples directory. If this is an atomic agent, use run_agent instead."
+                    "message": f"Example {example_name} not found in any configured directory. If this is an atomic agent, use run_agent instead."
                 }
+            print(f"找到 example {example_name} 在路径: {example_path}")
             
             # 查找 dataflow 配置文件
             dataflow_files = [f for f in os.listdir(example_path) if f.endswith('_dataflow.yml') or f.endswith('.yml')]
@@ -748,29 +788,28 @@ class MofaCLI:
         会自动检查 agent-hub 和 examples 目录
         """
         try:
-            # 首先检查 agent-hub 目录
-            agent_hub_path = os.path.join(self.agent_hub_dir, agent_name)
-            # 然后检查 examples 目录
-            examples_path = os.path.join(self.examples_dir, agent_name)
+            # 使用缓存查找agent的实际路径
+            agent_path = self._find_agent_path(agent_name)
+            if not agent_path:
+                return {"success": False, "message": f"Agent {agent_name} not found in any configured directory"}
             
-            # 检查 agent 是否存在于任一目录
-            if os.path.exists(agent_hub_path):
-                agent_path = agent_hub_path
+            # 根据路径判断类型
+            if self.agent_hub_dir in agent_path:
                 agent_type = "agent-hub"
-            elif os.path.exists(examples_path):
-                agent_path = examples_path
+            elif self.examples_dir in agent_path:
                 agent_type = "examples"
             else:
-                # 兼容旧版本，检查 self.agents_dir
-                agent_path = os.path.join(self.agents_dir, agent_name)
-                if not os.path.exists(agent_path):
-                    return {"success": False, "message": f"Agent {agent_name} not found in any directory"}
-                agent_type = "unknown"
+                agent_type = "custom"
             
             # 递归删除目录
             import shutil
             print(f"删除 {agent_type} 类型的 Agent: {agent_name} 路径: {agent_path}")
             shutil.rmtree(agent_path)
+            
+            # 从缓存中移除
+            if agent_name in self.agent_location_cache:
+                del self.agent_location_cache[agent_name]
+                
             return {"success": True, "message": f"{agent_type} Agent {agent_name} deleted"}
         except Exception as e:
             import traceback
@@ -1114,6 +1153,30 @@ class MofaCLI:
         except Exception as e:
             print(f"获取agent日志时出错: {e}")
             return f"获取日志时发生错误: {str(e)}"
+    
+    def _find_agent_path(self, agent_name):
+        """查找agent的实际路径，优先从缓存查找，缓存没有则实时查找"""
+        # 1. 优先从缓存中查找
+        if agent_name in self.agent_location_cache:
+            cached_path = self.agent_location_cache[agent_name]
+            # 验证缓存的路径是否还存在
+            if os.path.exists(cached_path):
+                return cached_path
+            else:
+                # 缓存失效，从缓存中移除
+                del self.agent_location_cache[agent_name]
+        
+        # 2. 缓存中没有，实时在所有目录中查找
+        for scan_dir in self.all_scan_dirs:
+            if os.path.exists(scan_dir):
+                candidate_path = os.path.join(scan_dir, agent_name)
+                if os.path.exists(candidate_path) and os.path.isdir(candidate_path):
+                    # 找到了，更新缓存并返回
+                    self.agent_location_cache[agent_name] = candidate_path
+                    return candidate_path
+        
+        # 3. 都没找到，返回None
+        return None
     
     def _update_agent_name_in_files(self, agent_path, old_name, new_name):
         """在复制的 agent 文件中更新名称"""

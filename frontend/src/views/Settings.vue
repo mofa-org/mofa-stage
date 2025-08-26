@@ -118,6 +118,76 @@
               />
               <div class="form-help">{{ $t('settings.examplesPathHelp') }}</div>
             </el-form-item>
+            
+            <!-- Additional Hub Directories -->
+            <el-form-item label="Additional Hub Directories">
+              <div class="additional-dirs">
+                <div 
+                  v-for="(dir, index) in settingsForm.additional_hub_dirs" 
+                  :key="index"
+                  class="dir-item"
+                >
+                  <PathInputWithHistory
+                    v-model="settingsForm.additional_hub_dirs[index]"
+                    :path-type="`additional_hub_dir_${index}`"
+                    placeholder="/path/to/additional/hub/directory"
+                    :context="{ mofa_dir: settingsForm.mofa_dir }"
+                    @browse="() => selectAdditionalHubDir(index)"
+                  />
+                  <el-button 
+                    type="danger" 
+                    size="small" 
+                    @click="removeAdditionalHubDir(index)"
+                  >
+                    Delete
+                  </el-button>
+                </div>
+                <el-button 
+                  type="primary" 
+                  size="small" 
+                  @click="addAdditionalHubDir"
+                  :disabled="settingsForm.additional_hub_dirs.length >= 10"
+                >
+                  Add Hub Directory
+                </el-button>
+              </div>
+              <div class="form-help">Add extra directories containing hub-type agents (atomic agents). Max 10 directories.</div>
+            </el-form-item>
+
+            <!-- Additional Example Directories -->
+            <el-form-item label="Additional Example Directories">
+              <div class="additional-dirs">
+                <div 
+                  v-for="(dir, index) in settingsForm.additional_example_dirs" 
+                  :key="index"
+                  class="dir-item"
+                >
+                  <PathInputWithHistory
+                    v-model="settingsForm.additional_example_dirs[index]"
+                    :path-type="`additional_example_dir_${index}`"
+                    placeholder="/path/to/additional/examples/directory"
+                    :context="{ mofa_dir: settingsForm.mofa_dir }"
+                    @browse="() => selectAdditionalExampleDir(index)"
+                  />
+                  <el-button 
+                    type="danger" 
+                    size="small" 
+                    @click="removeAdditionalExampleDir(index)"
+                  >
+                    Delete
+                  </el-button>
+                </div>
+                <el-button 
+                  type="primary" 
+                  size="small" 
+                  @click="addAdditionalExampleDir"
+                  :disabled="settingsForm.additional_example_dirs.length >= 10"
+                >
+                  Add Example Directory
+                </el-button>
+              </div>
+              <div class="form-help">Add extra directories containing example-type agents (dataflow examples). Max 10 directories.</div>
+            </el-form-item>
           </template>
 
           <!-- Dora 模式的配置 -->
@@ -467,7 +537,10 @@ export default {
         'Mission Control for MoFA',
         'Enjoy the show',
         'Control Panel for MoFA'
-      ]
+      ],
+      // ---- Additional Directories ----
+      additional_hub_dirs: [],
+      additional_example_dirs: []
     })
     
     const isLoading = computed(() => settingsStore.isLoading)
@@ -772,6 +845,51 @@ export default {
           return 'Enjoy the show'
       }
     }
+
+    // Additional directories related methods
+    const addAdditionalHubDir = () => {
+      if (settingsForm.additional_hub_dirs.length < 10) {
+        settingsForm.additional_hub_dirs.push('')
+      }
+    }
+
+    const removeAdditionalHubDir = (index) => {
+      settingsForm.additional_hub_dirs.splice(index, 1)
+    }
+
+    const selectAdditionalHubDir = async (index) => {
+      try {
+        const selectedPath = await smartSelectPath(settingsForm.additional_hub_dirs[index], `additional_hub_dir_${index}`)
+        if (selectedPath) {
+          settingsForm.additional_hub_dirs[index] = selectedPath
+          ElMessage.success('Additional hub directory selected')
+        }
+      } catch (error) {
+        ElMessage.error('Path selection failed, please enter manually')
+      }
+    }
+
+    const addAdditionalExampleDir = () => {
+      if (settingsForm.additional_example_dirs.length < 10) {
+        settingsForm.additional_example_dirs.push('')
+      }
+    }
+
+    const removeAdditionalExampleDir = (index) => {
+      settingsForm.additional_example_dirs.splice(index, 1)
+    }
+
+    const selectAdditionalExampleDir = async (index) => {
+      try {
+        const selectedPath = await smartSelectPath(settingsForm.additional_example_dirs[index], `additional_example_dir_${index}`)
+        if (selectedPath) {
+          settingsForm.additional_example_dirs[index] = selectedPath
+          ElMessage.success('Additional example directory selected')
+        }
+      } catch (error) {
+        ElMessage.error('Path selection failed, please enter manually')
+      }
+    }
     
     return {
       settingsForm,
@@ -789,7 +907,13 @@ export default {
       handleKeydown,
       addPresetSubtitle,
       removePresetSubtitle,
-      getCurrentSubtitlePreview
+      getCurrentSubtitlePreview,
+      addAdditionalHubDir,
+      removeAdditionalHubDir,
+      selectAdditionalHubDir,
+      addAdditionalExampleDir,
+      removeAdditionalExampleDir,
+      selectAdditionalExampleDir
     }
   }
 }
@@ -1054,5 +1178,22 @@ export default {
 
 [data-theme="dark"] .subtitle-preview {
   background: rgba(107, 206, 210, 0.15);
+}
+
+/* Additional directories styles */
+.additional-dirs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dir-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.dir-item .path-input-with-history {
+  flex: 1;
 }
 </style>

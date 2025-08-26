@@ -49,6 +49,8 @@ DEFAULT_SETTINGS = {
     "examples_path": DEFAULT_EXAMPLES_PATH,  # 默认examples路径
     "custom_agent_hub_path": CUSTOM_AGENT_HUB_PATH,  # 自定义agent-hub路径
     "custom_examples_path": CUSTOM_EXAMPLES_PATH,  # 自定义examples路径
+    "additional_hub_dirs": [],  # 额外的hub目录列表
+    "additional_example_dirs": [],  # 额外的example目录列表
     "use_relative_paths": True,  # 是否使用相对路径
     "theme": "light",
     "editor_font_size": 14,
