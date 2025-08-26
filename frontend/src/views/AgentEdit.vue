@@ -29,10 +29,9 @@
           </el-button>
           <el-button 
             @click="toggleVariableMonitor" 
-            :type="showVariableMonitor ? 'primary' : 'default'"
-            size="small">
+            :style="{ backgroundColor: showVariableMonitor ? '#ffc53d' : '', color: showVariableMonitor ? '#fff' : '', borderColor: showVariableMonitor ? '#ffc53d' : '' }">
             <el-icon><View /></el-icon>
-            变量
+            Variables
           </el-button>
           <el-button 
             v-if="nodeMonitorWindows.size > 0" 
@@ -167,6 +166,7 @@
                     :type="previewMode ? 'primary' : 'default'">
                     {{ previewMode ? '编辑' : '预览' }}
                   </el-button>
+                  <!-- 保存按钮已移至顶部工具栏，此处注释掉
                   <el-button 
                     size="small" 
                     @click="saveCurrentFile" 
@@ -174,6 +174,7 @@
                     :loading="isSaving">
                     保存
                   </el-button>
+                  -->
                 </el-button-group>
               </div>
             </div>
