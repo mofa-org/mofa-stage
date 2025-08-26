@@ -236,19 +236,79 @@ install_backend() {
     py_ver=$(python3 --version 2>&1 | cut -d ' ' -f 2)
     print_color_msg "$YELLOW" "$ZH_PYTHON_VERSION $py_ver" "$EN_PYTHON_VERSION $py_ver"
     
-    # 装依赖
+    # 装依赖 - 多重备选方案
     print_color_msg "$GREEN" "$ZH_PIP_INSTALL" "$EN_PIP_INSTALL"
-    pip3 install -r requirements.txt --break-system-packages
     
-    # 检查结果
-    if [ $? -eq 0 ]; then
-        print_color_msg "$GREEN" "$ZH_BACKEND_DEPS_SUCCESS" "$EN_BACKEND_DEPS_SUCCESS"
-    else
-        print_color_msg "$RED" "$ZH_BACKEND_DEPS_FAIL" "$EN_BACKEND_DEPS_FAIL"
-        exit 1
+    # 方案1: 虚拟环境 (最安全)
+    if python3 -m venv venv_temp 2>/dev/null; then
+        print_color_msg "$YELLOW" "尝试虚拟环境安装..." "Trying virtual environment install..."
+        source venv_temp/bin/activate
+        pip install -r requirements.txt
+        if [ $? -eq 0 ]; then
+            deactivate
+            # 移动虚拟环境到合适位置
+            rm -rf ../backend_venv 2>/dev/null
+            mv venv_temp ../backend_venv
+            print_color_msg "$GREEN" "✅ 虚拟环境安装成功! 运行时需要: source backend_venv/bin/activate" "✅ Virtual environment install successful! Need: source backend_venv/bin/activate"
+            cd ..
+            return 0
+        fi
+        deactivate 2>/dev/null
+        rm -rf venv_temp
     fi
     
+    # 方案2: 暴力移除系统保护 (针对Debian系)
+    for managed_file in /usr/lib/python*/EXTERNALLY-MANAGED /usr/lib/python*/dist-packages/EXTERNALLY-MANAGED; do
+        if [ -f "$managed_file" ]; then
+            print_color_msg "$YELLOW" "检测到系统保护，临时移除..." "System protection detected, temporarily removing..."
+            sudo mv "$managed_file" "$managed_file.mofa_backup" 2>/dev/null
+            pip3 install -r requirements.txt
+            result=$?
+            sudo mv "$managed_file.mofa_backup" "$managed_file" 2>/dev/null
+            if [ $result -eq 0 ]; then
+                print_color_msg "$GREEN" "✅ 绕过系统保护安装成功!" "✅ Bypassed system protection successfully!"
+                cd ..
+                return 0
+            fi
+            break
+        fi
+    done
+    
+    # 方案3: break-system-packages
+    print_color_msg "$YELLOW" "尝试 --break-system-packages..." "Trying --break-system-packages..."
+    pip3 install -r requirements.txt --break-system-packages 2>/dev/null
+    if [ $? -eq 0 ]; then
+        print_color_msg "$GREEN" "✅ break-system-packages 安装成功!" "✅ break-system-packages install successful!"
+        cd ..
+        return 0
+    fi
+    
+    # 方案4: 用户级安装
+    print_color_msg "$YELLOW" "尝试用户级安装..." "Trying user-level install..."
+    pip3 install -r requirements.txt --user
+    if [ $? -eq 0 ]; then
+        print_color_msg "$GREEN" "✅ 用户级安装成功!" "✅ User-level install successful!"
+        cd ..
+        return 0
+    fi
+    
+    # 方案5: 强制用户级安装
+    print_color_msg "$YELLOW" "尝试强制用户级安装..." "Trying forced user-level install..."
+    pip3 install -r requirements.txt --user --force-reinstall --no-deps
+    if [ $? -eq 0 ]; then
+        print_color_msg "$GREEN" "✅ 强制用户级安装成功!" "✅ Forced user-level install successful!"
+        cd ..
+        return 0
+    fi
+    
+    # 所有方案都失败
+    print_color_msg "$RED" "❌ 所有安装方案都失败了!" "❌ All installation methods failed!"
+    print_color_msg "$YELLOW" "手动解决方案:" "Manual solutions:"
+    echo "1. sudo rm /usr/lib/python*/EXTERNALLY-MANAGED"
+    echo "2. pip3 install -r requirements.txt"
+    echo "3. python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
     cd ..
+    exit 1
 }
 
 # 安装前端依赖
