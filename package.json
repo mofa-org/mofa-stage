@@ -6,7 +6,9 @@
   "author": "MoFA Team",
   "license": "MIT",
   "scripts": {
-    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\" \"wait-on http://localhost:3000 http://localhost:5002 && NODE_ENV=development electron .\"",
+    "kill-ports": "lsof -ti:3000,5001,5002 | xargs -r kill -9 || true",
+    "install-all": "npm install && cd frontend && npm install",
+    "dev": "npm run kill-ports && npm run install-all && concurrently \"npm run backend:dev\" \"npm run frontend:dev\" \"wait-on http://localhost:3000 http://localhost:5002 && NODE_ENV=development electron .\"",
     "frontend:dev": "cd frontend && npm run dev",
     "backend:dev": "cd backend && /opt/homebrew/opt/python@3.11/bin/python3.11 app.py",
     "frontend:build": "cd frontend && npm run build",
