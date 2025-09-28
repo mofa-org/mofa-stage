@@ -1,6 +1,6 @@
 {
   "name": "mofa-stage-desktop",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "MoFA Stage Desktop - AI Agent Development Platform",
   "main": "electron/main.js",
   "author": "MoFA Team",
@@ -50,7 +50,9 @@
       {
         "from": "backend/dist/",
         "to": "backend/",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "mac": {
