@@ -1,0 +1,60 @@
+{
+  "name": "mofa-stage-desktop",
+  "version": "1.0.0",
+  "description": "MoFA Stage Desktop - AI Agent Development Platform",
+  "main": "electron/main.js",
+  "author": "MoFA Team",
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\" \"wait-on http://localhost:3000 http://localhost:5002 && NODE_ENV=development electron .\"",
+    "frontend:dev": "cd frontend && npm run dev",
+    "backend:dev": "cd backend && /opt/homebrew/opt/python@3.11/bin/python3.11 app.py",
+    "frontend:build": "cd frontend && npm run build",
+    "backend:build": "/opt/homebrew/opt/python@3.11/bin/python3.11 scripts/build_backend.py",
+    "build": "npm run frontend:build && npm run backend:build",
+    "electron:pack": "electron-builder",
+    "dist": "npm run build && electron-builder --publish=never",
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "concurrently": "^8.2.2",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.mofa.stage.desktop",
+    "productName": "MoFA Stage",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/dist/**/*",
+      "!frontend/node_modules/**/*",
+      "!backend/backend_venv/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend/dist/",
+        "to": "backend/",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

@@ -1,8 +1,8 @@
-# MoFA_Stage
+# MoFA Stage Desktop
 
 English | [中文](README_cn.md)
 
-MoFA_Stage is a web-based development tool for managing and editing Nodes and Dataflows in the MoFA framework.
+MoFA Stage Desktop is an Electron-based desktop application for managing and editing Nodes and Dataflows in the MoFA framework, providing a unified development platform with embedded services.
 
 ## Features
 
@@ -23,7 +23,16 @@ MoFA_Stage is a web-based development tool for managing and editing Nodes and Da
   - File browser
   - VSCode Server integration (optional)
 
+- **Desktop Integration**
+  - Cross-platform support (Windows, macOS, Linux)
+  - Single installation package
+  - Embedded Python backend
+  - No environment configuration required
+
 ## Technology Stack
+
+**Desktop Framework**
+- Electron for cross-platform desktop application
 
 **Backend**
 - Python + Flask
@@ -39,171 +48,261 @@ MoFA_Stage is a web-based development tool for managing and editing Nodes and Da
 - ttyd (recommended)
 - code-server (optional)
 
+## Project Structure
 
-### Quick Start
+```
+mofa-stage-desktop/
+├── electron/           # Electron main process code
+│   ├── main.js        # Main process entry
+│   └── preload.js     # Preload script
+├── frontend/          # Vue.js frontend code
+├── backend/           # Flask backend code
+├── scripts/           # Build scripts
+├── assets/            # Application icons and resources
+└── dist/              # Build output directory
+```
+
+## Quick Start
+
+### For End Users
+
+**Method 1: Download Release Package (Recommended)**
+
+1. Download the appropriate installer from the releases page
+   - Windows: `.exe` installer
+   - macOS: `.dmg` package
+   - Linux: `AppImage` file
+
+2. Install and run the application
+   - No additional setup required
+   - Python environment is embedded
+
+**Method 2: Build from Source**
+
+```bash
+# Clone the repository
+git clone https://github.com/mofa-org/mofa-stage-desktop.git
+cd mofa-stage-desktop
+
+# Install dependencies
+npm install
+cd frontend && npm install
+cd ../backend && pip install -r requirements.txt
+
+# Build and package
+npm run build
+npm run dist
+```
+
+### For Developers
 
 #### Environment Requirements
 
 **System Support**
-- Linux (supports apt-get and yum package managers)
-- macOS
-- Windows is not currently supported, WSL (Windows Subsystem for Linux) is recommended
+- Windows 10/11
+- macOS 10.15+
+- Linux (Ubuntu 18.04+ or equivalent)
 
 **Software Requirements**
+- Node.js 18 or higher
 - Python 3.8 or higher
-- Node.js 14 or higher
-- MoFA framework installed
+- npm or yarn
 
-#### Installation and Run Scripts
+#### Development Setup
 
-The project provides two scripts:
+1. **Clone and install dependencies**
+   ```bash
+   git clone https://github.com/mofa-org/mofa-stage-desktop.git
+   cd mofa-stage-desktop
+   
+   # Install root dependencies
+   npm install
+   
+   # Install frontend dependencies
+   cd frontend
+   npm install
+   
+   # Install backend dependencies
+   cd ../backend
+   pip install -r requirements.txt
+   cd ..
+   ```
 
-- **install**: One-click installation of all dependencies
-  ```bash
-  chmod +x install
-  ./install
-  ```
-  Automatically installs backend/frontend dependencies with options for Docker or traditional installation. After installation, it will prompt whether to run, selecting yes will execute the run script. For local deployment, choose non-docker deployment.
+2. **Development mode**
+   ```bash
+   npm run dev
+   ```
+   This command will:
+   - Start the backend Flask server
+   - Start the frontend development server
+   - Launch Electron in development mode
 
-- **run**: One-click service startup
-  ```bash
-  chmod +x run
-  ./run
-  ```
-  Supports both Docker and traditional deployment modes. For local deployment, choose non-docker deployment.
+3. **Individual services**
+   ```bash
+   # Start only backend
+   npm run backend:dev
+   
+   # Start only frontend
+   npm run frontend:dev
+   ```
 
-##### Docker Deployment (Recommended)
+#### Build and Package
 
-###### Using Docker avoids all environment issues for the fastest deployment:
+1. **Build for production**
+   ```bash
+   npm run build
+   ```
+   This will:
+   - Build the frontend application
+   - Package the Python backend using PyInstaller
+
+2. **Create distributable packages**
+   ```bash
+   npm run dist
+   ```
+   Generates platform-specific installers in the `dist/` directory
+
+## System Requirements
+
+### For End Users
+- Memory: Minimum 4GB, recommended 8GB+
+- Storage: Minimum 500MB available space
+- Operating System:
+  - Windows 10/11
+  - macOS 10.15+
+  - Ubuntu 18.04+ or equivalent Linux distribution
+
+### For Developers
+- Node.js 18 or higher
+- Python 3.8 or higher
+- npm or yarn
+- Git (for version control)
+
+## Development Guide
+
+### Available Scripts
+
+- `npm run dev` - Start development server (frontend + backend + Electron)
+- `npm run frontend:dev` - Start only frontend development server
+- `npm run backend:dev` - Start only backend server
+- `npm run frontend:build` - Build frontend for production
+- `npm run backend:build` - Package backend using PyInstaller
+- `npm run build` - Build both frontend and backend
+- `npm run dist` - Create distributable desktop packages
+
+### Debugging
+
+1. **Enable Developer Tools**
+   - Press `F12` or select "Toggle DevTools" from menu
+
+2. **View Backend Logs**
+   - Backend logs are displayed in Electron main process console
+
+3. **Reload Application**
+   - Press `Ctrl+R` (Windows/Linux) or `Cmd+R` (macOS)
+
+### Backend Packaging
+
+The backend is packaged using PyInstaller to create a standalone executable:
 
 ```bash
-# Simply run the installation script to choose docker deployment
-./install
-./run
-
-# Or configure separately:
-
-# One-line frontend deployment
-docker run -d -p 3000:80 liyao1119/mofa-stage-frontend
-
-# Start backend
-cd backend && python app.py
+python scripts/build_backend.py
 ```
 
-**🚀 Quick Start (30-second deployment)**
+This script will:
+- Use PyInstaller to bundle the Flask application
+- Include all necessary dependencies
+- Create a single executable file
+- Handle platform-specific requirements
 
-**Method 1: Using Official Image (Recommended)**
+### Desktop Application Packaging
+
+Use electron-builder to create platform-specific packages:
 
 ```bash
-# 1. Pull and start frontend
-docker run -d -p 3000:80 --name mofa-frontend \
-  --add-host=host.docker.internal:host-gateway \
-  liyao1119/mofa-stage-frontend:latest
-
-# 2. Clone repository and start backend
-git clone https://github.com/mofa-org/mofa-stage.git
-cd mofa-stage/backend
-pip install -r requirements.txt
-python app.py
-
-# 3. Access system
-# Open browser: http://localhost:3000
+npm run electron:pack  # Create package without installer
+npm run dist          # Create installer/distributable
 ```
 
-**Method 2: Local Build**
+#### Package Output
 
-```bash
-# 1. Clone code
-git clone https://github.com/mofa-org/mofa-stage.git
-cd mofa-stage
+After running `npm run dist`, you'll find platform-specific packages in the `dist/` directory:
 
-# 2. Use installation script (supports Docker mode selection)
-./install
-
-# 3. Start services
-./run
-```
-
-**📋 System Requirements**
-
-- Docker Desktop ([Download](https://www.docker.com/products/docker-desktop/))
-- Python 3.8+ (backend only)
-- 4GB available memory
-
-### Development Mode (Manual Startup)
-
-1. Start the backend
-```bash
-cd backend
-python app.py
-```
-
-2. Start the frontend (development mode)
-```bash
-cd frontend
-npm run dev
-```
-
-Access http://localhost:3000.
-
-### Production Deployment
-
-1. Build the frontend
-```bash
-cd frontend
-npm run build  # Generates in the dist directory
-```
-
-2. Deployment methods (choose one)
-
-**Using Nginx**
-
-```nginx
-server {
-    listen 80;
-    
-    # Static files
-    location / {
-        root /path/to/mofa_stage/frontend/dist;
-        try_files $uri $uri/ /index.html;
-    }
-    
-    # API forwarding
-    location /api {
-        proxy_pass http://localhost:5002;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-    
-    # WebSocket
-    location /api/webssh {
-        proxy_pass http://localhost:5001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-```
-
-**Simple Deployment**
-
-Using Python's built-in HTTP server:
-```bash
-cd frontend/dist
-python -m http.server 3000
-```
-
-Start the backend:
-```bash
-cd backend
-python app.py
-```
+- **Windows**: `.exe` installer and unpacked application
+- **macOS**: `.dmg` disk image and `.app` bundle
+- **Linux**: `AppImage` portable application
 
 ## Common Issues
 
-### Port Occupation
+### Port Conflicts
 
-If you encounter port occupation issues, you can use this command to release ports:
+The application automatically finds available ports starting from the default values:
+
+| Service | Default Port | Description |
+|---------|--------------|-------------|
+| Backend API | 5002 | Flask main service |
+| WebSSH | 5001 | SSH terminal service |
+| Frontend (dev) | 3000 | Development server |
+| ttyd | 7681 | Web terminal |
+
+If you encounter port conflicts, the application will automatically search for available ports.
+
+### Python Dependencies
+
+Ensure all dependencies from `requirements.txt` are installed:
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+### Frontend Build Issues
+
+If frontend build fails:
+
+```bash
+cd frontend
+rm -rf node_modules
+npm install
+npm run build
+```
+
+### Application Startup
+
+First startup may take longer as the backend initializes. The application will:
+1. Start the Python backend service
+2. Initialize the frontend
+3. Launch the Electron window
+
+### Platform-Specific Issues
+
+**Windows**
+- Ensure Python is in PATH
+- Some antivirus software may flag the packaged executable
+
+**macOS**
+- You may need to allow the application in Security & Privacy settings
+- Gatekeeper may require manual approval for first launch
+
+**Linux**
+- Ensure necessary libraries are installed
+- AppImage may require executable permissions: `chmod +x MoFA-Stage-Desktop.AppImage`
+
+## Port Description
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Frontend | 3000 | Web interface (development) |
+| Backend API | 5002 | Flask service |
+| WebSSH | 5001 | SSH terminal |
+| ttyd | 7681 | Web terminal |
+| VS Code | 8080 | Code editor (if enabled) |
+
+## Troubleshooting
+
+### Release Port Conflicts
+
+If you encounter port occupation issues, use this command to release ports:
 
 ```bash
 for port in 3000 5001 5002 7681; do
@@ -215,140 +314,38 @@ for port in 3000 5001 5002 7681; do
 done
 ```
 
-### Port Description
+### Check Service Status
 
-| Service | Port | Description |
-|---------|------|-------------|
-| Frontend | 3000 | Web interface |
-| Backend API | 5002 | Flask service |
-| WebSSH | 5001 | SSH terminal |
-| ttyd | 7681 | Web terminal |
-| VS Code | 8080 | Code editor |
-
-### ttyd Installation Failure
-
-If ttyd automatic installation fails, you can refer to the [ttyd GitHub page](https://github.com/tsl0922/ttyd) for manual installation.
-
-### Docker-Specific Issues
-
-**Q: Port already in use?**
-```bash
-# Check process using port 3000
-lsof -i :3000
-# Or change port mapping
-docker run -d -p 8000:80 ...
-```
-
-**Q: Container cannot connect to backend?**
-Make sure backend service is running:
-```bash
-cd backend && python app.py
-```
-
-**Q: How to update to latest version?**
-```bash
-docker pull liyao1119/mofa-stage-frontend:latest
-docker stop mofa-frontend
-docker rm mofa-frontend
-# Re-run docker run command
-```
-
-**Q: How to view container logs?**
-```bash
-docker logs mofa-frontend
-```
-
-## Docker Advanced Configuration
-
-### Custom Build
-
-```bash
-cd frontend
-# Build after modifying configuration
-docker build -t my-mofa-frontend .
-docker run -d -p 3000:80 my-mofa-frontend
-```
-
-### Troubleshooting
-
-1. **Check if Docker is running properly**
+1. **Check if backend is running**
    ```bash
-   docker ps
+   curl http://localhost:5002/api/system/info
    ```
 
-2. **Check network connections**
+2. **Check frontend connection**
    ```bash
    curl http://localhost:3000
-   curl http://localhost:5002/api/settings
    ```
 
-3. **Restart container**
-   ```bash
-   docker restart mofa-frontend
-   ```
+3. **View application logs**
+   - Open Developer Tools in the application
+   - Check Console tab for frontend logs
+   - Backend logs appear in the terminal running the application
 
-## Directory Structure
+## Contributing
 
-```
-mofa-stage/
-├── backend/
-│   ├── app.py              # Main application
-│   ├── config.py           # Configuration
-│   ├── routes/             # API routes
-│   │   ├── agents.py       # Agent management
-│   │   ├── terminal.py     # Terminal features
-│   │   ├── webssh.py       # SSH connections
-│   │   ├── vscode.py       # VSCode integration
-│   │   ├── settings.py     # Settings management
-│   │   ├── ttyd.py         # ttyd integration
-│   │   └── mermaid.py      # Chart rendering
-│   ├── utils/              # Utility modules
-│   │   ├── mofa_cli.py     # MoFA command wrapper
-│   │   ├── file_ops.py     # File operations
-│   │   └── ttyd_manager.py # ttyd management
-│   └── requirements.txt    # Python dependencies
-├── frontend/
-│   ├── src/
-│   │   ├── views/          # Page components
-│   │   ├── components/     # UI components
-│   │   ├── api/            # API calls
-│   │   ├── store/          # State management
-│   │   └── router/         # Routing
-│   └── package.json        # Node.js dependencies
-├── install.sh              # Installation script
-└── run.sh                  # Startup script
-```
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## User Journey
-<img width="914" height="586" alt="image" src="https://github.com/user-attachments/assets/ae9ae4bc-8fd2-4da4-8d79-714f72fa4205" />
+## License
 
-```mermaid
-graph TD
-    A[🔧 Environment Setup] --> B[⚙️ System Configuration]
-    B --> C[🤖 Agent Development]
-    C --> D[🔄 Dataflow Orchestration]
-    D --> E[🔍 Debugging & Optimization]
-    
-    A --> A1[Install MoFA Framework]
-    A --> A2[Launch MoFA Stage]
-    A --> A3[Access Web Interface]
-    
-    B --> B1[Configure MoFA Path]
-    B --> B2[Select Terminal Mode]
-    B --> B3[Test Connections]
-    
-    C --> C1[Browse Agent List]
-    C --> C2[Create New Agent]
-    C --> C3[Edit Agent Code]
-    C --> C4[Test Agent]
-    
-    D --> D1[Create Dataflow]
-    D --> D2[Connect Agents]
-    D --> D3[Set Parameters]
-    D --> D4[Run Dataflow]
-    
-    E --> E1[View Execution Logs]
-    E --> E2[Use Terminal Debugging]
-    E --> E3[Performance Monitoring]
-    E --> E4[Version Management]
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [Electron](https://electronjs.org/) - Cross-platform desktop application framework
+- [Vue.js](https://vuejs.org/) - Progressive JavaScript framework
+- [Flask](https://flask.palletsprojects.com/) - Python micro-framework
+- [MoFA](https://github.com/mofa-org/mofa) - AI Agent framework

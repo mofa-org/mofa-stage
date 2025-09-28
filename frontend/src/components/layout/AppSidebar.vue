@@ -21,14 +21,15 @@
           <el-icon><Menu /></el-icon>
           <span v-if="!isCollapsed">{{ $t('sidebar.agentsList') }}</span>
         </el-menu-item>
-        <el-menu-item index="/terminal" v-if="showTerminal" class="menu-item">
+        <!-- 隐藏前两个终端选项 -->
+        <!-- <el-menu-item index="/terminal" v-if="showTerminal" class="menu-item">
           <el-icon><Monitor /></el-icon>
           <span v-if="!isCollapsed">{{ $t('sidebar.commandLine') }}</span>
         </el-menu-item>
         <el-menu-item index="/webssh" v-if="showWebSSH" class="menu-item">
           <el-icon><Monitor /></el-icon>
           <span v-if="!isCollapsed">{{ $t('sidebar.webSSH') }}</span>
-        </el-menu-item>
+        </el-menu-item> -->
         <el-menu-item index="/ttyd" v-if="showTtyd" class="menu-item">
           <el-icon><Monitor /></el-icon>
           <span v-if="!isCollapsed">{{ $t('sidebar.ttyd') || 'ttyd Terminal' }}</span>

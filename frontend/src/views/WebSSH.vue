@@ -469,7 +469,7 @@ export default {
       }
       
       const session = sessions.value.find(s => s.id === sessionId)
-      ElMessage.error(`Error in session ${session ? session.title : sessionId}: ${msg}`)
+      // ElMessage.error(`Error in session ${session ? session.title : sessionId}: ${msg}`)
       // Optionally close the tab on error, or mark it visually
       // handleTabRemove(session.name); 
     }

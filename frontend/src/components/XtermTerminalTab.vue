@@ -225,9 +225,9 @@
           }
           
           ws.onerror = (event) => {
-            term.writeln('\r\n\x1b[31mWebSocket Error.\x1b[0m')
+            // term.writeln('\r\n\x1b[31mWebSocket Error.\x1b[0m')
             console.error("WebSocket Error:", event)
-            emit('error', 'WebSocket connection error')
+            // emit('error', 'WebSocket connection error')
             disconnect() // Disconnect on error
           }
           

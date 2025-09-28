@@ -6,8 +6,8 @@ export const messages = {
       dataflowOrchestration: 'Dataflow Orchestration',
       commandLine: 'Command Line',
       settings: 'Settings',
-      webSSH: 'Command Line',
-      ttyd: 'Command Line'
+      webSSH: 'SSH Terminal',
+      ttyd: 'Web Terminal'
     },
     common: {
       confirm: 'Confirm',
@@ -230,8 +230,8 @@ export const messages = {
       dataflowOrchestration: '数据流编排',
       commandLine: '命令行',
       settings: '设置',
-      webSSH: '命令行',
-      ttyd: '命令行'
+      webSSH: 'SSH终端',
+      ttyd: 'Web终端'
     },
     common: {
       confirm: '确认',
