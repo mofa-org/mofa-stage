@@ -10,28 +10,35 @@ import subprocess
 import shutil
 from pathlib import Path
 
+# 设置UTF-8编码，避免Windows编码问题
+if sys.platform.startswith('win'):
+    import locale
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
+
 def main():
     # 获取项目根目录
     project_root = Path(__file__).parent.parent
     backend_dir = project_root / "backend"
     dist_dir = backend_dir / "dist"
     
-    print("🚀 开始打包Python后端...")
+    print("Starting Python backend packaging...")
     
     # 确保backend目录存在
     if not backend_dir.exists():
-        print("❌ 错误：backend目录不存在")
+        print("Error: backend directory not found")
         sys.exit(1)
     
     # 检查app.py是否存在
     app_py = backend_dir / "app.py"
     if not app_py.exists():
-        print("❌ 错误：app.py文件不存在")
+        print("Error: app.py file not found")
         sys.exit(1)
     
     # 清理之前的构建
     if dist_dir.exists():
-        print("🧹 清理之前的构建...")
+        print("Cleaning previous build...")
         shutil.rmtree(dist_dir)
     
     # 创建dist目录
@@ -62,8 +69,8 @@ def main():
     ]
     
     try:
-        print("📦 执行PyInstaller打包...")
-        print(f"命令: {' '.join(cmd)}")
+        print("Executing PyInstaller packaging...")
+        print(f"Command: {' '.join(cmd)}")
         
         # 在backend目录下执行命令
         result = subprocess.run(
@@ -74,7 +81,7 @@ def main():
             text=True
         )
         
-        print("✅ 打包成功！")
+        print("Packaging successful!")
         
         # 检查生成的文件
         if sys.platform == "win32":
@@ -84,17 +91,17 @@ def main():
             
         if executable.exists():
             file_size = executable.stat().st_size / (1024 * 1024)  # MB
-            print(f"📁 生成的可执行文件：{executable}")
-            print(f"📏 文件大小：{file_size:.1f} MB")
+            print(f"Generated executable: {executable}")
+            print(f"File size: {file_size:.1f} MB")
         else:
-            print("⚠️  警告：未找到生成的可执行文件")
+            print("Warning: Generated executable not found")
             
     except subprocess.CalledProcessError as e:
-        print(f"❌ 打包失败：{e}")
-        print(f"错误输出：{e.stderr}")
+        print(f"Packaging failed: {e}")
+        print(f"Error output: {e.stderr}")
         sys.exit(1)
     except FileNotFoundError:
-        print("❌ 错误：未找到pyinstaller。请安装：pip install pyinstaller")
+        print("Error: pyinstaller not found. Please install: pip install pyinstaller")
         sys.exit(1)
     
     # 清理临时文件
@@ -102,13 +109,13 @@ def main():
     spec_file = backend_dir / "app.spec"
     
     if build_dir.exists():
-        print("🧹 清理临时文件...")
+        print("Cleaning temporary files...")
         shutil.rmtree(build_dir, ignore_errors=True)
     
     if spec_file.exists():
         spec_file.unlink()
     
-    print("🎉 后端打包完成！")
+    print("Backend packaging completed!")
 
 if __name__ == "__main__":
     main()
