@@ -43,7 +43,7 @@
     <div class="sidebar-footer" v-if="!isCollapsed">
       <div class="version-info">
         <span class="version-label">MoFA Stage</span>
-        <span class="version-number">v0.5.2</span>
+        <span class="version-number">v{{ version }}</span>
       </div>
     </div>
   </div>
@@ -119,6 +119,9 @@ export default {
       }
     );
     
+    // 获取版本号
+    const version = import.meta.env.VITE_APP_VERSION || '1.0.0'
+    
     return {
       activeRoute,
       computedTheme,
@@ -126,7 +129,8 @@ export default {
       showWebSSH,
       showTtyd,
       isCollapsed,
-      toggleCollapse
+      toggleCollapse,
+      version
     }
   }
 }
