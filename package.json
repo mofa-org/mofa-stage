@@ -37,7 +37,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "liyao",
+      "owner": "mofa-org",
       "repo": "mofa-stage"
     },
     "files": [
