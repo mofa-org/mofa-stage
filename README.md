@@ -331,6 +331,71 @@ done
    - Check Console tab for frontend logs
    - Backend logs appear in the terminal running the application
 
+## Release Process
+
+### Automated Release with GitHub Actions
+
+The project uses GitHub Actions for automated building and releasing of desktop applications.
+
+#### Publishing a New Version
+
+**Step 1: Prepare and push changes**
+```bash
+# Add and commit your changes
+git add .
+git commit -m "your commit message"
+git push
+```
+
+**Step 2: Create a release version**
+```bash
+# For patch version (e.g., 0.6.0 -> 0.6.1)
+npm run version:patch
+
+# For minor version (e.g., 0.6.0 -> 0.7.0)  
+npm run version:minor
+
+# For major version (e.g., 0.6.0 -> 1.0.0)
+npm run version:major
+```
+
+**Step 3: Monitor the build**
+- GitHub Actions will automatically trigger when a new tag is pushed
+- Check the "Actions" tab in your GitHub repository
+- The workflow will build for both macOS (.dmg) and Windows (.exe)
+- Upon successful completion, releases will be published to GitHub Releases
+
+#### Manual Release (Alternative)
+
+If you prefer manual control:
+
+```bash
+# 1. Update version in package.json manually
+# 2. Commit changes
+git add .
+git commit -m "release: bump version to vX.X.X"
+git push
+
+# 3. Create and push tag
+git tag vX.X.X
+git push --tags
+```
+
+#### Build Outputs
+
+The automated build process creates:
+- **macOS**: `.dmg` installer package
+- **Windows**: `.exe` installer package  
+- **Artifacts**: Available for download from GitHub Actions
+
+#### Release Notes
+
+After the automated build completes:
+1. Go to the GitHub Releases page
+2. Edit the auto-generated release
+3. Add release notes and descriptions
+4. Mark as pre-release if needed
+
 ## Contributing
 
 1. Fork the repository
@@ -341,7 +406,7 @@ done
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
