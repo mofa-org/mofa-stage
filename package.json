@@ -38,7 +38,8 @@
     "publish": {
       "provider": "github",
       "owner": "mofa-org",
-      "repo": "mofa-stage"
+      "repo": "mofa-stage",
+      "releaseType": "release"
     },
     "files": [
       "electron/**/*",
