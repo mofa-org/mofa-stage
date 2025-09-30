@@ -11,6 +11,7 @@ import sys
 import re
 import ast
 import datetime
+from itertools import islice
 
 import requests
 import toml
@@ -1817,6 +1818,117 @@ class MofaCLI:
                     "examples": []
                 }
             }
+
+    def search_repository(self, query, file_globs=None, max_results=120):
+        """Search MoFA-related directories using ripgrep."""
+        if not query or len(query.strip()) < 2:
+            return {
+                "success": False,
+                "message": "Query must be at least 2 characters"
+            }
+
+        search_dirs = []
+        candidates = [
+            self.agent_hub_dir,
+            self.examples_dir,
+            self.mofa_dir,
+        ] + self.additional_hub_dirs + self.additional_example_dirs
+
+        for directory in candidates:
+            if directory and os.path.isdir(directory):
+                search_dirs.append(os.path.abspath(directory))
+
+        # Deduplicate while preserving order
+        seen = set()
+        unique_dirs = []
+        for directory in search_dirs:
+            if directory not in seen:
+                seen.add(directory)
+                unique_dirs.append(directory)
+
+        if not unique_dirs:
+            return {
+                "success": False,
+                "message": "No searchable directories configured"
+            }
+
+        rg_command = [
+            "rg",
+            "--json",
+            "--line-number",
+            "--max-columns", "240",
+            "--max-count", str(max_results),
+            query
+        ] + unique_dirs
+
+        if file_globs:
+            if isinstance(file_globs, str):
+                file_globs = [file_globs]
+            for pattern in file_globs:
+                rg_command.extend(["--glob", pattern])
+
+        try:
+            process = subprocess.run(
+                rg_command,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+        except FileNotFoundError:
+            return {
+                "success": False,
+                "message": "ripgrep (rg) is not installed."
+            }
+
+        if process.returncode not in (0, 1):
+            return {
+                "success": False,
+                "message": process.stderr.strip() or "ripgrep execution failed"
+            }
+
+        results = []
+        for line in process.stdout.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            if payload.get("type") != "match":
+                continue
+
+            data = payload.get("data", {})
+            path_text = data.get("path", {}).get("text")
+            if not path_text:
+                continue
+
+            lines = data.get("lines", {}).get("text", "")
+            line_number = data.get("line_number")
+
+            # Normalize path relative to base directory
+            relative_path = path_text
+            for base_dir in unique_dirs:
+                if path_text.startswith(base_dir):
+                    relative_path = os.path.relpath(path_text, base_dir)
+                    break
+
+            results.append({
+                "file": path_text,
+                "relative_file": relative_path,
+                "line": line_number,
+                "preview": lines.strip()
+            })
+
+            if len(results) >= max_results:
+                break
+
+        return {
+            "success": True,
+            "results": results,
+            "count": len(results)
+        }
 
     def get_available_nodes(self):
         """获取所有可用的nodes列表及其描述"""

@@ -372,6 +372,23 @@ def get_agent_templates():
     return jsonify(result), status_code
 
 
+@agents_bp.route('/search', methods=['GET'])
+def search_repository():
+    """在 MoFA / Dora 代码库中搜索内容"""
+    query = request.args.get('q', '').strip()
+    glob = request.args.get('glob')
+
+    mofa_cli = get_mofa_cli()
+
+    file_globs = None
+    if glob:
+        file_globs = [pattern.strip() for pattern in glob.split(',') if pattern.strip()]
+
+    result = mofa_cli.search_repository(query, file_globs=file_globs)
+    status_code = 200 if result.get('success', False) else 400
+    return jsonify(result), status_code
+
+
 @agents_bp.route('/suggest-nodes', methods=['POST'])
 def suggest_nodes():
     """根据描述推荐合适的节点"""
