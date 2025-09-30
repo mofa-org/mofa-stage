@@ -133,36 +133,52 @@ def is_process_running(pid):
     except OSError:
         return False
 
-def stop_ttyd():
-    """Stop the ttyd process if it's running"""
+def stop_ttyd(force=False):
+    """Stop the ttyd process if it's running
+    
+    Args:
+        force (bool): If True, forcefully stop any ttyd process.
+                     If False, only stop if started by this session.
+    """
     global ttyd_process
     
-    pid = get_pid_from_file()
+    if force:
+        # Force stop any existing ttyd process
+        pid = get_pid_from_file()
+        
+        if pid and is_process_running(pid):
+            logger.info(f"Force stopping ttyd process (PID: {pid})...")
+            try:
+                os.kill(pid, signal.SIGTERM)
+                # Wait for the process to terminate
+                for _ in range(10):  # Wait up to 5 seconds
+                    if not is_process_running(pid):
+                        break
+                    time.sleep(0.5)
+                else:
+                    # Force kill if it didn't terminate
+                    os.kill(pid, signal.SIGKILL)
+                
+                logger.info("ttyd process force stopped.")
+            except OSError as e:
+                logger.error(f"Failed to force stop ttyd process: {e}")
     
-    if pid and is_process_running(pid):
-        logger.info(f"Stopping ttyd process (PID: {pid})...")
-        try:
-            os.kill(pid, signal.SIGTERM)
-            # Wait for the process to terminate
-            for _ in range(10):  # Wait up to 5 seconds
-                if not is_process_running(pid):
-                    break
-                time.sleep(0.5)
-            else:
-                # Force kill if it didn't terminate
-                os.kill(pid, signal.SIGKILL)
-            
-            logger.info("ttyd process stopped.")
-        except OSError as e:
-            logger.error(f"Failed to stop ttyd process: {e}")
-    
-    # Also terminate the process started by this script if it exists
+    # Always clean up our own process if it exists
     if ttyd_process and ttyd_process.poll() is None:
-        ttyd_process.terminate()
-        ttyd_process = None
+        logger.info("Terminating ttyd process started by this session...")
+        try:
+            ttyd_process.terminate()
+            # Wait for graceful termination
+            try:
+                ttyd_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                ttyd_process.kill()  # Force kill if timeout
+            ttyd_process = None
+        except Exception as e:
+            logger.error(f"Error terminating own ttyd process: {e}")
     
-    # Remove PID file if it exists
-    if os.path.exists(pid_file):
+    # Remove PID file only if force stopping
+    if force and os.path.exists(pid_file):
         os.remove(pid_file)
 
 def start_ttyd():
@@ -176,8 +192,8 @@ def start_ttyd():
             logger.error("Failed to install ttyd. Please install it manually.")
             return False
     
-    # Stop any existing ttyd process
-    stop_ttyd()
+    # Stop any existing ttyd process (force stop)
+    stop_ttyd(force=True)
     
     # Get settings
     settings = get_settings()
@@ -235,15 +251,10 @@ def start_ttyd():
     logger.info(f"Working directory: {working_dir}")
     
     try:
-        # Open log file
-        log_fd = open(log_file, 'w')
-        
-        # Start ttyd process
+        # Start ttyd process - exactly like manual command
         ttyd_process = subprocess.Popen(
             cmd,
-            cwd=working_dir,  # Use the determined working directory
-            stdout=log_fd,
-            stderr=log_fd,
+            cwd=working_dir,
             start_new_session=True  # Detach from parent process
         )
         
@@ -269,8 +280,8 @@ def start_ttyd_with_command(working_dir, command):
             logger.error("Failed to install ttyd. Please install it manually.")
             return False
     
-    # Stop any existing ttyd process
-    stop_ttyd()
+    # Stop any existing ttyd process (force stop)
+    stop_ttyd(force=True)
     
     # Get settings
     settings = get_settings()
@@ -298,15 +309,10 @@ def start_ttyd_with_command(working_dir, command):
     logger.info(f"Executing: {command}")
     
     try:
-        # Open log file
-        log_fd = open(log_file, 'w')
-        
-        # Start ttyd process
+        # Start ttyd process - exactly like manual command
         ttyd_process = subprocess.Popen(
             cmd,
             cwd=working_dir,
-            stdout=log_fd,
-            stderr=log_fd,
             start_new_session=True  # Detach from parent process
         )
         
@@ -323,7 +329,7 @@ def start_ttyd_with_command(working_dir, command):
 
 def restart_ttyd():
     """Restart the ttyd service"""
-    stop_ttyd()
+    stop_ttyd(force=True)
     return start_ttyd()
 
 def get_ttyd_status():
@@ -347,8 +353,8 @@ def get_ttyd_status():
             'log_file': log_file
         }
 
-# Register cleanup function to stop ttyd when the script exits
-atexit.register(stop_ttyd)
+# No automatic cleanup - let ttyd run independently like old version
+# Users can manually stop ttyd using the stop command or API
 
 # Command-line interface for manual testing/control
 if __name__ == "__main__":
@@ -363,7 +369,7 @@ if __name__ == "__main__":
     if args.action == 'start':
         start_ttyd()
     elif args.action == 'stop':
-        stop_ttyd()
+        stop_ttyd(force=True)
     elif args.action == 'restart':
         restart_ttyd()
     elif args.action == 'status':

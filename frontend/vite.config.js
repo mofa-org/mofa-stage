@@ -9,6 +9,7 @@ const packageJson = JSON.parse(readFileSync(path.resolve(__dirname, '../package.
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
+  base: './', // 使用相对路径，确保在Electron中正常工作
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(packageJson.version)
   },

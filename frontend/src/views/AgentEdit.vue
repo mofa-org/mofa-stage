@@ -1120,7 +1120,7 @@ export default {
       if (isDataflowYaml.value) {
         // call backend to generate mermaid
         try {
-          const resp = await fetch('/api/mermaid/preview', {
+          const resp = await fetch('http://localhost:5002/api/mermaid/preview', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ yaml: newVal })
@@ -1449,7 +1449,7 @@ export default {
           // 如果是 dataflow YAML，调用后端导出 HTML
           if (isDataflowYaml.value) {
             try {
-              const resp = await fetch('/api/mermaid/export', {
+              const resp = await fetch('http://localhost:5002/api/mermaid/export', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

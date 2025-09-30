@@ -2,7 +2,7 @@
  * VS Code Web API
  */
 
-const API_BASE_URL = '/api/vscode'
+const API_BASE_URL = 'http://localhost:5002/api/vscode'
 
 export default {
   /**

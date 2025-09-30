@@ -13,7 +13,7 @@
     "version:minor": "npm version minor && git push --follow-tags",
     "version:major": "npm version major && git push --follow-tags",
     "frontend:dev": "cd frontend && npm run dev",
-    "backend:dev": "cd backend && python3 app.py",
+    "backend:dev": "cd backend && ${PYTHON_CMD:-python3} app.py",
     "frontend:build": "cd frontend && npm run build",
     "backend:build": "python3 scripts/build_backend.py",
     "build": "npm run frontend:build && npm run backend:build",
@@ -44,8 +44,20 @@
     "files": [
       "electron/**/*",
       "frontend/dist/**/*",
+      "backend/**/*",
+      "assets/**/*",
+      "scripts/**/*",
+      "README.md",
+      "README_cn.md",
+      "LICENSE",
+      "package.json",
       "!frontend/node_modules/**/*",
-      "!backend/backend_venv/**/*"
+      "!backend/backend_venv/**/*",
+      "!backend/__pycache__/**/*",
+      "!backend/temp/**/*",
+      "!backend/logs.duckdb",
+      "!node_modules/**/*",
+      "!dist/**/*"
     ],
     "extraResources": [
       {

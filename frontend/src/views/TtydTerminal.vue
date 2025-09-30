@@ -246,7 +246,7 @@ export default {
         
         // Get platform info
         try {
-          const response = await fetch('/api/system/info')
+          const response = await fetch('http://localhost:5002/api/system/info')
           if (response.ok) {
             const data = await response.json()
             systemInfo.platformInfo = data.platform_info || 'Unknown platform'
@@ -329,14 +329,14 @@ export default {
       } else {
         console.log('TtydTerminal already initialized, just checking service');
         // If already initialized, check ttyd service status silently
-        fetch('/api/ttyd/status')
+        fetch('http://localhost:5002/api/ttyd/status')
           .then(response => response.json())
           .then(data => {
             console.log('ttyd service status on activation:', data.status);
             if (data.status !== 'running') {
               // If not running, start it quietly
               console.log('ttyd service not running, starting silently');
-              return fetch('/api/ttyd/start', { 
+              return fetch('http://localhost:5002/api/ttyd/start', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
               });
@@ -393,7 +393,7 @@ export default {
     const checkTtydService = async () => {
       try {
         // Check status
-        const response = await fetch('/api/ttyd/status');
+        const response = await fetch('http://localhost:5002/api/ttyd/status');
         if (!response.ok) {
           throw new Error('Failed to fetch ttyd status');
         }
@@ -412,7 +412,7 @@ export default {
         if (data.status !== 'running') {
           ElMessage.info('Starting ttyd service...');
           try {
-            const startResponse = await fetch('/api/ttyd/start', { 
+            const startResponse = await fetch('http://localhost:5002/api/ttyd/start', { 
               method: 'POST',
               headers: { 'Content-Type': 'application/json' }
             });
@@ -449,7 +449,7 @@ export default {
     // Install ttyd
     const installTtyd = async () => {
       try {
-        const response = await fetch('/api/ttyd/install', { 
+        const response = await fetch('http://localhost:5002/api/ttyd/install', { 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -474,7 +474,7 @@ export default {
     // Start ttyd service
     const startTtyd = async () => {
       try {
-        const response = await fetch('/api/ttyd/start', { 
+        const response = await fetch('http://localhost:5002/api/ttyd/start', { 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -498,7 +498,7 @@ export default {
     // Restart ttyd service
     const restartTtyd = async () => {
       try {
-        const response = await fetch('/api/ttyd/restart', { 
+        const response = await fetch('http://localhost:5002/api/ttyd/restart', { 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });

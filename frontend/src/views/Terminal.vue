@@ -108,7 +108,7 @@ export default {
     // Get the platform information from the backend
     const getPlatformInfo = async () => {
       try {
-        const response = await fetch('/api/terminal/platform')
+        const response = await fetch('http://localhost:5002/api/terminal/platform')
         const data = await response.json()
         if (data.success) {
           platformInfo.value = data.platform
@@ -140,7 +140,7 @@ export default {
     const addNewTab = async () => {
       try {
         // Create a new terminal session
-        const response = await fetch('/api/terminal/session', {
+        const response = await fetch('http://localhost:5002/api/terminal/session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -194,7 +194,7 @@ export default {
       
       try {
         // Close the terminal session on the backend
-        await fetch('/api/terminal/close', {
+        await fetch('http://localhost:5002/api/terminal/close', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -303,7 +303,7 @@ export default {
       if (!tab.isExecuting) return
       
       try {
-        const response = await fetch('/api/terminal/interrupt', {
+        const response = await fetch('http://localhost:5002/api/terminal/interrupt', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -351,7 +351,7 @@ export default {
       tab.isExecuting = true
       
       try {
-        const response = await fetch('/api/terminal/execute', {
+        const response = await fetch('http://localhost:5002/api/terminal/execute', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

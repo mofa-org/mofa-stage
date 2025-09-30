@@ -61,8 +61,15 @@ def main():
         "--hidden-import=webssh",
         "--hidden-import=psutil",
         "--hidden-import=duckdb",
+        "--hidden-import=requests",
+        "--hidden-import=urllib3",
+        "--hidden-import=certifi",
+        "--hidden-import=chardet",
+        "--hidden-import=idna",
+        "--hidden-import=toml",
         # 添加数据文件
         "--add-data", f"{backend_dir}/config.py:.",
+        "--add-data", f"{backend_dir}/settings.json:.",
         "--add-data", f"{backend_dir}/routes:routes",
         "--add-data", f"{backend_dir}/utils:utils",
         str(app_py)

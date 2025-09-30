@@ -184,7 +184,7 @@ export default {
 
         // Get platform info
         try {
-          const response = await fetch('/api/system/info')
+          const response = await fetch('http://localhost:5002/api/system/info')
           if (response.ok) {
             const data = await response.json()
             platformInfo.value = data.platform_info || 'Unknown platform'

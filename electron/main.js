@@ -1,6 +1,6 @@
 const { app, BrowserWindow, Menu, shell, dialog } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const fs = require('fs');
 const net = require('net');
 
@@ -10,6 +10,32 @@ let backendProcess = null;
 let backendPort = 5002;
 
 const isDev = process.env.NODE_ENV === 'development';
+
+// 暴力杀掉指定端口的进程
+function killPortsForce(ports = [3000, 5000, 5001, 5002]) {
+  return new Promise((resolve) => {
+    const portList = ports.join(',');
+    
+    // 根据平台选择命令
+    let killCommand;
+    if (process.platform === 'win32') {
+      // Windows: 使用netstat和taskkill
+      killCommand = `for /f "tokens=5" %a in ('netstat -aon ^| findstr ":${ports.join(' :')}"') do taskkill /f /pid %a 2>nul`;
+    } else {
+      // Unix/Linux/macOS: 使用lsof和kill
+      killCommand = `lsof -ti:${portList} | xargs -r kill -9 2>/dev/null || true`;
+    }
+    
+    console.log(`Force killing processes on ports: ${portList}`);
+    exec(killCommand, (error, stdout, stderr) => {
+      if (error) {
+        console.log(`Port kill command completed with some errors (this is normal): ${error.message}`);
+      }
+      console.log(`Ports ${portList} have been cleared`);
+      resolve();
+    });
+  });
+}
 
 // 检查端口是否可用
 function checkPort(port) {
@@ -103,9 +129,8 @@ async function startBackend() {
       }
     });
 
-    // 等待后端启动
-    await waitForBackend();
-    console.log('Backend started successfully');
+    // 不等待后端启动完成，让应用先显示界面
+    console.log('Backend process started, continuing with app initialization...');
     
   } catch (error) {
     console.error('Failed to start backend:', error);
@@ -120,14 +145,26 @@ function waitForBackend(maxAttempts = 30) {
     
     const checkBackend = () => {
       attempts++;
-      const client = net.createConnection(backendPort, 'localhost');
+      console.log(`Checking backend availability, attempt ${attempts}/${maxAttempts}`);
       
-      client.on('connect', () => {
-        client.end();
+      // 使用HTTP请求检查而不是TCP连接
+      const http = require('http');
+      const req = http.get(`http://localhost:${backendPort}/`, (res) => {
+        console.log('Backend is responding with status:', res.statusCode);
         resolve();
       });
       
-      client.on('error', () => {
+      req.on('error', (error) => {
+        console.log(`Backend check failed (${attempts}/${maxAttempts}):`, error.message);
+        if (attempts >= maxAttempts) {
+          reject(new Error('Backend failed to start within timeout'));
+        } else {
+          setTimeout(checkBackend, 1000);
+        }
+      });
+      
+      req.setTimeout(2000, () => {
+        req.destroy();
         if (attempts >= maxAttempts) {
           reject(new Error('Backend failed to start within timeout'));
         } else {
@@ -184,7 +221,17 @@ function createWindow() {
     // 生产模式：加载打包的静态文件
     const indexPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
     console.log('Loading production file:', indexPath);
-    mainWindow.loadFile(indexPath);
+    
+    // 检查文件是否存在
+    if (fs.existsSync(indexPath)) {
+      mainWindow.loadFile(indexPath);
+      // 在生产模式下也打开开发者工具来调试
+      mainWindow.webContents.openDevTools();
+    } else {
+      console.error('Frontend index.html not found at:', indexPath);
+      // 显示错误页面
+      mainWindow.loadURL('data:text/html,<h1>Frontend files not found</h1><p>Path: ' + indexPath + '</p>');
+    }
   }
 
   // 窗口准备好后显示
@@ -291,8 +338,10 @@ function createMenu() {
 app.whenReady().then(async () => {
   console.log('Electron app is ready');
   
-  // 只在生产模式下启动后端，开发模式由concurrently管理
+  // 暴力杀掉可能冲突的端口（生产模式下）
   if (!isDev) {
+    console.log('Killing conflicting ports before startup...');
+    await killPortsForce([3000, 5000, 5001, 5002]);
     await startBackend();
   }
   

@@ -64,7 +64,7 @@ DEFAULT_SETTINGS = {
         "auto_connect": True  # 是否自动连接
     },
     "terminal_display_mode": "both",  # 终端显示模式: both, terminal, webssh
-    "ttyd_port": 8080,  # 默认ttyd端口
+    "ttyd_port": 7681,  # 默认ttyd端口
     # ---- AI API Settings ----
     # OpenAI
     "openai_api_key": "",
