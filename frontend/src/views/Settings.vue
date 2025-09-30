@@ -230,6 +230,64 @@
       <el-card class="settings-card">
         <template #header>
           <div class="card-header">
+            <h3>依赖管理</h3>
+            <div class="card-actions">
+              <el-button size="small" @click="loadDependencies" :loading="depsLoading">
+                重新检测
+              </el-button>
+            </div>
+          </div>
+        </template>
+
+        <div v-if="depsLoading">
+          <el-skeleton :rows="3" animated />
+        </div>
+        <div v-else class="dependency-list">
+          <div
+            v-for="dep in dependencies"
+            :key="dep.id"
+            class="dependency-item"
+          >
+            <div class="dependency-body">
+              <div class="dependency-header">
+                <div class="dependency-title">
+                  <span class="name">{{ dep.name }}</span>
+                  <el-tag :type="dep.installed ? 'success' : 'warning'" size="small">
+                    {{ dep.installed ? '已安装' : '未安装' }}
+                  </el-tag>
+                  <el-tag
+                    v-if="dep.installed && dep.running !== undefined"
+                    :type="dep.running ? 'success' : 'info'"
+                    size="small"
+                  >
+                    {{ dep.running ? '运行中' : '未运行' }}
+                  </el-tag>
+                </div>
+                <div class="dependency-actions">
+                  <el-button
+                    v-if="dep.auto_install"
+                    type="primary"
+                    size="small"
+                    :loading="installingDeps[dep.id]"
+                    @click="handleInstallDependency(dep.id)"
+                  >
+                    {{ dep.installed ? '重新安装' : '一键安装' }}
+                  </el-button>
+                </div>
+              </div>
+              <p class="dependency-desc">{{ dep.description }}</p>
+              <p class="dependency-hint">{{ dep.install_hint }}</p>
+            </div>
+          </div>
+          <div v-if="!dependencies.length" class="dependency-empty">
+            <el-empty description="暂无依赖信息" :image-size="100" />
+          </div>
+        </div>
+      </el-card>
+
+      <el-card class="settings-card">
+        <template #header>
+          <div class="card-header">
             <!-- <h3>{{ $t('settings.sshSettings') || 'SSH Settings' }}</h3> -->
             <h3>{{ $t('settings.sshsetting') || 'Remote SSH Connection Settings' }}</h3>
           </div>
@@ -486,6 +544,7 @@ import { Setting, Folder, Document } from '@element-plus/icons-vue'
 import { setLanguage } from '../utils/i18n'
 import PathInputWithHistory from '../components/PathInputWithHistory.vue'
 import { smartSelectPath } from '../utils/fileBrowser'
+import { fetchDependencies, installDependency } from '@/api/system'
 
 export default {
   name: 'Settings',
@@ -547,6 +606,49 @@ export default {
     const isSaving = ref(false)
     const isResetting = ref(false)
     const isMac = computed(() => navigator.platform.toUpperCase().indexOf('MAC') >= 0)
+
+    const dependencies = ref([])
+    const depsLoading = ref(false)
+    const installingDeps = reactive({})
+
+    const loadDependencies = async () => {
+      depsLoading.value = true
+      try {
+        const { data } = await fetchDependencies()
+        if (data?.success) {
+          dependencies.value = data.dependencies || []
+        } else {
+          ElMessage.error(data?.message || '依赖状态获取失败')
+        }
+      } catch (error) {
+        console.error('Failed to load dependencies:', error)
+        ElMessage.error('依赖状态获取失败，请稍后重试')
+      } finally {
+        depsLoading.value = false
+      }
+    }
+
+    const handleInstallDependency = async (depId) => {
+      if (!depId) {
+        return
+      }
+
+      installingDeps[depId] = true
+      try {
+        const { data } = await installDependency(depId)
+        if (data?.success) {
+          ElMessage.success(data.message || '依赖安装完成')
+        } else {
+          ElMessage.error(data?.message || '依赖安装失败')
+        }
+      } catch (error) {
+        console.error('Failed to install dependency:', error)
+        ElMessage.error('依赖安装失败，请检查日志或手动安装')
+      } finally {
+        installingDeps[depId] = false
+        loadDependencies()
+      }
+    }
     
     const loadSettings = async () => {
       const settings = await settingsStore.fetchSettings()
@@ -807,6 +909,7 @@ export default {
       
       // 加载其他设置
       loadSettings()
+      loadDependencies()
       // Apply theme on initial load
       applyTheme(settingsForm.theme)
       
@@ -913,7 +1016,12 @@ export default {
       selectAdditionalHubDir,
       addAdditionalExampleDir,
       removeAdditionalExampleDir,
-      selectAdditionalExampleDir
+      selectAdditionalExampleDir,
+      dependencies,
+      depsLoading,
+      installingDeps,
+      loadDependencies,
+      handleInstallDependency
     }
   }
 }
@@ -1016,6 +1124,74 @@ export default {
   );
   background-size: 300% 100%;
   animation: flowing-border 16s ease-in-out infinite;
+}
+
+.dependency-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dependency-item {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--card-background, #fff);
+  transition: box-shadow 0.2s ease;
+}
+
+.dependency-item:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.dependency-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dependency-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.dependency-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.dependency-title .name {
+  font-size: 16px;
+  color: var(--text-color);
+}
+
+.dependency-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dependency-desc {
+  margin: 0;
+  color: var(--text-color-secondary);
+}
+
+.dependency-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  opacity: 0.8;
+}
+
+.dependency-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 160px;
 }
 
 .card-header {

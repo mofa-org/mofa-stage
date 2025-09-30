@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, dialog } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog, session } = require('electron');
 const path = require('path');
 const { spawn, exec } = require('child_process');
 const fs = require('fs');
@@ -6,10 +6,110 @@ const net = require('net');
 
 // 保持对窗口对象的全局引用
 let mainWindow;
+let splashWindow;
 let backendProcess = null;
 let backendPort = 5002;
 
 const isDev = process.env.NODE_ENV === 'development';
+
+// Relax Chromium's strict CORS checks so packaged builds can talk to local services
+app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');
+
+// Cache flag to avoid registering duplicate webRequest listeners
+let corsInterceptorRegistered = false;
+
+function createSplashWindow() {
+  if (splashWindow || isDev) {
+    return;
+  }
+
+  splashWindow = new BrowserWindow({
+    width: 300,
+    height: 260,
+    frame: false,
+    resizable: false,
+    show: false,
+    transparent: false,
+    alwaysOnTop: true,
+    fullscreenable: false,
+    skipTaskbar: true,
+    backgroundColor: '#ffffff',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+
+  const logoPath = path.join(__dirname, '..', 'assets', 'mofa-logo.png');
+  const logoData = fs.existsSync(logoPath) ? fs.readFileSync(logoPath).toString('base64') : '';
+  const logoSrc = logoData ? `data:image/png;base64,${logoData}` : '';
+
+  const splashHtml = encodeURIComponent(`
+    <style>
+      body { margin:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #ffffff; color:#131a2c; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; }
+      img { width: 96px; height: 96px; margin-bottom: 18px; }
+      .subtitle { font-size: 14px; letter-spacing: 0.4px; }
+    </style>
+    <body>
+      ${logoSrc ? `<img src="${logoSrc}" alt="MoFA Stage" />` : '<div style="font-size:22px;font-weight:600;margin-bottom:18px;">MoFA Stage</div>'}
+      <div class="subtitle">Loading…</div>
+    </body>`);
+
+  splashWindow.loadURL(`data:text/html;charset=UTF-8,${splashHtml}`);
+  splashWindow.once('ready-to-show', () => splashWindow?.show());
+}
+
+function destroySplashWindow() {
+  if (splashWindow) {
+    splashWindow.close();
+    splashWindow = null;
+  }
+}
+
+function getConfiguredTtydPort() {
+  try {
+    const settingsPath = path.join(__dirname, '..', 'backend', 'settings.json');
+    if (fs.existsSync(settingsPath)) {
+      const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+      if (settings && typeof settings.ttyd_port === 'number') {
+        return settings.ttyd_port;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to read ttyd_port from settings.json:', error.message);
+  }
+  return 7681;
+}
+
+function registerTtydCorsInterceptor() {
+  if (corsInterceptorRegistered || !session?.defaultSession) {
+    return;
+  }
+
+  const ttydPort = getConfiguredTtydPort();
+  const allowedPrefixes = [
+    `http://localhost:${ttydPort}`,
+    `http://127.0.0.1:${ttydPort}`
+  ];
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const shouldPatch = allowedPrefixes.some((prefix) => details.url.startsWith(prefix));
+
+    if (shouldPatch) {
+      const responseHeaders = { ...details.responseHeaders };
+      responseHeaders['Access-Control-Allow-Origin'] = ['*'];
+      responseHeaders['Access-Control-Allow-Headers'] = ['*'];
+      responseHeaders['Access-Control-Allow-Methods'] = ['GET, POST, PUT, DELETE, OPTIONS'];
+
+      callback({ cancel: false, responseHeaders });
+      return;
+    }
+
+    callback({ cancel: false, responseHeaders: details.responseHeaders });
+  });
+
+  corsInterceptorRegistered = true;
+}
 
 // 暴力杀掉指定端口的进程
 function killPortsForce(ports = [3000, 5000, 5001, 5002]) {
@@ -225,8 +325,6 @@ function createWindow() {
     // 检查文件是否存在
     if (fs.existsSync(indexPath)) {
       mainWindow.loadFile(indexPath);
-      // 在生产模式下也打开开发者工具来调试
-      mainWindow.webContents.openDevTools();
     } else {
       console.error('Frontend index.html not found at:', indexPath);
       // 显示错误页面
@@ -236,6 +334,7 @@ function createWindow() {
 
   // 窗口准备好后显示
   mainWindow.once('ready-to-show', () => {
+    destroySplashWindow();
     mainWindow.show();
     
     // 聚焦到窗口
@@ -337,12 +436,27 @@ function createMenu() {
 // 应用事件处理
 app.whenReady().then(async () => {
   console.log('Electron app is ready');
+
+  registerTtydCorsInterceptor();
   
   // 暴力杀掉可能冲突的端口（生产模式下）
   if (!isDev) {
     console.log('Killing conflicting ports before startup...');
-    await killPortsForce([3000, 5000, 5001, 5002]);
-    await startBackend();
+    createSplashWindow();
+    try {
+      await killPortsForce([3000, 5000, 5001, 5002]);
+      await startBackend();
+
+      try {
+        console.log('Waiting for backend service to become available...');
+        await waitForBackend(15);
+        console.log('Backend is ready.');
+      } catch (error) {
+        console.error('Backend failed to respond in time:', error);
+      }
+    } finally {
+      destroySplashWindow();
+    }
   }
   
   // 创建窗口和菜单

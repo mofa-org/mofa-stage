@@ -19,15 +19,112 @@ logger = logging.getLogger('ttyd_manager')
 ttyd_process = None
 pid_file = os.path.join(tempfile.gettempdir(), 'mofa_ttyd.pid')
 log_file = os.path.join(tempfile.gettempdir(), 'mofa_ttyd.log')
+ALLOW_ORIGIN_FLAG_SUPPORTED = {}
+
+# Common locations where ttyd/brew binaries usually live when launched from a GUI app
+COMMON_BINARY_DIRS = [
+    '/usr/local/bin',
+    '/opt/homebrew/bin',
+    '/usr/bin',
+    '/bin'
+]
+
+
+def build_search_path(extra_paths=None):
+    """Compose a PATH string that covers brew/GUI launch scenarios."""
+    paths = []
+    current = os.environ.get('PATH', '')
+    if current:
+        paths.extend(current.split(os.pathsep))
+
+    paths.extend(COMMON_BINARY_DIRS)
+
+    if extra_paths:
+        if isinstance(extra_paths, str):
+            extra_paths = [extra_paths]
+        paths.extend(extra_paths)
+
+    # Preserve order but drop duplicates/empties
+    seen = set()
+    ordered = []
+    for entry in paths:
+        if not entry:
+            continue
+        if entry not in seen:
+            seen.add(entry)
+            ordered.append(entry)
+
+    return os.pathsep.join(ordered)
+
+
+def resolve_ttyd_binary(settings=None):
+    """Locate the ttyd executable, considering GUI PATH limitations."""
+    search_path = build_search_path()
+    settings = settings or {}
+
+    # Highest priority: explicit path from settings.json
+    custom_path = settings.get('ttyd_binary_path') if isinstance(settings, dict) else None
+    if custom_path and os.path.isfile(custom_path) and os.access(custom_path, os.X_OK):
+        return custom_path
+
+    # Fall back to PATH lookup (augmented with brew dirs)
+    candidate = shutil.which('ttyd', path=search_path)
+    if candidate:
+        return candidate
+
+    # As a final fallback, probe the common directories directly
+    for directory in COMMON_BINARY_DIRS:
+        candidate = os.path.join(directory, 'ttyd')
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+
+    return None
+
+
+def ttyd_supports_allow_origin(settings=None):
+    """Detect whether the ttyd binary understands --allow-origin (cached per binary)."""
+    ttyd_binary = resolve_ttyd_binary(settings)
+
+    if not ttyd_binary:
+        return False
+
+    if ttyd_binary in ALLOW_ORIGIN_FLAG_SUPPORTED:
+        return ALLOW_ORIGIN_FLAG_SUPPORTED[ttyd_binary]
+
+    try:
+        env = os.environ.copy()
+        env['PATH'] = build_search_path()
+        result = subprocess.run(
+            [ttyd_binary, '--help'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+            env=env
+        )
+        ALLOW_ORIGIN_FLAG_SUPPORTED[ttyd_binary] = '--allow-origin' in result.stdout
+    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+        logger.debug('Unable to determine ttyd --allow-origin support: %s', exc)
+        ALLOW_ORIGIN_FLAG_SUPPORTED[ttyd_binary] = False
+
+    return ALLOW_ORIGIN_FLAG_SUPPORTED[ttyd_binary]
 
 def is_ttyd_installed():
     """Check if ttyd is installed and available in PATH"""
+    settings = get_settings()
+    ttyd_binary = resolve_ttyd_binary(settings)
+    if not ttyd_binary:
+        return False
+
     try:
         # Run ttyd --version to check if it's available
-        result = subprocess.run(['ttyd', '--version'], 
-                                stdout=subprocess.PIPE, 
-                                stderr=subprocess.PIPE, 
-                                text=True)
+        result = subprocess.run(
+            [ttyd_binary, '--version'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env={**os.environ, 'PATH': build_search_path()}
+        )
         return result.returncode == 0
     except FileNotFoundError:
         return False
@@ -77,14 +174,15 @@ def install_ttyd():
         try:
             logger.info("Detected macOS, installing ttyd using brew...")
             # Check if Homebrew is installed
+            brew_env = {**os.environ, 'PATH': build_search_path()}
             try:
-                subprocess.run(['brew', '--version'], check=True, stdout=subprocess.PIPE)
+                subprocess.run(['brew', '--version'], check=True, stdout=subprocess.PIPE, env=brew_env)
             except (subprocess.CalledProcessError, FileNotFoundError):
                 logger.error("Homebrew not found. Please install Homebrew first: https://brew.sh/")
                 return False
             
             # Install ttyd using Homebrew
-            subprocess.run(['brew', 'install', 'ttyd'], check=True)
+            subprocess.run(['brew', 'install', 'ttyd'], check=True, env=brew_env)
             logger.info("ttyd installed successfully!")
             return True
         except subprocess.CalledProcessError as e:
@@ -187,10 +285,8 @@ def start_ttyd():
     
     # First, ensure ttyd is installed
     if not is_ttyd_installed():
-        logger.info("ttyd is not installed. Attempting to install it...")
-        if not install_ttyd():
-            logger.error("Failed to install ttyd. Please install it manually.")
-            return False
+        logger.warning("ttyd is not installed. Skipping startup until user installs it.")
+        return False
     
     # Stop any existing ttyd process (force stop)
     stop_ttyd(force=True)
@@ -232,30 +328,49 @@ def start_ttyd():
         logger.warning(f"Determined working directory '{working_dir}' doesn't exist. Using home directory instead.")
         working_dir = os.path.expanduser("~")
     
+    ttyd_binary = resolve_ttyd_binary(settings)
+    if not ttyd_binary:
+        logger.error('ttyd executable not found. Please install ttyd or set ttyd_binary_path in settings.')
+        return False
+
     # Get shell command from settings, fallback to zsh
     shell_cmd = settings.get('ttyd_command', 'zsh')
-    
+
+    allow_origin_value = settings.get('ttyd_allow_origin', '*')
+    allow_origin_supported = ttyd_supports_allow_origin(settings)
+
     # Prepare ttyd command with proper settings
     cmd = [
-        'ttyd',
+        ttyd_binary,
         '-p', str(ttyd_port),
         '-W',  # Allow write access
-        '-w', working_dir,  # Set working directory
+        '-w', working_dir  # Set working directory
         # '-t', 'fontSize=14',
         # '-t', "fontFamily='Courier New',monospace",
         # '-t', 'theme={"background":"#1e1e1e","foreground":"#d4d4d4"}',
-        shell_cmd
     ]
+
+    if allow_origin_value and allow_origin_supported:
+        cmd.extend(['--allow-origin', allow_origin_value])
+        logger.debug("Using ttyd --allow-origin %s", allow_origin_value)
+    elif allow_origin_value and not allow_origin_supported:
+        logger.debug("ttyd binary does not support --allow-origin; skipping header override")
+
+    cmd.append(shell_cmd)
     
     logger.info(f"Starting ttyd with command: {' '.join(cmd)}")
     logger.info(f"Working directory: {working_dir}")
     
     try:
+        env = os.environ.copy()
+        env['PATH'] = build_search_path()
+
         # Start ttyd process - exactly like manual command
         ttyd_process = subprocess.Popen(
             cmd,
             cwd=working_dir,
-            start_new_session=True  # Detach from parent process
+            start_new_session=True,  # Detach from parent process
+            env=env
         )
         
         # Write PID to file
@@ -275,10 +390,8 @@ def start_ttyd_with_command(working_dir, command):
     
     # First, ensure ttyd is installed
     if not is_ttyd_installed():
-        logger.info("ttyd is not installed. Attempting to install it...")
-        if not install_ttyd():
-            logger.error("Failed to install ttyd. Please install it manually.")
-            return False
+        logger.warning("ttyd is not installed. Skipping startup until user installs it.")
+        return False
     
     # Stop any existing ttyd process (force stop)
     stop_ttyd(force=True)
@@ -296,24 +409,43 @@ def start_ttyd_with_command(working_dir, command):
     # We'll wrap the command in a shell that will keep the terminal open
     wrapped_command = f'bash -c "echo Starting dataflow...; {command}; echo; echo Command finished. Press any key to continue...; read -n 1"'
     
+    ttyd_binary = resolve_ttyd_binary(settings)
+    if not ttyd_binary:
+        logger.error('ttyd executable not found. Please install ttyd or set ttyd_binary_path in settings.')
+        return False
+
+    allow_origin_value = settings.get('ttyd_allow_origin', '*')
+    allow_origin_supported = ttyd_supports_allow_origin(settings)
+
     cmd = [
-        'ttyd',
+        ttyd_binary,
         '-p', str(ttyd_port),
         '-W',  # Allow write access
-        '-w', working_dir,  # Set working directory
-        'bash', '-c', wrapped_command
+        '-w', working_dir  # Set working directory
     ]
+
+    if allow_origin_value and allow_origin_supported:
+        cmd.extend(['--allow-origin', allow_origin_value])
+        logger.debug("Using ttyd --allow-origin %s", allow_origin_value)
+    elif allow_origin_value and not allow_origin_supported:
+        logger.debug("ttyd binary does not support --allow-origin; skipping header override")
+
+    cmd.extend(['bash', '-c', wrapped_command])
     
     logger.info(f"Starting ttyd with command: {' '.join(cmd)}")
     logger.info(f"Working directory: {working_dir}")
     logger.info(f"Executing: {command}")
     
     try:
+        env = os.environ.copy()
+        env['PATH'] = build_search_path()
+
         # Start ttyd process - exactly like manual command
         ttyd_process = subprocess.Popen(
             cmd,
             cwd=working_dir,
-            start_new_session=True  # Detach from parent process
+            start_new_session=True,
+            env=env
         )
         
         # Write PID to file

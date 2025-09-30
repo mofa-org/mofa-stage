@@ -30,6 +30,13 @@ def status():
 @ttyd_bp.route('/start', methods=['POST'])
 def start():
     """Start the ttyd service"""
+    if not is_ttyd_installed():
+        return jsonify({
+            'success': False,
+            'message': 'ttyd is not installed',
+            'needs_install': True
+        }), 400
+
     result = start_ttyd()
     
     if result:
@@ -60,6 +67,13 @@ def stop():
 @ttyd_bp.route('/restart', methods=['POST'])
 def restart():
     """Restart the ttyd service"""
+    if not is_ttyd_installed():
+        return jsonify({
+            'success': False,
+            'message': 'ttyd is not installed',
+            'needs_install': True
+        }), 400
+
     result = restart_ttyd()
     
     if result:
@@ -95,6 +109,13 @@ def start_with_command():
             'message': 'working_dir and command are required'
         }), 400
     
+    if not is_ttyd_installed():
+        return jsonify({
+            'success': False,
+            'message': 'ttyd is not installed',
+            'needs_install': True
+        }), 400
+
     result = start_ttyd_with_command(working_dir, command)
     
     if result:

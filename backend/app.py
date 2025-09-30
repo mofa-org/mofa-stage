@@ -1,7 +1,7 @@
 """
 MoFA_Stage Flask 后端应用
 """
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os
 import sys
@@ -18,7 +18,11 @@ from routes.ttyd import ttyd_bp
 from routes.mermaid import mermaid_bp
 from routes.vscode import vscode_bp
 from routes.duckdb import duckdb_bp
-from utils.ttyd_manager import start_ttyd, get_ttyd_status, is_ttyd_installed
+from utils.ttyd_manager import (
+    get_ttyd_status,
+    is_ttyd_installed,
+    install_ttyd
+)
 
 def create_app():
     """创建 Flask 应用"""
@@ -142,21 +146,71 @@ def create_app():
                 "error": str(e)
             }), 500
     
-    # 检查并启动ttyd服务
-    try:
-        # Check if ttyd is installed
-        if not is_ttyd_installed():
-            app.logger.warning("ttyd is not installed. It will be installed automatically when needed.")
-        
-        # Check the current status
-        status = get_ttyd_status()
-        if status['status'] == 'stopped':
-            app.logger.info("Starting ttyd service...")
-            start_ttyd()
-        else:
-            app.logger.info(f"ttyd service is already running on PID {status['pid']}")
-    except Exception as e:
-        app.logger.error(f"Error initializing ttyd service: {e}")
+    @app.route('/api/system/dependencies', methods=['GET'])
+    def list_dependencies():
+        """Return the installation status of core runtime dependencies."""
+        import shutil
+
+        dependencies = []
+
+        ttyd_installed = is_ttyd_installed()
+        ttyd_status = get_ttyd_status()
+
+        dependencies.append({
+            "id": "ttyd",
+            "name": "ttyd",
+            "description": "Web 终端服务（用于嵌入式 shell）",
+            "installed": ttyd_installed,
+            "running": ttyd_status.get('status') == 'running',
+            "auto_install": True,
+            "install_hint": "用于提供网页终端能力，macOS 建议通过 Homebrew 安装"
+        })
+
+        mofa_cli_path = shutil.which('mofa')
+        dependencies.append({
+            "id": "mofa-cli",
+            "name": "MoFA CLI",
+            "description": "MoFA 命令行工具（Agent 管理所需）",
+            "installed": bool(mofa_cli_path),
+            "running": bool(mofa_cli_path),
+            "auto_install": False,
+            "install_hint": "请按照 MoFA 文档安装 CLI 并确保 mofa 命令可用"
+        })
+
+        return jsonify({
+            "success": True,
+            "dependencies": dependencies
+        })
+
+    @app.route('/api/system/dependencies/install', methods=['POST'])
+    def install_dependency():
+        """Install supported dependencies on demand."""
+        data = request.get_json(silent=True) or {}
+        dep_id = data.get('id')
+
+        if dep_id == 'ttyd':
+            if is_ttyd_installed():
+                return jsonify({
+                    "success": True,
+                    "message": "ttyd 已安装"
+                })
+
+            success = install_ttyd()
+            if success:
+                return jsonify({
+                    "success": True,
+                    "message": "ttyd 安装完成"
+                })
+            else:
+                return jsonify({
+                    "success": False,
+                    "message": "ttyd 安装失败，请手动安装或检查日志"
+                }), 500
+
+        return jsonify({
+            "success": False,
+            "message": "暂不支持安装该依赖"
+        }), 400
     
     # 主页路由
     @app.route('/')

@@ -152,7 +152,7 @@
 
 <script>
 import { ref, reactive, onMounted, onBeforeUnmount, nextTick, watch, onActivated, onDeactivated } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSettingsStore } from '../store/settings'
 import { useAgentStore } from '../store/agent'
 import { Loading, Monitor, QuestionFilled, Search, Refresh, ArrowRight, Document } from '@element-plus/icons-vue'
@@ -190,6 +190,7 @@ export default {
     const props = arguments[0] // Access props in setup
     const settingsStore = useSettingsStore()
     const agentStore = useAgentStore()
+    const API_BASE_URL = 'http://localhost:5002/api'
     const showNewTabDialog = ref(false)
     const activeTabName = ref('')
     const sessions = ref([])
@@ -397,11 +398,24 @@ export default {
         const data = await response.json();
         console.log('ttyd service status:', data);
         
-        // If not installed, install it
+        // If not installed, prompt the user to install
         if (!data.installed) {
-          ElMessage.warning('ttyd is not installed. Attempting to install...');
-          await installTtyd();
-          return;
+          try {
+            await ElMessageBox.confirm(
+              '检测到本机尚未安装 ttyd，是否现在安装？\n我们将尝试通过系统包管理器自动安装（macOS 会调用 Homebrew）。',
+              '缺少依赖',
+              {
+                confirmButtonText: '立即安装',
+                cancelButtonText: '稍后处理',
+                type: 'warning'
+              }
+            )
+            await installTtyd()
+          } catch (confirmError) {
+            console.info('User cancelled ttyd installation prompt.', confirmError)
+            ElMessage.info('可前往“设置 > 依赖管理”手动安装 ttyd。')
+          }
+          return
         }
         
         // If not running, start it
@@ -413,8 +427,18 @@ export default {
               headers: { 'Content-Type': 'application/json' }
             });
             
+            if (startResponse.status === 400) {
+              const errorPayload = await startResponse.json().catch(() => ({}))
+              if (errorPayload?.needs_install) {
+                ElMessage.warning('ttyd 未安装，请先完成安装后再启动。')
+              } else {
+                ElMessage.error(errorPayload?.message || '启动 ttyd 失败')
+              }
+              return
+            }
+
             if (!startResponse.ok) {
-              throw new Error('Failed to start ttyd service');
+              throw new Error('Failed to start ttyd service')
             }
             
             const startData = await startResponse.json();
@@ -450,11 +474,12 @@ export default {
           headers: { 'Content-Type': 'application/json' }
         });
         
+        const data = await response.json().catch(() => ({}))
+
         if (!response.ok) {
-          throw new Error('Failed to install ttyd');
+          throw new Error(data?.message || 'Failed to install ttyd');
         }
         
-        const data = await response.json();
         if (data.success) {
           ElMessage.success('ttyd installed successfully.');
           await startTtyd();
@@ -475,11 +500,17 @@ export default {
           headers: { 'Content-Type': 'application/json' }
         });
         
+        const data = await response.json().catch(() => ({}))
+
+        if (response.status === 400 && data?.needs_install) {
+          ElMessage.warning('ttyd 未安装，请先完成安装。');
+          return;
+        }
+
         if (!response.ok) {
-          throw new Error('Failed to start ttyd service');
+          throw new Error(data?.message || 'Failed to start ttyd service');
         }
         
-        const data = await response.json();
         if (data.success) {
           ElMessage.success('ttyd service started successfully.');
         } else {
@@ -499,11 +530,17 @@ export default {
           headers: { 'Content-Type': 'application/json' }
         });
         
+        const data = await response.json().catch(() => ({}))
+
+        if (response.status === 400 && data?.needs_install) {
+          ElMessage.warning('ttyd 未安装，请先完成安装。');
+          return;
+        }
+
         if (!response.ok) {
-          throw new Error('Failed to restart ttyd service');
+          throw new Error(data?.message || 'Failed to restart ttyd service');
         }
         
-        const data = await response.json();
         if (data.success) {
           ElMessage.success('ttyd service restarted successfully.');
           
@@ -700,7 +737,7 @@ export default {
       
       try {
         // 动态获取实际的 dataflow 文件名
-        const response = await fetch(`/api/agents/${exampleName}/dataflow-file`);
+        const response = await fetch(`${API_BASE_URL}/agents/${exampleName}/dataflow-file`);
         let dataflowFile = `${exampleName}_dataflow.yml`; // 默认文件名作为兜底
         let examplesPath = '';
         

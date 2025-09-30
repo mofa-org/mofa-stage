@@ -46,8 +46,20 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run release
 
+      - name: Package macOS app (macOS only)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd dist
+          tar -czf "MoFA-Stage-macos-x64.tar.gz" -C mac-x64 "MoFA Stage.app"
+          tar -czf "MoFA-Stage-macos-arm64.tar.gz" -C mac-arm64 "MoFA Stage.app"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.os }}
-          path: dist/*
+          path: |
+            dist/*.tar.gz
+            dist/*.exe
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
