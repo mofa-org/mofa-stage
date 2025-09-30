@@ -60,8 +60,8 @@ jobs:
           
           # Generate certificate
           openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=MoFA Stage Developer"
-          openssl pkcs12 -export -out cert.p12 -inkey key.pem -in cert.pem -password pass:
-          security import cert.p12 -k build.keychain -P "" -T /usr/bin/codesign
+          openssl pkcs12 -export -out cert.p12 -inkey key.pem -in cert.pem -passout pass:temppass
+          security import cert.p12 -k build.keychain -P "temppass" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
           
           # Copy and sign apps
