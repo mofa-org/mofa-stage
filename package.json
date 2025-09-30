@@ -70,13 +70,16 @@
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": {
-        "target": "dir",
-        "arch": [
-          "x64",
-          "arm64"
-        ]
-      }
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "dir",
+          "arch": ["x64", "arm64"]
+        }
+      ]
     },
     "win": {
       "target": {

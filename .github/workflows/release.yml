@@ -51,17 +51,38 @@ jobs:
         run: |
           cd dist
           ls -la
+          
+          # Create self-signed certificate for code signing
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -t 3600 -l build.keychain
+          
+          # Generate certificate
+          openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=MoFA Stage Developer"
+          openssl pkcs12 -export -out cert.p12 -inkey key.pem -in cert.pem -password pass:
+          security import cert.p12 -k build.keychain -P "" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          
+          # Copy and sign apps
           cp -r mac/MoFA\ Stage.app MoFA-Stage-macos-x64.app
           cp -r mac-arm64/MoFA\ Stage.app MoFA-Stage-macos-arm64.app
-          tar -czf "MoFA-Stage-macos-x64.tar.gz" -C . "MoFA-Stage-macos-x64.app"
-          tar -czf "MoFA-Stage-macos-arm64.tar.gz" -C . "MoFA-Stage-macos-arm64.app"
+          
+          # Sign the apps
+          codesign --force --deep --sign "MoFA Stage Developer" "MoFA-Stage-macos-x64.app" || echo "Signing failed, continuing..."
+          codesign --force --deep --sign "MoFA Stage Developer" "MoFA-Stage-macos-arm64.app" || echo "Signing failed, continuing..."
+          
+          # Create zip files with .app preserved
+          ditto -c -k --sequesterRsrc --keepParent "MoFA-Stage-macos-x64.app" "MoFA-Stage-macos-x64.zip"
+          ditto -c -k --sequesterRsrc --keepParent "MoFA-Stage-macos-arm64.app" "MoFA-Stage-macos-arm64.zip"
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            dist/*.tar.gz
+            dist/*.dmg
+            dist/*.zip
             dist/*.exe
             dist/*.AppImage
             dist/*.deb
