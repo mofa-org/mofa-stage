@@ -380,13 +380,9 @@ export default {
 
     // Get the base URL for ttyd service
     const getTtydBaseUrl = () => {
-      const protocol = window.location.protocol;
-      const hostname = window.location.hostname;
-      
-      // Get port from settings
+      // Use direct connection to ttyd service
       const ttydPort = settingsStore.settings.ttyd_port || 7681;
-      
-      return `${protocol}//${hostname}:${ttydPort}`;
+      return `http://localhost:${ttydPort}`;
     };
     
     // Check ttyd service status and start if needed
