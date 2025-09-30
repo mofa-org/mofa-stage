@@ -14,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest]
 
     steps:
       - name: Checkout code
@@ -50,7 +50,8 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           cd dist
-          tar -czf "MoFA-Stage-macos-x64.tar.gz" -C mac-x64 "MoFA Stage.app"
+          ls -la
+          tar -czf "MoFA-Stage-macos-x64.tar.gz" -C mac "MoFA Stage.app"
           tar -czf "MoFA-Stage-macos-arm64.tar.gz" -C mac-arm64 "MoFA Stage.app"
 
       - name: Upload artifacts
