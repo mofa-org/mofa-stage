@@ -48,6 +48,7 @@ def create_agent():
     version = data.get('version', '0.0.1')
     authors = data.get('authors', 'MoFA_Stage User')
     agent_type = data.get('agent_type', 'agent-hub')  # 默认为 agent-hub 类型
+    template_name = data.get('template')
     
     if not agent_name:
         return jsonify({"success": False, "message": "Agent name is required"}), 400
@@ -57,7 +58,7 @@ def create_agent():
         return jsonify({"success": False, "message": "Invalid agent_type. Must be 'agent-hub' or 'examples'"}), 400
     
     mofa_cli = get_mofa_cli()
-    result = mofa_cli.create_agent(agent_name, version, authors, agent_type)
+    result = mofa_cli.create_agent(agent_name, version, authors, agent_type, template_name)
     return jsonify(result)
 
 @agents_bp.route('/copy', methods=['POST'])
@@ -360,3 +361,39 @@ def get_available_nodes():
     mofa_cli = get_mofa_cli()
     result = mofa_cli.get_available_nodes()
     return jsonify(result)
+
+
+@agents_bp.route('/templates', methods=['GET'])
+def get_agent_templates():
+    """获取可用的 Agent 模板列表"""
+    mofa_cli = get_mofa_cli()
+    result = mofa_cli.list_agent_templates()
+    status_code = 200 if result.get('success', False) else 500
+    return jsonify(result), status_code
+
+
+@agents_bp.route('/suggest-nodes', methods=['POST'])
+def suggest_nodes():
+    """根据描述推荐合适的节点"""
+    data = request.json or {}
+    flow_description = data.get('flow_description', '')
+    limit = data.get('limit', 5)
+
+    try:
+        limit = int(limit)
+    except (ValueError, TypeError):
+        limit = 5
+
+    mofa_cli = get_mofa_cli()
+    result = mofa_cli.suggest_nodes(flow_description, limit)
+    status_code = 200 if result.get('success', False) else 400
+    return jsonify(result), status_code
+
+
+@agents_bp.route('/node-details/<node_name>', methods=['GET'])
+def get_node_details(node_name):
+    """获取指定节点的上下文信息"""
+    mofa_cli = get_mofa_cli()
+    result = mofa_cli.get_node_details(node_name)
+    status_code = 200 if result.get('success', False) else 404
+    return jsonify(result), status_code

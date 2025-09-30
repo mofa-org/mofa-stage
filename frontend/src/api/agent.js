@@ -14,6 +14,13 @@ export default {
   },
 
   /**
+   * 获取可用的 Agent 模板
+   */
+  getAgentTemplates() {
+    return axios.get(`${API_URL}/agents/templates`)
+  },
+
+  /**
    * 获取指定 agent 的详细信息
    */
   getAgentDetails(agentName) {
@@ -139,5 +146,22 @@ export default {
       flow_description: flowDescription,
       flow_name: flowName
     })
+  },
+
+  /**
+   * 推荐合适的 nodes
+   */
+  suggestNodes(flowDescription, limit = 5) {
+    return axios.post(`${API_URL}/agents/suggest-nodes`, {
+      flow_description: flowDescription,
+      limit
+    })
+  },
+
+  /**
+   * 获取节点上下文详情
+   */
+  getNodeDetails(nodeName) {
+    return axios.get(`${API_URL}/agents/node-details/${encodeURIComponent(nodeName)}`)
   }
 }

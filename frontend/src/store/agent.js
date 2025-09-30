@@ -17,6 +17,12 @@ export const useAgentStore = defineStore('agent', {
     agentLogs: {}, // 保存每个agent的日志
     processOutputs: {}, // 保存进程输出
     availableNodes: [], // 可用的nodes列表
+    nodeRecommendations: [], // 推荐的nodes
+    nodeDetails: {}, // 节点上下文缓存
+    agentTemplates: {
+      'agent-hub': [],
+      examples: []
+    }
   }),
   
   getters: {
@@ -298,16 +304,16 @@ export const useAgentStore = defineStore('agent', {
         } else {
           return {
             success: false, 
-            error: response.data.error || '获取日志失败',
-            logs: '无法获取日志'
+            error: response.data.error || 'Failed to fetch logs',
+            logs: 'Unable to fetch logs'
           }
         }
       } catch (error) {
         console.error('Error fetching agent logs:', error)
         return {
           success: false,
-          error: error.message || '获取日志失败',
-          logs: `错误: ${error.message || error}`
+          error: error.message || 'Failed to fetch logs',
+          logs: `Error: ${error.message || error}`
         }
       }
     },
@@ -331,7 +337,7 @@ export const useAgentStore = defineStore('agent', {
         } else {
           return {
             success: false, 
-            error: response.data.message || '获取进程输出失败',
+            error: response.data.message || 'Failed to fetch process output',
             is_running: false,
             new_output: [],
             all_output: []
@@ -341,7 +347,7 @@ export const useAgentStore = defineStore('agent', {
         console.error('Error fetching process output:', error)
         return {
           success: false,
-          error: error.message || '获取进程输出失败',
+          error: error.message || 'Failed to fetch process output',
           is_running: false,
           new_output: [],
           all_output: []
@@ -440,6 +446,72 @@ export const useAgentStore = defineStore('agent', {
         }
       } finally {
         this.isLoading = false
+      }
+    },
+
+    async suggestNodes(flowDescription, limit = 5) {
+      this.error = null
+      if (!flowDescription || !flowDescription.trim()) {
+        this.nodeRecommendations = []
+        return []
+      }
+
+      try {
+        const response = await agentApi.suggestNodes(flowDescription, limit)
+        if (response.data && response.data.success) {
+          this.nodeRecommendations = response.data.suggestions || []
+          return this.nodeRecommendations
+        }
+        throw new Error(response.data?.message || 'Failed to suggest nodes')
+      } catch (error) {
+        this.error = error.message || 'Failed to suggest nodes'
+        console.error(error)
+        this.nodeRecommendations = []
+        return []
+      }
+    },
+
+    async fetchAgentTemplates() {
+      this.error = null
+      try {
+        const response = await agentApi.getAgentTemplates()
+        if (response.data && response.data.success) {
+          const templates = response.data.templates || {}
+          this.agentTemplates = {
+            'agent-hub': templates['agent-hub'] || [],
+            examples: templates['examples'] || []
+          }
+          return this.agentTemplates
+        }
+        throw new Error(response.data?.message || 'Failed to load templates')
+      } catch (error) {
+        this.error = error.message || 'Failed to load templates'
+        console.error(error)
+        this.agentTemplates = { 'agent-hub': [], examples: [] }
+        return this.agentTemplates
+      }
+    },
+
+    async fetchNodeDetails(nodeName) {
+      if (!nodeName) {
+        return null
+      }
+
+      if (this.nodeDetails[nodeName]) {
+        return this.nodeDetails[nodeName]
+      }
+
+      try {
+        const response = await agentApi.getNodeDetails(nodeName)
+        if (response.data && response.data.success) {
+          this.nodeDetails[nodeName] = response.data.node
+          return response.data.node
+        }
+        throw new Error(response.data?.message || 'Failed to load node details')
+      } catch (error) {
+        this.error = error.message || 'Failed to load node details'
+        console.error(error)
+        return null
       }
     }
   }

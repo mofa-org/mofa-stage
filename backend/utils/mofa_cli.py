@@ -8,7 +8,15 @@ import shutil
 import time
 from pathlib import Path
 import sys
+import re
+import ast
+import datetime
+
 import requests
+import toml
+import yaml
+
+from utils.node_index import NodeKnowledgeIndex
 
 class MofaCLI:
     def __init__(self, settings=None):
@@ -96,6 +104,10 @@ class MofaCLI:
         
         # 存储正在运行的进程信息
         self._running_processes = {}
+
+        # 节点索引缓存
+        self._node_index = NodeKnowledgeIndex()
+        self._cached_nodes = []
         
         # 分别存储hub和example类型的额外目录
         self.additional_hub_dirs = []
@@ -467,7 +479,7 @@ class MofaCLI:
                 })
         return files_list
     
-    def create_agent(self, agent_name, version="0.0.1", authors="MoFA_Stage User", agent_type="agent-hub"):
+    def create_agent(self, agent_name, version="0.0.1", authors="MoFA_Stage User", agent_type="agent-hub", template_name=None):
         """创建一个新的 agent
         
         Args:
@@ -480,57 +492,79 @@ class MofaCLI:
             # 根据 agent_type 选择输出目录
             if agent_type == "agent-hub":
                 output_dir = self.agent_hub_dir
+                template_default = "hello-world"
+                template_dirs = [self.agent_hub_dir] + self.additional_hub_dirs
             elif agent_type == "examples":
                 output_dir = self.examples_dir
+                template_default = "hello_world"
+                template_dirs = [self.examples_dir] + self.additional_example_dirs
             else:
                 return {"success": False, "message": f"Invalid agent_type: {agent_type}. Must be 'agent-hub' or 'examples'"}
-            
+
             print(f"创建 {agent_type} 类型的 Agent: {agent_name} 到目录: {output_dir}")
-            
+
             # 确保目录存在
             os.makedirs(output_dir, exist_ok=True)
-            
-            # 使用不同的模板，根据 agent 类型
-            template_path = ""
-            if agent_type == "agent-hub":
-                template_path = os.path.join(self.agent_hub_dir, "hello-world")
-            else:  # examples
-                template_path = os.path.join(self.examples_dir, "hello_world")
-            
-            # 检查模板是否存在
-            if not os.path.exists(template_path):
-                print(f"警告: 模板路径不存在: {template_path}，将尝试使用 mofa new-agent 命令")
-                cmd = f"mofa new-agent {agent_name} --version {version} --output {output_dir} --authors \"{authors}\""
-                result = self._run_command(cmd)
-            else:
-                # 使用模板复制创建新 agent
-                agent_dir = os.path.join(output_dir, agent_name)
+
+            selected_template = template_name or template_default
+            template_path = None
+            fallback_template_path = None
+
+            for directory in template_dirs:
+                if not directory:
+                    continue
+                candidate = os.path.join(directory, selected_template)
+                if os.path.isdir(candidate):
+                    template_path = candidate
+                    break
+                # capture default fallback if different from selected
+                default_candidate = os.path.join(directory, template_default)
+                if os.path.isdir(default_candidate):
+                    fallback_template_path = default_candidate
+
+            if not template_path:
+                template_path = fallback_template_path
+
+            agent_dir = os.path.join(output_dir, agent_name)
+            result = None
+
+            if template_path and os.path.isdir(template_path):
                 if os.path.exists(agent_dir):
                     return {"success": False, "message": f"Agent directory already exists: {agent_dir}"}
-                
-                # 复制模板目录
+
                 import shutil
                 shutil.copytree(template_path, agent_dir)
-                
-                # 更新 agent 名称和版本
-                template_name = os.path.basename(template_path)
-                self._update_agent_name_in_files(agent_dir, template_name, agent_name)
-                
-                # 更新 README.md
+
+                template_name_actual = os.path.basename(template_path)
+                self._update_agent_name_in_files(agent_dir, template_name_actual, agent_name)
+
                 readme_path = os.path.join(agent_dir, "README.md")
                 if os.path.exists(readme_path):
                     with open(readme_path, "r") as f:
                         content = f.read()
-                    content = content.replace(template_name, agent_name)
-                    content = content.replace("# " + template_name, "# " + agent_name)
+                    content = content.replace(template_name_actual, agent_name)
+                    content = content.replace("# " + template_name_actual, "# " + agent_name)
                     with open(readme_path, "w") as f:
                         f.write(content)
                 else:
-                    # 创建一个基本的 README.md
                     with open(readme_path, "w") as f:
                         f.write(f"# {agent_name} Agent\n\nCreated by {authors}\nVersion: {version}\n\nThis is a {agent_type} agent.")
-                
-                result = f"Created {agent_type} agent '{agent_name}' from template '{template_name}'"
+
+                pyproject_path = os.path.join(agent_dir, "pyproject.toml")
+                if os.path.exists(pyproject_path):
+                    self._update_pyproject(agent_dir, agent_name, version, authors)
+
+                if agent_type == "examples":
+                    self._rename_examples_files(agent_dir, template_name_actual, agent_name)
+
+                result = f"Created {agent_type} agent '{agent_name}' from template '{template_name_actual}'"
+            else:
+                warn_template = template_path or selected_template
+                print(f"警告: 模板路径不存在: {warn_template}，将尝试使用 mofa new-agent 命令")
+                cmd = f"mofa new-agent {agent_name} --version {version} --output {output_dir} --authors \"{authors}\""
+                command_result = self._run_command(cmd)
+                if command_result:
+                    return {"success": True, "message": f"Agent '{agent_name}' created via mofa new-agent"}
         
             if not result:
                 # 命令失败，尝试手动创建一个基本agent目录
@@ -1355,6 +1389,435 @@ class MofaCLI:
             result.append({"name": name, "path": rel, "type": ext})
         return result
 
+    def _read_text_file(self, file_path, max_chars=5000):
+        """Read a text file safely with a sensible size limit."""
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read(max_chars)
+            return content
+        except Exception:
+            return ""
+
+    def _first_meaningful_paragraph(self, text):
+        """Extract the first non-heading paragraph from markdown/text."""
+        if not text:
+            return ""
+
+        paragraphs = re.split(r"\n\s*\n", text)
+        for paragraph in paragraphs:
+            cleaned = paragraph.strip()
+            if not cleaned:
+                continue
+            # Remove markdown heading markers/bullets
+            cleaned = re.sub(r"^[#>\-*\s]+", "", cleaned)
+            cleaned = cleaned.strip()
+            if len(cleaned) >= 24:
+                return re.sub(r"\s+", " ", cleaned)
+        return ""
+
+    def _extract_python_docstrings(self, node_path, max_files=6):
+        """Collect top-level docstrings from python files close to the root."""
+        docstrings = []
+        visited = 0
+        for root, dirs, files in os.walk(node_path):
+            depth = root.count(os.sep) - node_path.count(os.sep)
+            if depth > 1:
+                # Skip deeply nested files to keep things light-weight
+                dirs[:] = []
+                continue
+
+            for file in files:
+                if not file.endswith(".py"):
+                    continue
+                file_path = os.path.join(root, file)
+                text = self._read_text_file(file_path)
+                if not text:
+                    continue
+                try:
+                    module = ast.parse(text)
+                    docstring = ast.get_docstring(module)
+                except Exception:
+                    docstring = None
+
+                if not docstring:
+                    # Fallback to the first comment block at the top of the file
+                    head = text.split("\n\n", 1)[0]
+                    comment_lines = []
+                    for line in head.splitlines():
+                        stripped = line.strip()
+                        if stripped.startswith("#"):
+                            comment_lines.append(stripped.lstrip("# "))
+                        else:
+                            break
+                    if comment_lines:
+                        docstring = " ".join(comment_lines)
+
+                if docstring:
+                    docstrings.append(re.sub(r"\s+", " ", docstring.strip()))
+
+                visited += 1
+                if visited >= max_files:
+                    break
+            if visited >= max_files:
+                break
+
+        return docstrings
+
+    def _parse_pyproject_metadata(self, pyproject_path):
+        """Extract description, entry points, dependencies, and keywords from pyproject."""
+        if not os.path.exists(pyproject_path):
+            return {}
+
+        metadata = {}
+        try:
+            data = toml.load(pyproject_path)
+        except Exception:
+            return {}
+
+        project_table = {}
+        if "project" in data:
+            project_table = data.get("project", {})
+        elif data.get("tool", {}).get("poetry"):
+            project_table = data["tool"]["poetry"]
+
+        if project_table:
+            if project_table.get("description"):
+                metadata["description"] = project_table.get("description", "")
+            if project_table.get("keywords"):
+                metadata["keywords"] = project_table.get("keywords", [])
+
+        # Entry points / scripts
+        entry_points = []
+        poetry_scripts = data.get("tool", {}).get("poetry", {}).get("scripts", {})
+        project_scripts = data.get("project", {}).get("scripts", {})
+        scripts = {**poetry_scripts, **project_scripts}
+        for name, target in scripts.items():
+            entry_points.append(f"{name} -> {target}")
+        if entry_points:
+            metadata["entry_points"] = entry_points
+
+        # Dependencies
+        dependencies = []
+        raw_dependencies = data.get("project", {}).get("dependencies")
+        if raw_dependencies:
+            dependencies.extend(self._format_dependency_list(raw_dependencies))
+
+        poetry_dependencies = data.get("tool", {}).get("poetry", {}).get("dependencies")
+        if poetry_dependencies:
+            dependencies.extend(self._format_dependency_dict(poetry_dependencies))
+
+        if dependencies:
+            # Remove duplicates while preserving order
+            seen = set()
+            ordered = []
+            for dep in dependencies:
+                if dep not in seen:
+                    ordered.append(dep)
+                    seen.add(dep)
+            metadata["dependencies"] = ordered
+
+        return metadata
+
+    def _format_dependency_list(self, dependencies):
+        formatted = []
+        if isinstance(dependencies, list):
+            for dep in dependencies:
+                if isinstance(dep, str):
+                    formatted.append(dep)
+        elif isinstance(dependencies, dict):
+            formatted.extend(self._format_dependency_dict(dependencies))
+        return formatted
+
+    def _format_dependency_dict(self, dependencies):
+        formatted = []
+        if not isinstance(dependencies, dict):
+            return formatted
+
+        for name, value in dependencies.items():
+            if name.lower() == "python":
+                continue
+            if isinstance(value, dict):
+                version = value.get("version") or value.get("path") or value.get("url")
+            else:
+                version = value
+            if version and version != "*":
+                formatted.append(f"{name} ({version})")
+            else:
+                formatted.append(str(name))
+        return formatted
+
+    def _collect_config_files(self, node_path, max_files=5):
+        configs = []
+        try:
+            for root, dirs, files in os.walk(node_path):
+                depth = root.count(os.sep) - node_path.count(os.sep)
+                if depth > 1:
+                    dirs[:] = []
+                    continue
+                for file in files:
+                    if file.endswith((".yaml", ".yml", ".json")):
+                        rel_path = os.path.relpath(os.path.join(root, file), node_path)
+                        configs.append(rel_path)
+                        if len(configs) >= max_files:
+                            return configs
+        except Exception:
+            return configs
+        return configs
+
+    def _collect_primary_files(self, node_path, max_files=6):
+        primary = []
+        try:
+            for root, dirs, files in os.walk(node_path):
+                depth = root.count(os.sep) - node_path.count(os.sep)
+                if depth > 1:
+                    dirs[:] = []
+                    continue
+                for file in files:
+                    if file.endswith(".py") and file != "__init__.py":
+                        rel_path = os.path.relpath(os.path.join(root, file), node_path)
+                        primary.append(rel_path)
+                        if len(primary) >= max_files:
+                            return primary
+        except Exception:
+            return primary
+        return primary
+
+    def _collect_node_metadata(self, node_path):
+        """Gather multiple contextual signals about a node."""
+        metadata = {}
+
+        readme_candidates = [
+            "README.md",
+            "README.MD",
+            "README_cn.md",
+            "README_CN.md",
+        ]
+
+        description_candidates = []
+        for filename in readme_candidates:
+            text = self._read_text_file(os.path.join(node_path, filename))
+            summary = self._first_meaningful_paragraph(text)
+            if summary:
+                description_candidates.append(("readme", summary))
+
+        pyproject_metadata = self._parse_pyproject_metadata(os.path.join(node_path, "pyproject.toml"))
+        if pyproject_metadata.get("description"):
+            description_candidates.append(("pyproject", pyproject_metadata["description"]))
+
+        docstrings = self._extract_python_docstrings(node_path)
+        if docstrings:
+            for doc in docstrings:
+                description_candidates.append(("code", doc))
+            metadata["doc_highlights"] = [doc.split("\n")[0] for doc in docstrings[:3]]
+
+        context_snippets = []
+        if readme_candidates:
+            for filename in readme_candidates:
+                file_path = os.path.join(node_path, filename)
+                if os.path.exists(file_path):
+                    text = self._read_text_file(file_path, max_chars=1200)
+                    if text:
+                        context_snippets.append({
+                            "path": filename,
+                            "type": "readme",
+                            "snippet": text[:400]
+                        })
+
+        config_files = self._collect_config_files(node_path)
+        if config_files:
+            metadata["config_files"] = config_files
+            for rel_path in config_files[:3]:
+                absolute_path = os.path.join(node_path, rel_path)
+                parser = None
+                if rel_path.endswith((".yaml", ".yml")):
+                    parser = lambda text: yaml.safe_load(text)
+                elif rel_path.endswith(".json"):
+                    parser = lambda text: json.loads(text)
+
+                if not parser:
+                    continue
+
+                try:
+                    raw_text = self._read_text_file(absolute_path, max_chars=8000)
+                    config_data = parser(raw_text) if raw_text else None
+                except Exception:
+                    config_data = None
+
+                if isinstance(config_data, dict):
+                    for key in ("description", "summary", "details"):
+                        value = config_data.get(key)
+                        if isinstance(value, str):
+                            cleaned = self._first_meaningful_paragraph(value)
+                            if cleaned:
+                                description_candidates.append(("config", cleaned))
+                                break
+                
+                raw_preview = self._read_text_file(absolute_path, max_chars=800)
+                if raw_preview:
+                    context_snippets.append({
+                        "path": rel_path,
+                        "type": "config",
+                        "snippet": raw_preview[:400]
+                    })
+        selected_description = ""
+        priority = ["pyproject", "readme", "config", "code"]
+        for source in priority:
+            for candidate_source, candidate_text in description_candidates:
+                if candidate_source == source and candidate_text:
+                    selected_description = candidate_text.strip()
+                    break
+            if selected_description:
+                break
+
+        if not selected_description and description_candidates:
+            selected_description = description_candidates[0][1]
+
+        if selected_description:
+            selected_description = re.sub(r"\s+", " ", selected_description).strip()
+            if len(selected_description) > 200:
+                selected_description = selected_description[:197].rstrip() + "..."
+
+        if pyproject_metadata.get("entry_points"):
+            metadata["entry_points"] = pyproject_metadata["entry_points"]
+
+        if pyproject_metadata.get("dependencies"):
+            metadata["dependencies"] = pyproject_metadata["dependencies"]
+
+        if pyproject_metadata.get("keywords"):
+            metadata["keywords"] = pyproject_metadata["keywords"]
+
+        primary_files = self._collect_primary_files(node_path)
+        if primary_files:
+            metadata["primary_files"] = primary_files
+            for rel_path in primary_files[:3]:
+                absolute = os.path.join(node_path, rel_path)
+                preview = self._read_text_file(absolute, max_chars=1000)
+                if preview:
+                    context_snippets.append({
+                        "path": rel_path,
+                        "type": "code",
+                        "snippet": preview[:400]
+                    })
+
+        tests_dir = os.path.join(node_path, "tests")
+        if os.path.isdir(tests_dir):
+            try:
+                test_files = []
+                for root, _, files in os.walk(tests_dir):
+                    depth = root.count(os.sep) - tests_dir.count(os.sep)
+                    if depth > 1:
+                        continue
+                    for file in files:
+                        if file.endswith((".py", ".yaml", ".yml")):
+                            rel = os.path.relpath(os.path.join(root, file), node_path)
+                            test_files.append(rel)
+                            if len(test_files) >= 5:
+                                break
+                    if len(test_files) >= 5:
+                        break
+                if test_files:
+                    metadata["tests"] = test_files
+                    sample = test_files[0]
+                    sample_path = os.path.join(node_path, sample)
+                    preview = self._read_text_file(sample_path, max_chars=600)
+                    if preview:
+                        context_snippets.append({
+                            "path": sample,
+                            "type": "test",
+                            "snippet": preview[:400]
+                        })
+            except Exception:
+                pass
+
+        metadata["has_configs"] = bool(metadata.get("config_files"))
+        metadata["has_tests"] = bool(metadata.get("tests"))
+
+        agent_pkg_path = os.path.join(node_path, "agent")
+        metadata["has_agent_package"] = os.path.isdir(agent_pkg_path)
+
+        dataflow_files = [path for path in metadata.get("config_files", []) if path.lower().endswith((".yml", ".yaml")) and "dataflow" in path.lower()]
+        if dataflow_files:
+            metadata["dataflows"] = dataflow_files
+            metadata["has_dataflow"] = True
+
+        # Clean empty values
+        if context_snippets:
+            metadata["context_snippets"] = context_snippets
+
+        metadata = {k: v for k, v in metadata.items() if v}
+
+        return {
+            "description": selected_description,
+            "metadata": metadata
+        }
+
+    def _list_templates_for_dir(self, base_dir):
+        templates = []
+        if not base_dir or not os.path.isdir(base_dir):
+            return templates
+
+        try:
+            for entry in sorted(os.listdir(base_dir)):
+                if entry.startswith('.') or entry.startswith('__'):
+                    continue
+                template_path = os.path.join(base_dir, entry)
+                if not os.path.isdir(template_path):
+                    continue
+
+                metadata = self._collect_node_metadata(template_path)
+                templates.append({
+                    "name": entry,
+                    "description": metadata.get("description") or f"Template: {entry}",
+                    "metadata": metadata.get("metadata", {})
+                })
+        except Exception as exc:
+            print(f"Error listing templates in {base_dir}: {exc}")
+
+        return templates
+
+    def list_agent_templates(self):
+        """Gather available templates for agent creation."""
+        try:
+            hub_dirs = [self.agent_hub_dir] + self.additional_hub_dirs
+            example_dirs = [self.examples_dir] + self.additional_example_dirs
+
+            hub_templates = []
+            for directory in hub_dirs:
+                hub_templates.extend(self._list_templates_for_dir(directory))
+
+            example_templates = []
+            for directory in example_dirs:
+                example_templates.extend(self._list_templates_for_dir(directory))
+
+            # Remove duplicates by name while preserving order
+            def deduplicate(items):
+                seen = set()
+                unique = []
+                for item in items:
+                    name = item.get("name")
+                    if name in seen:
+                        continue
+                    seen.add(name)
+                    unique.append(item)
+                return unique
+
+            return {
+                "success": True,
+                "templates": {
+                    "agent-hub": deduplicate(hub_templates),
+                    "examples": deduplicate(example_templates)
+                }
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "message": str(e),
+                "templates": {
+                    "agent-hub": [],
+                    "examples": []
+                }
+            }
+
     def get_available_nodes(self):
         """获取所有可用的nodes列表及其描述"""
         try:
@@ -1365,232 +1828,335 @@ class MofaCLI:
                 for node_name in os.listdir(self.agent_hub_dir):
                     node_path = os.path.join(self.agent_hub_dir, node_name)
                     if os.path.isdir(node_path):
+                        enriched = self._collect_node_metadata(node_path)
+
                         node_info = {
                             "name": node_name,
                             "type": "agent-hub",
                             "path": node_path,
-                            "description": ""
+                            "description": enriched.get("description") or f"Agent node: {node_name}"
                         }
-                        
-                        # 尝试从README.md获取描述
-                        readme_path = os.path.join(node_path, "README.md")
-                        if os.path.exists(readme_path):
-                            try:
-                                with open(readme_path, "r", encoding="utf-8") as f:
-                                    lines = f.readlines()
-                                    # 提取第一行作为描述（通常是标题）
-                                    for line in lines:
-                                        line = line.strip()
-                                        if line and not line.startswith('#'):
-                                            node_info["description"] = line[:100]  # 限制长度
-                                            break
-                                        elif line.startswith('# '):
-                                            node_info["description"] = line[2:].strip()[:100]
-                                            break
-                            except Exception as e:
-                                print(f"读取README失败: {e}")
-                        
-                        # 尝试从pyproject.toml获取更多信息
-                        pyproject_path = os.path.join(node_path, "pyproject.toml")
-                        if os.path.exists(pyproject_path):
-                            try:
-                                with open(pyproject_path, "r", encoding="utf-8") as f:
-                                    content = f.read()
-                                    # 简单提取description（如果有的话）
-                                    if 'description' in content and not node_info["description"]:
-                                        lines = content.split('\n')
-                                        for line in lines:
-                                            if 'description' in line and '=' in line:
-                                                desc = line.split('=')[1].strip().strip('"\'')
-                                                node_info["description"] = desc[:100]
-                                                break
-                            except Exception as e:
-                                print(f"读取pyproject.toml失败: {e}")
-                        
-                        # 如果没有描述，使用节点名称
-                        if not node_info["description"]:
-                            node_info["description"] = f"Agent node: {node_name}"
-                        
+
+                        metadata = enriched.get("metadata")
+                        if metadata:
+                            node_info["metadata"] = metadata
+
                         nodes.append(node_info)
             
+            sorted_nodes = sorted(nodes, key=lambda x: x["name"])
+            self._cached_nodes = sorted_nodes
+            self._node_index.build(sorted_nodes)
+
             return {
                 "success": True,
-                "nodes": sorted(nodes, key=lambda x: x["name"])
+                "nodes": sorted_nodes
             }
         except Exception as e:
             print(f"获取可用nodes时出错: {e}")
             return {"success": False, "message": str(e)}
 
+    def suggest_nodes(self, flow_description, limit=5):
+        """提供基于描述的节点推荐"""
+        if not flow_description or not flow_description.strip():
+            return {
+                "success": False,
+                "message": "flow_description is required"
+            }
+
+        if not self._cached_nodes:
+            available = self.get_available_nodes()
+            if not available.get("success"):
+                return available
+
+        suggestions = self._node_index.search(flow_description, limit=limit or 5)
+        if not suggestions:
+            return {
+                "success": True,
+                "suggestions": []
+            }
+
+        node_lookup = {node.get("name"): node for node in self._cached_nodes}
+        enriched = []
+        for suggestion in suggestions:
+            node = node_lookup.get(suggestion["name"], {})
+            enriched.append({
+                "name": suggestion["name"],
+                "score": suggestion["score"],
+                "description": node.get("description"),
+                "metadata": node.get("metadata", {})
+            })
+
+        return {
+            "success": True,
+            "suggestions": enriched
+        }
+
+    def get_node_details(self, node_name):
+        """返回指定节点的详细上下文信息"""
+        if not node_name:
+            return {"success": False, "message": "node_name is required"}
+
+        if not self._cached_nodes:
+            available = self.get_available_nodes()
+            if not available.get("success"):
+                return available
+
+        for node in self._cached_nodes:
+            if node.get("name") == node_name:
+                return {"success": True, "node": node}
+
+        return {"success": False, "message": f"Node {node_name} not found"}
+
+    def _ensure_node_cache(self):
+        """Return a lookup dict for cached nodes, refreshing if necessary."""
+        if not self._cached_nodes:
+            result = self.get_available_nodes()
+            if not result.get("success"):
+                return {}
+        return {node.get("name"): node for node in self._cached_nodes}
+
+    def _summarize_node_for_prompt(self, node_name, node_lookup):
+        node = node_lookup.get(node_name, {})
+        metadata = node.get("metadata", {}) or {}
+        summary = {
+            "name": node_name,
+            "description": node.get("description", ""),
+            "entry_points": metadata.get("entry_points", [])[:3],
+            "dependencies": metadata.get("dependencies", [])[:5],
+            "primary_files": metadata.get("primary_files", [])[:4],
+            "config_files": metadata.get("config_files", [])[:4],
+            "tests": metadata.get("tests", [])[:3],
+            "doc_highlights": metadata.get("doc_highlights", [])[:3]
+        }
+
+        snippets = []
+        for snippet in metadata.get("context_snippets", [])[:3]:
+            snippet_text = snippet.get("snippet", "")
+            if not snippet_text:
+                continue
+            snippets.append({
+                "path": snippet.get("path"),
+                "type": snippet.get("type"),
+                "excerpt": snippet_text.strip()
+            })
+
+        if snippets:
+            summary["context_snippets"] = snippets
+
+        return summary
+
+    def _fallback_dataflow(self, selected_nodes, flow_description, flow_name, node_lookup):
+        """Construct a deterministic YAML when LLM generation is unavailable."""
+        if not selected_nodes:
+            return "", "No nodes provided"
+
+        dataflow_nodes = []
+
+        # Terminal input node anchors the flow
+        dataflow_nodes.append({
+            "id": "terminal-input",
+            "build": "pip install -e ../../node-hub/terminal-input",
+            "path": "dynamic",
+            "outputs": ["data"],
+            "inputs": {}
+        })
+
+        previous_output = "terminal-input/data"
+
+        for index, node_name in enumerate(selected_nodes):
+            node_id = node_name
+            build_path = f"pip install -e ../../agent-hub/{node_name}"
+            path = node_name
+
+            metadata = node_lookup.get(node_name, {}).get("metadata", {}) if node_lookup else {}
+
+            env = {"WRITE_LOG": True}
+            if index == len(selected_nodes) - 1:
+                env["IS_DATAFLOW_END"] = True
+
+            node_entry = {
+                "id": node_id,
+                "build": build_path,
+                "path": path,
+                "outputs": [f"{node_id}_output"],
+                "inputs": {
+                    "input": previous_output
+                },
+                "env": env
+            }
+
+            if metadata.get("config_files"):
+                node_entry["configs"] = metadata["config_files"][:2]
+
+            dataflow_nodes.append(node_entry)
+            previous_output = f"{node_id}/{node_id}_output"
+
+        structure = {
+            "name": flow_name or "generated_flow",
+            "description": flow_description or "Generated via fallback",
+            "version": "0.0.1",
+            "nodes": dataflow_nodes
+        }
+
+        try:
+            yaml_content = yaml.safe_dump(structure, sort_keys=False, allow_unicode=True)
+        except Exception:
+            yaml_content = ""
+
+        message = "使用内置模板生成了基础 dataflow，请根据节点实际输入输出进行完善。"
+        return yaml_content, message
+
+
+    
     def generate_dataflow_with_gemini(self, selected_nodes, flow_description, flow_name):
         """使用Gemini API基于选择的nodes和描述生成dataflow"""
         try:
-            # 从设置中获取Gemini API key
+            node_lookup = self._ensure_node_cache()
+
             from routes.settings import get_settings
             settings = get_settings()
             api_key = settings.get('gemini_api_key')
             api_endpoint = settings.get('gemini_api_endpoint', 'https://generativelanguage.googleapis.com/v1beta')
-            
+
+            highlighted_nodes = [self._summarize_node_for_prompt(node, node_lookup) for node in selected_nodes]
+
             if not api_key:
-                return {"success": False, "message": "Gemini API key not configured"}
-            
-            # 构建nodes信息
-            nodes_info = []
-            for node_name in selected_nodes:
-                node_path = os.path.join(self.agent_hub_dir, node_name)
-                if os.path.exists(node_path):
-                    node_desc = ""
-                    readme_path = os.path.join(node_path, "README.md")
-                    if os.path.exists(readme_path):
-                        try:
-                            with open(readme_path, "r", encoding="utf-8") as f:
-                                content = f.read()
-                                # 取前500字符作为描述
-                                node_desc = content[:500]
-                        except:
-                            node_desc = f"Node: {node_name}"
-                    
-                    nodes_info.append({
-                        "name": node_name,
-                        "description": node_desc
-                    })
-            
-            # 构建prompt
+                yaml_content, message = self._fallback_dataflow(selected_nodes, flow_description, flow_name, node_lookup)
+                return {
+                    "success": True if yaml_content else False,
+                    "message": "Gemini API 未配置，已使用内置模板生成基础 dataflow。" if yaml_content else message,
+                    "yaml_content": yaml_content,
+                    "dataflow_path": None,
+                    "source": "fallback"
+                }
+
+            node_context_json = json.dumps(highlighted_nodes, ensure_ascii=False, indent=2)
+
             prompt = f"""
-基于以下信息生成一个MoFA dataflow YAML配置文件：
+你是 MoFA Stage 的系统架构师，需要根据用户需求和节点上下文生成工业级 dataflow。
 
-用户需求：{flow_description}
+用户需求: {flow_description}
+目标 dataflow 名称: {flow_name}
 
-可用的nodes：
-{json.dumps(nodes_info, ensure_ascii=False, indent=2)}
+候选节点上下文:
+{node_context_json}
 
-请生成一个完整的dataflow YAML配置，遵循以下格式：
-- 每个node都应该有id, build, path, outputs, inputs等字段
-- 第一个node通常是terminal-input，用于接收用户输入
-- 最后一个node应该设置 IS_DATAFLOW_END: true
-- nodes之间通过inputs/outputs连接
-- build路径格式为: pip install -e ../../agent-hub/[node-name]
-- path通常与node名称相关
-
-参考格式：
+生成要求:
+- 输出纯 YAML，可直接保存为 `*_dataflow.yml`。
+- 首个节点必须是 `terminal-input` 并暴露 `data` 输出。
+- 其余节点按照上下文推断 `build`, `path`, `inputs`, `outputs`；若信息不足可使用占位符但需在注释或 env 中标注待确认内容。
+- 末节点需声明 `env.IS_DATAFLOW_END = true`，所有节点默认包含 `env.WRITE_LOG = true`。
+- 若节点包含测试、配置或关键文件，请在 YAML 中体现为 `configs` 或注释，以指导后续完善。
+- 结构示例：
 ```yaml
+name: {flow_name}
+version: 0.0.1
+description: <简短概述>
 nodes:
   - id: terminal-input
     build: pip install -e ../../node-hub/terminal-input
     path: dynamic
-    outputs:
-      - data
+    outputs: [data]
+  - id: <another-node>
+    build: pip install -e ../../agent-hub/<another-node>
+    path: <path>
     inputs:
-      result: some-node/output
-  - id: some-node
-    build: pip install -e ../../agent-hub/some-node
-    path: some-node
+      <input_key>: terminal-input/data
     outputs:
-      - output
-    inputs:
-      input_data: terminal-input/data
+      - <output_key>
     env:
-      IS_DATAFLOW_END: true
       WRITE_LOG: true
+      # IS_DATAFLOW_END: true  # 仅在最后节点设置
 ```
 
-请只返回YAML配置内容，不要包含其他解释文字。
+仅输出最终 YAML，不要附加解释文字。
 """
 
-            # 获取选择的AI模型
             ai_model = settings.get('ai_model', 'gemini-2.0-flash')
-            
-            # 调用Gemini API
             url = f"{api_endpoint}/models/{ai_model}:generateContent"
-            headers = {
-                'Content-Type': 'application/json'
-            }
-            
+            headers = {'Content-Type': 'application/json'}
             payload = {
-                "contents": [
-                    {
-                        "parts": [
-                            {
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ]
+                "safetySettings": [
+                    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+                ],
+                "contents": [{"parts": [{"text": prompt}]}]
             }
-            
+
             response = requests.post(
                 f"{url}?key={api_key}",
                 headers=headers,
                 data=json.dumps(payload)
             )
-            
+
             if response.status_code != 200:
+                yaml_content, message = self._fallback_dataflow(selected_nodes, flow_description, flow_name, node_lookup)
                 return {
-                    "success": False, 
-                    "message": f"Gemini API调用失败: {response.status_code} - {response.text}"
+                    "success": True if yaml_content else False,
+                    "message": f"Gemini API调用失败 ({response.status_code})，{message}",
+                    "yaml_content": yaml_content,
+                    "dataflow_path": None,
+                    "source": "fallback"
                 }
-            
+
             result = response.json()
-            
-            # 提取生成的内容
-            if 'candidates' in result and len(result['candidates']) > 0:
-                generated_content = result['candidates'][0]['content']['parts'][0]['text']
-                
-                # 清理生成的内容，提取YAML部分
-                yaml_content = generated_content
-                if '```yaml' in yaml_content:
-                    yaml_content = yaml_content.split('```yaml')[1]
-                if '```' in yaml_content:
-                    yaml_content = yaml_content.split('```')[0]
-                yaml_content = yaml_content.strip()
-                
-                # 创建dataflow目录
-                dataflow_dir = os.path.join(self.examples_dir, flow_name)
-                if os.path.exists(dataflow_dir):
-                    return {"success": False, "message": f"Dataflow '{flow_name}' already exists"}
-                
-                os.makedirs(dataflow_dir, exist_ok=True)
-                
-                # 保存dataflow配置文件
-                dataflow_file_path = os.path.join(dataflow_dir, f"{flow_name}_dataflow.yml")
-                with open(dataflow_file_path, "w", encoding="utf-8") as f:
-                    f.write(yaml_content)
-                
-                # 创建README.md
-                readme_content = f"""# {flow_name} Dataflow
 
-## 描述
-{flow_description}
-
-## 使用的Nodes
-{', '.join(selected_nodes)}
-
-## 运行方式
-```bash
-cd {dataflow_dir}
-dora up
-dora build {flow_name}_dataflow.yml
-dora start {flow_name}_dataflow.yml
-```
-
-## 自动生成
-此dataflow由MoFA Stage基于用户需求自动生成。
-"""
-                
-                readme_path = os.path.join(dataflow_dir, "README.md")
-                with open(readme_path, "w", encoding="utf-8") as f:
-                    f.write(readme_content)
-                
+            if 'candidates' not in result or len(result['candidates']) == 0:
+                yaml_content, message = self._fallback_dataflow(selected_nodes, flow_description, flow_name, node_lookup)
                 return {
-                    "success": True,
-                    "message": f"Dataflow '{flow_name}' generated successfully",
-                    "dataflow_path": dataflow_dir,
-                    "yaml_content": yaml_content
+                    "success": True if yaml_content else False,
+                    "message": f"Gemini API 未返回结果，{message}",
+                    "yaml_content": yaml_content,
+                    "dataflow_path": None,
+                    "source": "fallback"
                 }
-            else:
-                return {"success": False, "message": "Gemini API返回了空内容"}
-                
+
+            generated_content = result['candidates'][0]['content']['parts'][0]['text']
+            yaml_content = generated_content
+            if '```yaml' in yaml_content:
+                yaml_content = yaml_content.split('```yaml', 1)[1]
+                if '```' in yaml_content:
+                    yaml_content = yaml_content.split('```', 1)[0]
+
+            yaml_content = yaml_content.strip()
+
+            if not yaml_content:
+                yaml_content, message = self._fallback_dataflow(selected_nodes, flow_description, flow_name, node_lookup)
+                return {
+                    "success": True if yaml_content else False,
+                    "message": f"生成内容为空，{message}",
+                    "yaml_content": yaml_content,
+                    "dataflow_path": None,
+                    "source": "fallback"
+                }
+
+            dataflow_dir = os.path.join(self.examples_dir, flow_name)
+            os.makedirs(dataflow_dir, exist_ok=True)
+            dataflow_file_path = os.path.join(dataflow_dir, f"{flow_name}_dataflow.yml")
+
+            if os.path.exists(dataflow_file_path):
+                timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+                dataflow_file_path = os.path.join(
+                    dataflow_dir,
+                    f"{flow_name}_dataflow_{timestamp}.yml"
+                )
+
+            with open(dataflow_file_path, "w", encoding="utf-8") as f:
+                f.write(yaml_content)
+
+            return {
+                "success": True,
+                "message": f"Dataflow '{flow_name}' generated successfully",
+                "dataflow_path": dataflow_dir,
+                "yaml_content": yaml_content,
+                "source": "gemini",
+                "nodes_used": highlighted_nodes
+            }
         except Exception as e:
-            import traceback
-            trace = traceback.format_exc()
-            print(f"生成dataflow时出错: {str(e)}\n{trace}")
-            return {"success": False, "message": f"生成dataflow失败: {str(e)}"}
+            yaml_content, message = self._fallback_dataflow(selected_nodes, flow_description, flow_name, self._ensure_node_cache())
+            return {
+                "success": True if yaml_content else False,
+                "message": f"生成dataflow失败: {str(e)}。{message}",
+                "yaml_content": yaml_content,
+                "dataflow_path": None,
+                "source": "fallback"
+            }
