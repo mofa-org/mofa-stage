@@ -1,6 +1,6 @@
 {
   "name": "mofa-stage-desktop",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "MoFA Stage Desktop - AI Agent Development Platform",
   "main": "electron/main.js",
   "author": "MoFA Team",
@@ -72,32 +72,45 @@
       "category": "public.app-category.developer-tools",
       "target": {
         "target": "dir",
-        "arch": ["x64", "arm64"]
+        "arch": [
+          "x64",
+          "arm64"
+        ]
       }
     },
     "win": {
       "target": {
         "target": "portable",
-        "arch": ["x64"]
+        "arch": [
+          "x64"
+        ]
       }
     },
     "linux": {
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "rpm",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "tar.gz",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
