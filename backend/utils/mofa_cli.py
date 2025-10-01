@@ -1909,16 +1909,19 @@ class MofaCLI:
 
             # Normalize path relative to base directory
             relative_path = path_text
+            match_root = None
             for base_dir in unique_dirs:
                 if path_text.startswith(base_dir):
                     relative_path = os.path.relpath(path_text, base_dir)
+                    match_root = base_dir
                     break
 
             results.append({
                 "file": path_text,
                 "relative_file": relative_path,
                 "line": line_number,
-                "preview": lines.strip()
+                "preview": lines.strip(),
+                "root": match_root
             })
 
             if len(results) >= max_results:

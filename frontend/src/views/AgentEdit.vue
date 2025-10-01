@@ -6,10 +6,20 @@
           <el-icon><ArrowLeft /></el-icon>
         </el-button>
         <h1 class="page-title">{{ agentName }}</h1>
-        <el-tag v-if="isAgentRunning" type="success">运行中</el-tag>
+        <el-tag v-if="isAgentRunning" type="success">Running</el-tag>
       </div>
       
       <div class="header-actions">
+        <el-button
+          class="code-search-btn"
+          size="small"
+          type="primary"
+          plain
+          @click="openCodeSearch"
+        >
+          <el-icon><Search /></el-icon>
+          Code Search
+        </el-button>
         <el-button-group>
           <el-button 
             v-if="useNewEditor && vscodeStatus.running" 
@@ -17,7 +27,7 @@
             type="success" 
             size="small">
             <el-icon><Download /></el-icon>
-            扩展
+            Extensions
           </el-button>
           <el-button 
             v-if="useNewEditor && vscodeStatus.running" 
@@ -25,7 +35,7 @@
             type="info" 
             size="small">
             <el-icon><Setting /></el-icon>
-            配置
+            Config
           </el-button>
           <el-button 
             @click="toggleVariableMonitor" 
@@ -39,7 +49,7 @@
             type="warning"
             size="small">
             <el-icon><Close /></el-icon>
-            关闭节点监控 ({{ nodeMonitorWindows.size }})
+            Close Node Monitors ({{ nodeMonitorWindows.size }})
           </el-button>
           <el-button class="custom-save-btn" @click="saveCurrentFile" :disabled="!hasChanges" :loading="isSaving">
             <el-icon><Document /></el-icon>
@@ -72,18 +82,18 @@
       <!-- 新版编辑器 - VS Code Web 嵌入 -->
       <div v-if="useNewEditor" class="vscode-full-container">
         <div v-if="vscodeStatus.loading" class="vscode-loading">
-          <div v-loading="true" element-loading-text="正在启动 VS Code Web..." class="loading-container">
+          <div v-loading="true" element-loading-text="Starting VS Code Web..." class="loading-container">
           </div>
         </div>
         <div v-else-if="vscodeStatus.error" class="vscode-error">
           <el-alert
-            title="VS Code Web 启动失败"
+            title="VS Code Web Failed to Start"
             type="error"
             :description="vscodeStatus.error"
             show-icon
           />
           <el-button @click="startVSCodeServer" type="primary" style="margin-top: 10px;">
-            重试启动
+            Retry Launch
           </el-button>
         </div>
         <VSCodeEmbed 
@@ -92,15 +102,15 @@
           :vscode-base-url="vscodeBaseUrl" 
         />
         <div v-else class="vscode-starting">
-          <el-empty description="正在准备 VS Code Web...">
+          <el-empty description="Preparing VS Code Web...">
             <el-button @click="startVSCodeServer" type="primary">
-              启动 VS Code
+              Launch VS Code
             </el-button>
             <el-button @click="installExtensions" type="success" style="margin-left: 10px;">
-              安装推荐扩展
+              Install Recommended Extensions
             </el-button>
             <el-button @click="updateVSCodeConfig" type="info" style="margin-left: 10px;">
-              更新配置
+              Update Config
             </el-button>
           </el-empty>
         </div>
@@ -120,9 +130,9 @@
           </div>
           
           <div v-if="!fileTreeCollapsed" class="sidebar-header">
-            <h3>文件列表</h3>
+            <h3>File List</h3>
             <el-input
-              placeholder="搜索文件"
+              placeholder="Search files"
               v-model="fileSearchQuery"
               prefix-icon="Search"
               clearable
@@ -145,8 +155,8 @@
 
           <div v-if="!fileTreeCollapsed" class="sidebar-footer">
             <el-button-group>
-              <el-button size="small" @click="addNewFile" :icon="Document">文件</el-button>
-              <el-button size="small" @click="addNewFolder" :icon="FolderAdd">文件夹</el-button>
+              <el-button size="small" @click="addNewFile" :icon="Document">New File</el-button>
+              <el-button size="small" @click="addNewFolder" :icon="FolderAdd">New Folder</el-button>
             </el-button-group>
           </div>
         </div>
@@ -164,7 +174,7 @@
                     size="small"
                     @click="togglePreviewMode"
                     :type="previewMode ? 'primary' : 'default'">
-                    {{ previewMode ? '编辑' : '预览' }}
+                    {{ previewMode ? 'Edit' : 'Preview' }}
                   </el-button>
                   <!-- 保存按钮已移至顶部工具栏，此处注释掉
                   <el-button 
@@ -195,7 +205,7 @@
                         ref="codeEditorRef"
                       />
                       <div v-else class="new-editor-placeholder">
-                        <el-empty description="请选择文件或切换到新版编辑器" />
+                        <el-empty description="Select a file or switch to the new editor" />
                       </div>
                     </el-tab-pane>
                     <el-tab-pane label="Graph" name="graph">
@@ -226,7 +236,7 @@
                         <div class="image-info">
                           <div class="image-filename">{{ currentFile.path.split('/').pop() }}</div>
                           <div v-if="imageInfo.width && imageInfo.height" class="image-dimensions">
-                            {{ imageInfo.width }} × {{ imageInfo.height }} 像素
+                            {{ imageInfo.width }} × {{ imageInfo.height }} pixels
                           </div>
                           <div v-if="imageInfo.size" class="image-size">
                             {{ formatFileSize(imageInfo.size) }}
@@ -250,10 +260,10 @@
                         <div class="video-info">
                           <div class="video-filename">{{ currentFile.path.split('/').pop() }}</div>
                           <div v-if="videoInfo.duration" class="video-duration">
-                            时长: {{ formatDuration(videoInfo.duration) }}
+                            Duration: {{ formatDuration(videoInfo.duration) }}
                           </div>
                           <div v-if="videoInfo.width && videoInfo.height" class="video-dimensions">
-                            {{ videoInfo.width }} × {{ videoInfo.height }} 像素
+                            {{ videoInfo.width }} × {{ videoInfo.height }} pixels
                           </div>
                           <div v-if="videoInfo.size" class="video-size">
                             {{ formatFileSize(videoInfo.size) }}
@@ -277,14 +287,14 @@
                         <div v-if="isDuckDBWALFile" class="wal-info">
                           <el-alert type="info" :closable="false" show-icon>
                             <template #title>
-                              DuckDB Write-Ahead Log (WAL) 文件
+                              DuckDB Write-Ahead Log (WAL) File
                             </template>
-                            <p>这是DuckDB的事务日志文件，用于保证数据库的持久性和一致性。</p>
+                            <p>This DuckDB transaction log file preserves durability and consistency.</p>
                             <ul>
-                              <li>包含未提交的事务记录</li>
-                              <li>在数据库恢复时自动使用</li>
-                              <li>不应手动修改此文件</li>
-                              <li>由DuckDB自动管理</li>
+                              <li>Contains uncommitted transaction records</li>
+                              <li>Used automatically during database recovery</li>
+                              <li>Do not modify this file manually</li>
+                              <li>Managed automatically by DuckDB</li>
                             </ul>
                           </el-alert>
                         </div>
@@ -294,13 +304,13 @@
                           <!-- 加载状态 -->
                           <div v-if="duckdbData.loading" class="loading-state">
                             <el-loading-spinner />
-                            <p>正在加载数据库内容...</p>
+                            <p>Loading database contents...</p>
                           </div>
 
                           <!-- 错误状态 -->
                           <div v-else-if="duckdbData.error" class="error-state">
                             <el-alert type="error" :closable="false">
-                              <template #title>加载失败</template>
+                              <template #title>Load Failed</template>
                               {{ duckdbData.error }}
                             </el-alert>
                           </div>
@@ -311,26 +321,26 @@
                               <template #header>
                                 <div class="card-header">
                                   <el-icon><DataBoard /></el-icon>
-                                  <span>数据库统计</span>
+                                  <span>Database Stats</span>
                                 </div>
                               </template>
                               <el-row :gutter="20">
                                 <el-col :span="8">
                                   <div class="stat-item">
                                     <div class="stat-value">{{ duckdbData.stats.total_records || 0 }}</div>
-                                    <div class="stat-label">总记录数</div>
+                                    <div class="stat-label">Total Records</div>
                                   </div>
                                 </el-col>
                                 <el-col :span="8">
                                   <div class="stat-item">
                                     <div class="stat-value">{{ duckdbData.stats.total_nodes || 0 }}</div>
-                                    <div class="stat-label">节点数量</div>
+                                    <div class="stat-label">Node Count</div>
                                   </div>
                                 </el-col>
                                 <el-col :span="8">
                                   <div class="stat-item">
                                     <div class="stat-value">{{ duckdbData.tables.length }}</div>
-                                    <div class="stat-label">数据表</div>
+                                    <div class="stat-label">Tables</div>
                                   </div>
                                 </el-col>
                               </el-row>
@@ -341,7 +351,7 @@
                               <template #header>
                                 <div class="card-header">
                                   <el-icon><Grid /></el-icon>
-                                  <span>数据节点</span>
+                                  <span>Data Nodes</span>
                                 </div>
                               </template>
                               <div class="tables-list">
@@ -355,7 +365,7 @@
                                       <div class="table-title">
                                         <el-icon><Box /></el-icon>
                                         <span class="table-name">{{ table.node_name }}</span>
-                                        <el-tag size="small" type="info">{{ table.record_count }} 条记录</el-tag>
+                                        <el-tag size="small" type="info">{{ table.record_count }} records</el-tag>
                                       </div>
                                     </template>
                                     
@@ -384,7 +394,7 @@
 
                                       <!-- 历史记录 -->
                                       <div v-if="duckdbData.historyData[table.node_name]" class="history-section">
-                                        <h4 class="history-title">📋 历史记录</h4>
+                                        <h4 class="history-title">📋 History</h4>
                                         <div class="history-table">
                                           <el-table 
                                             :data="duckdbData.historyData[table.node_name]" 
@@ -392,13 +402,13 @@
                                             stripe
                                             :max-height="300"
                                           >
-                                            <el-table-column prop="time" label="时间" width="160" show-overflow-tooltip />
-                                            <el-table-column label="输入变量" width="120">
+                                            <el-table-column prop="time" label="Time" width="160" show-overflow-tooltip />
+                                            <el-table-column label="Input Variable" width="120">
                                               <template #default="scope">
                                                 {{ scope.row.input_name || '-' }}
                                               </template>
                                             </el-table-column>
-                                            <el-table-column label="输入值" min-width="150">
+                                            <el-table-column label="Input Value" min-width="150">
                                               <template #default="scope">
                                                 <div v-if="scope.row.input_value !== null && scope.row.input_value !== undefined" class="table-value">
                                                   <pre>{{ JSON.stringify(scope.row.input_value, null, 2) }}</pre>
@@ -406,12 +416,12 @@
                                                 <span v-else class="null-value">-</span>
                                               </template>
                                             </el-table-column>
-                                            <el-table-column label="输出变量" width="120">
+                                            <el-table-column label="Output Variable" width="120">
                                               <template #default="scope">
                                                 {{ scope.row.output_name || '-' }}
                                               </template>
                                             </el-table-column>
-                                            <el-table-column label="输出值" min-width="150">
+                                            <el-table-column label="Output Value" min-width="150">
                                               <template #default="scope">
                                                 <div v-if="scope.row.output_value !== null && scope.row.output_value !== undefined" class="table-value">
                                                   <pre>{{ JSON.stringify(scope.row.output_value, null, 2) }}</pre>
@@ -431,8 +441,8 @@
 
                           <!-- 空状态 -->
                           <div v-else class="empty-database">
-                            <el-empty description="数据库为空或无法访问">
-                              <el-button type="primary" @click="loadDuckDBData">重新加载</el-button>
+                            <el-empty description="Database is empty or unreachable">
+                              <el-button type="primary" @click="loadDuckDBData">Reload</el-button>
                             </el-empty>
                           </div>
                         </div>
@@ -451,7 +461,7 @@
                       ref="codeEditorRef"
                     />
                     <div v-else class="new-editor-placeholder">
-                      <el-empty description="请选择文件或切换到新版编辑器" />
+                      <el-empty description="Select a file or switch to the new editor" />
                     </div>
                   </template>
                 </template>
@@ -474,7 +484,7 @@
                 <ArrowRight v-else />
               </el-icon>
                            <div class="toggle-text" v-if="showMermaidSidebar">
-                <span class="toggle-label-expanded">关闭</span>
+                <span class="toggle-label-expanded">Close</span>
               </div>
               <el-icon class="preview-icon" v-else>
                 <View />
@@ -487,21 +497,21 @@
           <div v-if="!useNewEditor && isDataflowYaml && showMermaidSidebar" class="mermaid-preview-sidebar" :style="{ width: mermaidSidebarWidth + 'px' }">
            <div class="mermaid-resize-handle" @mousedown="startResizeMermaid"></div>
                      <div class="mermaid-sidebar-header">
-             <h4>数据流图</h4>
+             <h4>Dataflow Diagram</h4>
              <div class="mermaid-toolbar">
-               <el-tooltip content="放大" placement="top">
+               <el-tooltip content="Zoom In" placement="top">
                  <el-button size="small" text @click="zoomIn"><el-icon><Plus /></el-icon></el-button>
                </el-tooltip>
-               <el-tooltip content="缩小" placement="top">
+               <el-tooltip content="Zoom Out" placement="top">
                  <el-button size="small" text @click="zoomOut"><el-icon><Minus /></el-icon></el-button>
                </el-tooltip>
-               <el-tooltip content="重置" placement="top">
+               <el-tooltip content="Reset" placement="top">
                  <el-button size="small" text @click="resetZoom"><el-icon><Refresh /></el-icon></el-button>
                </el-tooltip>
-               <el-tooltip content="新标签页打开" placement="top">
+               <el-tooltip content="Open in New Tab" placement="top">
                  <el-button size="small" text @click="openMermaidInNewTab"><el-icon><Document /></el-icon></el-button>
                </el-tooltip>
-               <el-tooltip content="关闭" placement="top">
+               <el-tooltip content="Close" placement="top">
                  <el-button size="small" text @click="toggleMermaidSidebar"><el-icon><Close /></el-icon></el-button>
                </el-tooltip>
              </div>
@@ -520,7 +530,7 @@
           
           <div class="mermaid-preview-content">
             <div v-if="loadingMermaidContent" v-loading="true" class="mermaid-loading">
-              加载中...
+              Loading...
             </div>
             <div v-else-if="mermaidHtmlContent"
                  class="mermaid-zoom-wrapper"
@@ -528,7 +538,7 @@
               <iframe class="mermaid-content-iframe" :srcdoc="mermaidHtmlContent" />
             </div>
                          <div v-else class="mermaid-empty">
-               <el-empty description="未找到 HTML 文件" size="small" />
+               <el-empty description="No HTML file found" size="small" />
              </div>
           </div>
         </div>
@@ -591,6 +601,65 @@
       </div>
     </div>
 
+    <el-drawer
+      v-model="codeSearchDrawer"
+      direction="rtl"
+      size="380px"
+      :with-header="false"
+      class="code-search-drawer"
+    >
+      <div class="code-search-header">
+        <h3>Repository Code Search</h3>
+        <p class="code-search-subtitle">Glide through MoFA & Dora code with pastel-powered focus.</p>
+      </div>
+      <div class="code-search-controls">
+        <el-input
+          v-model="codeSearchQuery"
+          placeholder="Keyword (e.g. run_agent)"
+          clearable
+          @keyup.enter="performCodeSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-input
+          v-model="codeSearchGlob"
+          placeholder="Optional glob (e.g. *.py,*.yml)"
+          clearable
+        />
+        <div class="code-search-actions">
+          <el-button type="primary" plain @click="performCodeSearch" :loading="searchLoading">Search</el-button>
+          <el-button plain @click="clearCodeSearch">Clear</el-button>
+        </div>
+      </div>
+      <el-divider content-position="left">Matches</el-divider>
+      <el-scrollbar class="code-search-results" v-loading="searchLoading">
+        <template v-if="!searchLoading && searchResults.length">
+          <div
+            v-for="item in searchResults"
+            :key="item.file + ':' + item.line"
+            class="code-search-item"
+            @click="openSearchResult(item)"
+          >
+            <div class="result-path">{{ deriveAgentRelativePath(item) || item.relative_file }}</div>
+            <div class="result-line">Line {{ item.line }}</div>
+            <pre class="result-snippet">{{ item.preview }}</pre>
+            <el-tag
+              v-if="!deriveAgentRelativePath(item)"
+              size="small"
+              type="warning"
+              effect="light"
+            >Outside current agent</el-tag>
+          </div>
+        </template>
+        <el-empty
+          v-else-if="!searchLoading"
+          description="No results yet. Try another query."
+        />
+      </el-scrollbar>
+    </el-drawer>
+
     <!-- 新建文件对话框 -->
     <el-dialog v-model="newFileDialogVisible" title="Create New File" width="30%">
       <el-form :model="newFileForm" label-width="80px">
@@ -644,23 +713,23 @@
     >
       <div class="context-menu-item" v-if="contextMenuData && contextMenuData.isDirectory" @click="handleRenameItem">
         <el-icon><Edit /></el-icon>
-        <span>重命名</span>
+        <span>Rename</span>
       </div>
       <div class="context-menu-item" v-if="contextMenuData && contextMenuData.isDirectory" @click="handleDeleteItem">
         <el-icon><Delete /></el-icon>
-        <span>删除文件夹</span>
+        <span>Delete Folder</span>
       </div>
       <div class="context-menu-item" v-if="contextMenuData && !contextMenuData.isDirectory" @click="handleRenameItem">
         <el-icon><Edit /></el-icon>
-        <span>重命名</span>
+        <span>Rename</span>
       </div>
       <div class="context-menu-item" v-if="contextMenuData && !contextMenuData.isDirectory" @click="handleCopyItem">
         <el-icon><CopyDocument /></el-icon>
-        <span>复制文件</span>
+        <span>Copy File</span>
       </div>
       <div class="context-menu-item" v-if="contextMenuData && !contextMenuData.isDirectory" @click="handleDeleteItem">
         <el-icon><Delete /></el-icon>
-        <span>删除文件</span>
+        <span>Delete File</span>
       </div>
     </div>
 
@@ -704,7 +773,7 @@
               :loading="dataflowOutputLoading"
             >
               <el-icon><Refresh /></el-icon>
-              刷新
+              Refresh
             </el-button>
             <el-button 
               size="small" 
@@ -712,14 +781,14 @@
               :type="autoRefreshDataflowOutput ? 'success' : 'info'"
             >
               <el-icon><VideoPlay v-if="!autoRefreshDataflowOutput" /><VideoPause v-else /></el-icon>
-              {{ autoRefreshDataflowOutput ? '停止自动刷新' : '自动刷新' }}
+              {{ autoRefreshDataflowOutput ? 'Stop Auto Refresh' : 'Auto Refresh' }}
             </el-button>
             <el-button 
               size="small" 
               @click="clearDataflowOutput"
             >
               <el-icon><Delete /></el-icon>
-              清空
+              Clear
             </el-button>
             <el-button 
               type="danger" 
@@ -728,7 +797,7 @@
               v-if="isAgentRunning"
             >
               <el-icon><VideoPause /></el-icon>
-              停止运行
+              Stop Run
             </el-button>
           </el-button-group>
         </div>
@@ -737,16 +806,16 @@
         <div class="dataflow-output-container">
           <el-card class="output-card" body-style="padding: 0;">
             <div class="output-header">
-              <span class="output-title">实时输出</span>
+              <span class="output-title">Live Output</span>
               <el-tag 
                 :type="isAgentRunning ? 'success' : 'info'" 
                 size="small"
               >
-                {{ isAgentRunning ? '运行中' : '已停止' }}
+                {{ isAgentRunning ? 'Running' : 'Stopped' }}
               </el-tag>
             </div>
             <div class="output-body">
-              <pre class="output-content" v-loading="dataflowOutputLoading">{{ dataflowOutput || '暂无输出...' }}</pre>
+              <pre class="output-content" v-loading="dataflowOutputLoading">{{ dataflowOutput || 'No output yet...' }}</pre>
             </div>
           </el-card>
         </div>
@@ -754,7 +823,7 @@
       
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="closeDataflowOutputDialog">关闭</el-button>
+          <el-button @click="closeDataflowOutputDialog">Close</el-button>
         </div>
       </template>
     </el-dialog>
@@ -891,6 +960,13 @@ export default {
     // 节点变量监控窗口管理
     const nodeMonitorWindows = reactive(new Map()) // 存储每个节点的监控窗口状态
     const nextZIndex = ref(1001) // 管理窗口层级
+
+    // 仓库代码搜索
+    const codeSearchDrawer = ref(false)
+    const codeSearchQuery = ref('')
+    const codeSearchGlob = ref('')
+    const searchResults = computed(() => agentStore.searchResults)
+    const searchLoading = computed(() => agentStore.searchLoading)
 
     // 计算属性
     const defaultProps = {
@@ -1061,14 +1137,14 @@ export default {
         if (result.success) {
           vscodeStatus.value.running = true
           vscodePort.value = result.port || 8080
-          ElMessage.success('VS Code Web 启动成功')
+          ElMessage.success('VS Code Web started successfully')
         } else {
           vscodeStatus.value.error = result.error
-          ElMessage.error(`启动失败: ${result.error}`)
+          ElMessage.error(`Failed to launch: ${result.error}`)
         }
       } catch (error) {
         vscodeStatus.value.error = error.message
-        ElMessage.error(`启动失败: ${error.message}`)
+        ElMessage.error(`Failed to launch: ${error.message}`)
       } finally {
         vscodeStatus.value.loading = false
       }
@@ -1089,16 +1165,16 @@ export default {
 
     // 安装推荐扩展
     const installExtensions = async () => {
-      ElMessage.info('正在安装 VS Code 扩展...')
+      ElMessage.info('Installing VS Code extensions...')
       try {
         const result = await vscodeApi.installExtensions(props.agentName)
         if (result.success) {
-          ElMessage.success(`扩展安装完成: ${result.installed.length} 个成功, ${result.failed.length} 个失败`)
+          ElMessage.success(`Extension install finished: ${result.installed.length} succeeded, ${result.failed.length} failed`)
         } else {
-          ElMessage.error(`扩展安装失败: ${result.error}`)
+          ElMessage.error(`Extension install failed: ${result.error}`)
         }
       } catch (error) {
-        ElMessage.error(`扩展安装失败: ${error.message}`)
+        ElMessage.error(`Extension install failed: ${error.message}`)
       }
     }
 
@@ -1107,12 +1183,12 @@ export default {
       try {
         const result = await vscodeApi.updateConfig(props.agentName)
         if (result.success) {
-          ElMessage.success('VS Code 配置已更新')
+          ElMessage.success('VS Code configuration updated')
         } else {
-          ElMessage.error(`配置更新失败: ${result.error}`)
+          ElMessage.error(`Configuration update failed: ${result.error}`)
         }
       } catch (error) {
-        ElMessage.error(`配置更新失败: ${error.message}`)
+        ElMessage.error(`Configuration update failed: ${error.message}`)
       }
     }
 
@@ -1136,11 +1212,11 @@ export default {
       // 如果有未保存的更改，提示保存
       if (hasChanges.value) {
         ElMessageBox.confirm(
-          '有未保存的更改，是否保存后再离开？',
-          '未保存的更改',
+          'Unsaved changes detected. Save before leaving?',
+          'Unsaved Changes',
           {
-            confirmButtonText: '保存并离开',
-            cancelButtonText: '放弃更改',
+            confirmButtonText: 'Save and Leave',
+            cancelButtonText: 'Discard Changes',
             type: 'warning',
             distinguishCancelAndClose: true
           }
@@ -1264,6 +1340,52 @@ export default {
       })
     }
 
+    const openCodeSearch = () => {
+      codeSearchDrawer.value = true
+      nextTick(() => {
+        if (!codeSearchQuery.value) {
+          codeSearchQuery.value = currentFile.value ? currentFile.value.path.split('/').pop()?.split('.')[0] || '' : ''
+        }
+      })
+    }
+
+    const performCodeSearch = async () => {
+      if (!codeSearchQuery.value.trim()) {
+        ElMessage.warning('Enter a keyword to search')
+        return
+      }
+      await agentStore.searchRepository(codeSearchQuery.value.trim(), codeSearchGlob.value.trim())
+    }
+
+    const clearCodeSearch = () => {
+      codeSearchQuery.value = ''
+      codeSearchGlob.value = ''
+      agentStore.searchResults = []
+    }
+
+    const deriveAgentRelativePath = (result) => {
+      if (!result || !result.file) {
+        return null
+      }
+      const marker = `/${props.agentName}/`
+      const idx = result.file.lastIndexOf(marker)
+      if (idx === -1) {
+        return null
+      }
+      return result.file.substring(idx + marker.length)
+    }
+
+    const openSearchResult = async (result) => {
+      const relativePath = deriveAgentRelativePath(result)
+      if (!relativePath) {
+        ElMessage.info('Result belongs to another workspace. Open it from the repository directly.')
+        return
+      }
+      fileTreeCollapsed.value = false
+      await loadFileContent(relativePath)
+      codeSearchDrawer.value = false
+    }
+
     const handleFileClick = async (data) => {
       console.log('handleFileClick called with:', data)
       if (data.isDirectory) return
@@ -1272,11 +1394,11 @@ export default {
       if (currentFile.value && hasChanges.value) {
         try {
           await ElMessageBox.confirm(
-            '有未保存的更改，是否保存？',
-            '未保存的更改',
+            'Unsaved changes detected. Save now?',
+            'Unsaved Changes',
             {
-              confirmButtonText: '保存',
-              cancelButtonText: '放弃更改',
+              confirmButtonText: 'Save',
+              cancelButtonText: 'Discard Changes',
               type: 'warning'
             }
           )
@@ -1331,7 +1453,7 @@ export default {
               // 保存图片大小信息
               imageInfo.value.size = blob.size
               previewMode.value = true // 图片文件自动进入预览模式
-              console.log('图片加载成功:', filePath, '大小:', blob.size)
+              console.log('Image loaded successfully:', filePath, 'size:', blob.size)
             } else {
               console.error('Failed to load image:', response.status, response.statusText)
               ElMessage.error('Failed to load image file')
@@ -1368,7 +1490,7 @@ export default {
               // 保存视频大小信息
               videoInfo.value.size = blob.size
               previewMode.value = true // 视频文件自动进入预览模式
-              console.log('视频加载成功:', filePath, '大小:', blob.size)
+              console.log('Video loaded successfully:', filePath, 'size:', blob.size)
             } else {
               console.error('Failed to load video:', response.status, response.statusText)
               ElMessage.error('Failed to load video file')
@@ -1519,10 +1641,10 @@ export default {
         const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico']
         const videoExtensions = ['mp4', 'webm', 'ogg', 'avi', 'mov', 'mkv', 'flv', 'wmv', 'm4v', '3gp']
         if (imageExtensions.includes(ext)) {
-          ElMessage.info('图片文件已创建，请使用外部工具编辑后上传')
+          ElMessage.info('Image file created. Please edit with an external tool before uploading')
           const result = await agentStore.saveFileContent(props.agentName, filePath, '')
           if (result) {
-            ElMessage.success('图片文件占位符已创建')
+            ElMessage.success('Image file placeholder created')
             newFileDialogVisible.value = false
             await loadAgentFiles()
           } else {
@@ -1531,10 +1653,10 @@ export default {
           isCreatingFile.value = false
           return
         } else if (videoExtensions.includes(ext)) {
-          ElMessage.info('视频文件已创建，请使用外部工具编辑后上传')
+          ElMessage.info('Video file created. Please edit with an external tool before uploading')
           const result = await agentStore.saveFileContent(props.agentName, filePath, '')
           if (result) {
-            ElMessage.success('视频文件占位符已创建')
+            ElMessage.success('Video file placeholder created')
             newFileDialogVisible.value = false
             await loadAgentFiles()
           } else {
@@ -1773,16 +1895,16 @@ export default {
       if (!contextMenuData.value) return
       hideContextMenu()
       
-      const itemType = contextMenuData.value.isDirectory ? '文件夹' : '文件'
+      const itemType = contextMenuData.value.isDirectory ? 'Folder' : 'File'
       const itemName = contextMenuData.value.label
       
       try {
         await ElMessageBox.confirm(
-          `确定要删除这个${itemType}吗: ${itemName}?`,
-          `删除${itemType}`,
+          `Delete this ${itemType.toLowerCase()}? ${itemName}`,
+          `Delete ${itemType}`,
           {
-            confirmButtonText: '删除',
-            cancelButtonText: '取消',
+            confirmButtonText: 'Delete',
+            cancelButtonText: 'Cancel',
             type: 'warning',
             confirmButtonClass: 'el-button--danger'
           }
@@ -1791,7 +1913,7 @@ export default {
         // 调用后端删除接口
         const success = await agentStore.deleteFileOrFolder(props.agentName, contextMenuData.value.path)
         if (success) {
-          ElMessage.success(`${itemType}已删除`)
+          ElMessage.success(`${itemType} deleted`)
           await loadAgentFiles()
           // 如果删除的是当前打开文件，清空编辑器
           if (currentFile.value && currentFile.value.path === contextMenuData.value.path) {
@@ -1799,7 +1921,7 @@ export default {
             editorContent.value = ''
           }
         } else {
-          ElMessage.error(`删除${itemType}失败`)
+          ElMessage.error(`Failed to delete the ${itemType.toLowerCase()}`)
         }
         
       } catch (e) {
@@ -1809,7 +1931,7 @@ export default {
 
     const confirmRename = async () => {
       if (!contextMenuData.value || !renameForm.value.newName.trim()) {
-        ElMessage.warning('请输入新名称')
+        ElMessage.warning('Please enter a new name')
         return
       }
       
@@ -2135,7 +2257,7 @@ export default {
           mermaidHtmlContent.value = content;
         }
              } catch (err) {
-         ElMessage.error(`加载 HTML 失败: ${err.message}`)
+        ElMessage.error(`Failed to load HTML: ${err.message}`)
        } finally {
         loadingMermaidContent.value = false
       }
@@ -2184,7 +2306,7 @@ export default {
 
     const handleVariableMonitorMinimize = (minimized) => {
       // 可以在这里处理最小化状态，比如记录到本地存储
-      console.log('变量监控窗口最小化状态:', minimized)
+      console.log('Variable monitor window minimized state:', minimized)
     }
 
     const handleVariableMonitorPositionChange = (position) => {
@@ -2555,7 +2677,7 @@ export default {
         if (codeEditorRef.value) {
           codeEditorRef.value.selectLines(start, end)
         } else {
-          console.log('编辑器未初始化或不可用')
+          console.log('Editor is not initialized or unavailable')
         }
       }
     })
@@ -2629,7 +2751,18 @@ export default {
       zoomOut,
       resetZoom,
       openMermaidInNewTab,
+      // 代码搜索
+      codeSearchDrawer,
+      codeSearchQuery,
+      codeSearchGlob,
+      searchResults,
+      searchLoading,
+      openCodeSearch,
+      performCodeSearch,
+      clearCodeSearch,
+      openSearchResult,
       fileTreeWrapper,
+      deriveAgentRelativePath,
       rememberFileTreeScroll,
       restoreFileTreeScroll,
       terminalHeight,
@@ -3515,6 +3648,86 @@ export default {
   bottom: 0;
   z-index: 9998;
   background: transparent;
+}
+
+.code-search-drawer {
+  background: linear-gradient(180deg, #f8f4ff 0%, #f6fffb 100%);
+}
+
+.code-search-header {
+  padding: 16px 20px 8px;
+}
+
+.code-search-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #5c2d91;
+}
+
+.code-search-subtitle {
+  margin: 4px 0 0;
+  color: #8a73c0;
+  font-size: 13px;
+}
+
+.code-search-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 20px 12px;
+}
+
+.code-search-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.code-search-results {
+  padding: 0 16px 20px;
+  max-height: calc(100vh - 220px);
+}
+
+.code-search-item {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(171, 135, 255, 0.26);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.code-search-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(149, 128, 255, 0.18);
+}
+
+.result-path {
+  font-weight: 600;
+  color: #5a3f8c;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.result-line {
+  font-size: 11px;
+  color: #9c8fb5;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+
+.result-snippet {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  font-family: 'Fira Code', 'Monaco', 'Courier New', monospace;
+  color: #40335e;
+  background: rgba(244, 240, 255, 0.85);
+  padding: 8px;
+  border-radius: 6px;
+  white-space: pre-wrap;
 }
 
 /* Dataflow输出弹窗样式 */

@@ -163,5 +163,16 @@ export default {
    */
   getNodeDetails(nodeName) {
     return axios.get(`${API_URL}/agents/node-details/${encodeURIComponent(nodeName)}`)
+  },
+
+  /**
+   * 仓库代码搜索
+   */
+  searchRepository(query, glob = '') {
+    const params = { q: query }
+    if (glob) {
+      params.glob = glob
+    }
+    return axios.get(`${API_URL}/agents/search`, { params })
   }
 }

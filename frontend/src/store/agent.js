@@ -22,7 +22,9 @@ export const useAgentStore = defineStore('agent', {
     agentTemplates: {
       'agent-hub': [],
       examples: []
-    }
+    },
+    searchResults: [],
+    searchLoading: false
   }),
   
   getters: {
@@ -489,6 +491,26 @@ export const useAgentStore = defineStore('agent', {
         console.error(error)
         this.agentTemplates = { 'agent-hub': [], examples: [] }
         return this.agentTemplates
+      }
+    },
+
+    async searchRepository(query, glob = '') {
+      this.error = null
+      this.searchLoading = true
+      try {
+        const response = await agentApi.searchRepository(query, glob)
+        if (response.data && response.data.success) {
+          this.searchResults = response.data.results || []
+          return this.searchResults
+        }
+        throw new Error(response.data?.message || 'Search failed')
+      } catch (error) {
+        this.error = error.message || 'Search failed'
+        console.error(error)
+        this.searchResults = []
+        return []
+      } finally {
+        this.searchLoading = false
       }
     },
 
