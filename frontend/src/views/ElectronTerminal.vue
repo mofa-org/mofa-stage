@@ -626,30 +626,49 @@ export default {
       })
 
       // 添加键盘事件监听，支持 Ctrl+V 粘贴
-      term.attachCustomKeyEventHandler((event) => {
+      const handleKeyDown = (event) => {
         // 检查是否是粘贴快捷键
-        if (event.type === 'keydown' && (event.ctrlKey || event.metaKey) && event.key === 'v') {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
           event.preventDefault()
           
-          // 使用 Electron API 读取剪贴板
-          if (window.electronAPI?.clipboard) {
+          // 异步处理粘贴
+          const handlePaste = async () => {
             try {
-              const text = window.electronAPI.clipboard.readText()
-              if (text) {
+              let text = ''
+              
+              console.log('Attempting paste, electronAPI available:', !!window.electronAPI?.clipboard)
+              
+              // 首先尝试 Electron API
+              if (window.electronAPI?.clipboard) {
+                text = window.electronAPI.clipboard.readText()
+                console.log('Got text from Electron clipboard:', text ? text.length + ' chars' : 'empty')
+              } else if (navigator.clipboard) {
+                // 如果没有 Electron API，使用浏览器 API
+                text = await navigator.clipboard.readText()
+                console.log('Got text from browser clipboard:', text ? text.length + ' chars' : 'empty')
+              }
+              
+              if (text && terminalApi.value && session.status === 'running') {
+                console.log('Writing to terminal:', session.id)
                 terminalApi.value.write(session.id, text)
+              } else {
+                console.log('Not writing - text:', !!text, 'terminalApi:', !!terminalApi.value, 'status:', session.status)
               }
             } catch (error) {
               console.warn('Failed to read clipboard:', error)
             }
           }
-          return false
+          
+          handlePaste()
         }
-        return true
-      })
-
-      // 添加右键菜单支持
+      }
+      
+      // 添加到终端元素
       const terminalElement = term.element
       if (terminalElement) {
+        terminalElement.addEventListener('keydown', handleKeyDown)
+        
+        // 添加右键菜单支持
         terminalElement.addEventListener('contextmenu', (event) => {
           event.preventDefault()
           
@@ -684,16 +703,23 @@ export default {
             pasteItem.style.background = 'transparent'
             pasteItem.style.color = 'var(--text-color)'
           })
-          pasteItem.addEventListener('click', () => {
-            if (window.electronAPI?.clipboard) {
-              try {
-                const text = window.electronAPI.clipboard.readText()
-                if (text) {
-                  terminalApi.value.write(session.id, text)
-                }
-              } catch (error) {
-                console.warn('Failed to paste:', error)
+          pasteItem.addEventListener('click', async () => {
+            try {
+              let text = ''
+              
+              // 首先尝试 Electron API
+              if (window.electronAPI?.clipboard) {
+                text = window.electronAPI.clipboard.readText()
+              } else if (navigator.clipboard) {
+                // 如果没有 Electron API，使用浏览器 API
+                text = await navigator.clipboard.readText()
               }
+              
+              if (text && terminalApi.value && session.status === 'running') {
+                terminalApi.value.write(session.id, text)
+              }
+            } catch (error) {
+              console.warn('Failed to paste:', error)
             }
             document.body.removeChild(menu)
           })
