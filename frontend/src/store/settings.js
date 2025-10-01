@@ -30,6 +30,8 @@ export const useSettingsStore = defineStore('settings', {
         examples_path: defaultPaths.examples_path, 
         custom_agent_hub_path: defaultPaths.custom_agent_hub_path,
         custom_examples_path: defaultPaths.custom_examples_path,
+        local_terminal_shell: localStorage.getItem('local_terminal_shell') || '',
+        local_terminal_cwd: localStorage.getItem('local_terminal_cwd') || '',
         theme: 'light',
         editor_font_size: 14,
         editor_tab_size: 4,
@@ -43,7 +45,7 @@ export const useSettingsStore = defineStore('settings', {
           auto_connect: true
         },
         // 添加终端显示模式设置
-        terminal_display_mode: 'both', // 'terminal', 'webssh', 'both'
+        terminal_display_mode: 'both', // 'ttyd', 'local', 'webssh', 'both', 'all'
         // ---- AI API Settings ----
         ai_model: 'gemini-2.0-flash', // 默认使用Gemini 2.0 Flash
         openai_api_key: '',
@@ -128,16 +130,19 @@ export const useSettingsStore = defineStore('settings', {
             localStorage.setItem('custom_agent_hub_path', this.settings.custom_agent_hub_path);
           }
           
-          if (!this.settings.custom_examples_path) {
-            this.settings.custom_examples_path = defaultPaths.custom_examples_path;
+          if (this.settings.local_terminal_shell === undefined) {
+            this.settings.local_terminal_shell = '';
           } else {
-            localStorage.setItem('custom_examples_path', this.settings.custom_examples_path);
+            localStorage.setItem('local_terminal_shell', this.settings.local_terminal_shell || '');
           }
-          
+
+          if (this.settings.local_terminal_cwd === undefined) {
+            this.settings.local_terminal_cwd = '';
+          } else {
+            localStorage.setItem('local_terminal_cwd', this.settings.local_terminal_cwd || '');
+          }
+
           // 确保use_default路径相关字段存在
-          if (this.settings.use_default_agent_hub_path === undefined) {
-            this.settings.use_default_agent_hub_path = true;
-          }
           
           if (this.settings.use_default_examples_path === undefined) {
             this.settings.use_default_examples_path = true;
@@ -229,6 +234,8 @@ export const useSettingsStore = defineStore('settings', {
         localStorage.setItem('examples_path', settings.examples_path || '');
         localStorage.setItem('custom_agent_hub_path', settings.custom_agent_hub_path || '');
         localStorage.setItem('custom_examples_path', settings.custom_examples_path || '');
+        localStorage.setItem('local_terminal_shell', settings.local_terminal_shell || '');
+        localStorage.setItem('local_terminal_cwd', settings.local_terminal_cwd || '');
         
         // 添加路径到历史记录
         if (settings.mofa_dir) {

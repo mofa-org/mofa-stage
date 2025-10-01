@@ -61,6 +61,12 @@ const router = createRouter({
       meta: { keepAlive: true }
     },
     {
+      path: '/local-terminal',
+      name: 'local-terminal',
+      component: EmptyComponent, // Electron 原生终端
+      meta: { keepAlive: true }
+    },
+    {
       path: '/ttyd',
       name: 'ttyd',
       component: EmptyComponent, // 使用空组件

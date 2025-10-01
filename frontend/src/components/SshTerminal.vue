@@ -15,19 +15,19 @@
     <div class="terminal-config" v-if="!isConnected">
       <el-form :model="sshConfig" label-width="100px">
         <el-form-item label="Host">
-          <el-input v-model="sshConfig.host" placeholder="例如: localhost 或 127.0.0.1" />
+          <el-input v-model="sshConfig.host" placeholder="e.g., localhost or 127.0.0.1" />
         </el-form-item>
         <el-form-item label="Port">
-          <el-input v-model="sshConfig.port" placeholder="例如: 22" />
+          <el-input v-model="sshConfig.port" placeholder="e.g., 22" />
         </el-form-item>
         <el-form-item label="Username">
-          <el-input v-model="sshConfig.username" placeholder="SSH 用户名" />
+          <el-input v-model="sshConfig.username" placeholder="SSH username" />
         </el-form-item>
         <el-form-item label="Password">
-          <el-input v-model="sshConfig.password" type="password" placeholder="SSH 密码" />
+          <el-input v-model="sshConfig.password" type="password" placeholder="SSH password" />
         </el-form-item>
         <el-form-item label="Command">
-          <el-input v-model="sshConfig.command" type="textarea" :rows="3" placeholder="要执行的命令" />
+          <el-input v-model="sshConfig.command" type="textarea" :rows="3" placeholder="Command to execute" />
         </el-form-item>
       </el-form>
     </div>

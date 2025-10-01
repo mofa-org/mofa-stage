@@ -21,7 +21,7 @@
         </el-button>
         <el-button type="success" @click="handleGenerateDataflow" class="generate-btn">
           <el-icon><MagicStick /></el-icon>
-          智能生成 Dataflow
+          Generate Dataflow
         </el-button>
       </div>
     </div>
@@ -182,25 +182,25 @@
       :lock-scroll="false">
       <div class="log-container">
         <div class="log-controls">
-          <el-input v-model="logSearchText" placeholder="搜索日志..." clearable class="log-search">
+          <el-input v-model="logSearchText" placeholder="Search logs..." clearable class="log-search">
             <template #prefix>
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
-          <el-select v-model="logTypeFilter" placeholder="日志类型" clearable class="log-type-filter">
-            <el-option label="所有" value="all" />
+          <el-select v-model="logTypeFilter" placeholder="Log type" clearable class="log-type-filter">
+            <el-option label="All" value="all" />
             <el-option label="INFO" value="INFO" />
             <el-option label="DEBUG" value="DEBUG" />
             <el-option label="WARNING" value="WARNING" />
             <el-option label="ERROR" value="ERROR" />
           </el-select>
           <el-button @click="expandAllLogs" type="primary" plain>
-            {{ allExpanded ? '折叠全部' : '展开全部' }}
+            {{ allExpanded ? 'Collapse All' : 'Expand All' }}
           </el-button>
         </div>
         
         <div class="log-stats" v-if="filteredLogs.length > 0">
-          显示 {{ filteredLogs.length }} 条日志
+          Showing {{ filteredLogs.length }} logs
         </div>
         
         <div class="structured-logs" v-if="parsedLogs.length > 0">
@@ -227,7 +227,7 @@
         
         <div class="log-footer">
           <el-button @click="logDrawerVisible = false">{{ $t('common.close') }}</el-button>
-          <el-button type="primary" @click="fetchAgentLogs(selectedAgentName)">刷新日志</el-button>
+          <el-button type="primary" @click="fetchAgentLogs(selectedAgentName)">Refresh Logs</el-button>
         </div>
       </div>
     </el-drawer>
@@ -243,25 +243,25 @@
     >
       <div class="process-output-container">
         <el-tabs v-model="terminalTab">
-          <el-tab-pane label="进程输出" name="output">
+          <el-tab-pane label="Process Output" name="output">
             <div class="process-output-header">
               <div class="process-info" v-if="processOutput">
                 <el-tag :type="processOutput.is_running ? 'success' : 'info'">
-                  {{ processOutput.is_running ? '运行中' : '已停止' }}
+                  {{ processOutput.is_running ? 'Running' : 'Stopped' }}
                 </el-tag>
                 <span class="process-elapsed-time" v-if="processOutput.elapsed_time">
-                  运行时间: {{ formatElapsedTime(processOutput.elapsed_time) }}
+                  Runtime: {{ formatElapsedTime(processOutput.elapsed_time) }}
                 </span>
               </div>
               <div class="process-controls">
                 <el-button type="primary" size="small" @click="refreshProcessOutput" :loading="refreshingOutput">
-                  <el-icon><Refresh /></el-icon> 刷新
+                  <el-icon><Refresh /></el-icon> Refresh
                 </el-button>
                 <el-button type="primary" size="small" @click="toggleAutoRefresh">
-                  {{ autoRefresh ? '停止自动刷新' : '自动刷新' }}
+                  {{ autoRefresh ? 'Stop Auto Refresh' : 'Auto Refresh' }}
                 </el-button>
                 <el-button type="danger" size="small" @click="handleStopAgent(selectedAgentName)">
-                  <el-icon><VideoPause /></el-icon> 停止运行
+                  <el-icon><VideoPause /></el-icon> Stop Run
                 </el-button>
               </div>
             </div>
@@ -275,9 +275,9 @@
             </div>
           </el-tab-pane>
           
-          <el-tab-pane label="SSH 终端" name="ssh">
+          <el-tab-pane label="SSH Terminal" name="ssh">
             <ssh-terminal 
-              :title="`${selectedAgentName} SSH 终端`" 
+              :title="`${selectedAgentName} SSH Terminal`" 
               :auto-connect="true" 
               :agent-path="getAgentPath(selectedAgentName)" 
             />
@@ -418,11 +418,11 @@ export default {
         }
         
         // 确定日志类型
-        let type = '其他'
+        let type = 'Other'
         if (title.includes('Dora Daemon')) {
           type = 'Dora Daemon'
         } else if (title.includes('运行实例')) {
-          type = '运行实例'
+          type = 'Run Instance'
         }
         
         sections.push({
@@ -443,10 +443,10 @@ export default {
       } else {
         // 如果没有找到任何部分，将整个日志作为一个部分
         sections.push({
-          title: '日志内容',
+          title: 'Log Content',
           time: null,
           content: logContent,
-          type: '其他'
+          type: 'Other'
         })
       }
       
@@ -562,12 +562,11 @@ export default {
     const formatElapsedTime = (seconds) => {
       const minutes = Math.floor(seconds / 60)
       const remainingSeconds = Math.floor(seconds % 60)
-      
+
       if (minutes > 0) {
-        return `${minutes}分${remainingSeconds}秒`
-      } else {
-        return `${remainingSeconds}秒`
+        return `${minutes}m ${remainingSeconds}s`
       }
+      return `${remainingSeconds}s`
     }
     
     // 获取 Agent 路径
@@ -589,7 +588,7 @@ export default {
         // 这里应该想服务器发起请求获取日志
         const response = await agentStore.fetchAgentLogs(agentName)
         if (response && response.success) {
-          currentAgentLogs.value = response.logs || '暂无日志'
+          currentAgentLogs.value = response.logs || 'No logs yet'
           // 解析日志内容
           parsedLogs.value = parseLogContent(response.logs)
           filteredLogs.value = parsedLogs.value
@@ -599,12 +598,12 @@ export default {
           logSearchText.value = ''
           logTypeFilter.value = ''
         } else {
-          currentAgentLogs.value = '获取日志失败'
+          currentAgentLogs.value = 'Failed to fetch logs'
           parsedLogs.value = []
           filteredLogs.value = []
         }
       } catch (error) {
-        currentAgentLogs.value = `错误: ${error.message || error}`
+        currentAgentLogs.value = `Error: ${error.message || error}`
         parsedLogs.value = []
         filteredLogs.value = []
       }

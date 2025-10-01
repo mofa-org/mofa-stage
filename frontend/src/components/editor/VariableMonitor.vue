@@ -8,19 +8,19 @@
     <div class="monitor-header" @mousedown="startDrag">
       <div class="header-left">
         <el-icon class="window-icon"><View /></el-icon>
-        <span class="window-title">变量监控</span>
+        <span class="window-title">Variable Monitor</span>
       </div>
       <div class="header-controls">
-        <el-button size="small" text @click="refreshVariables" :loading="isRefreshing" title="刷新">
+        <el-button size="small" text @click="refreshVariables" :loading="isRefreshing" title="Refresh">
           <el-icon><Refresh /></el-icon>
         </el-button>
-        <el-button size="small" text @click="clearWatch" title="清空">
+        <el-button size="small" text @click="clearWatch" title="Clear">
           <el-icon><Delete /></el-icon>
         </el-button>
-        <el-button size="small" text @click="toggleMinimize" title="最小化">
+        <el-button size="small" text @click="toggleMinimize" title="Minimize">
           <el-icon><Minus /></el-icon>
         </el-button>
-        <el-button size="small" text @click="closeWindow" title="关闭">
+        <el-button size="small" text @click="closeWindow" title="Close">
           <el-icon><Close /></el-icon>
         </el-button>
       </div>
@@ -32,7 +32,7 @@
       <div class="add-watch-section">
         <el-input
           v-model="newWatchExpression"
-          placeholder="添加监控表达式（如: hello-world.query）..."
+          placeholder="Add watch expression (e.g., hello-world.query)..."
           size="small"
           @keyup.enter="addWatch"
         >
@@ -45,7 +45,7 @@
         <div class="quick-actions" style="margin-top: 8px;">
           <el-button size="small" @click="autoDiscoverVariables" :loading="isDiscovering">
             <el-icon><Search /></el-icon>
-            自动发现变量
+            Auto discover variables
           </el-button>
         </div>
       </div>
@@ -53,9 +53,9 @@
       <!-- 监控变量列表 -->
       <div class="watch-list">
         <div v-if="watchList.length === 0" class="empty-state">
-          <el-empty description="暂无监控变量" :image-size="50">
+          <el-empty description="No monitored variables yet" :image-size="50">
             <el-button type="primary" size="small" @click="addSampleWatch">
-              添加示例监控
+              Add sample monitors
             </el-button>
           </el-empty>
         </div>
@@ -93,7 +93,7 @@
     <!-- 监控窗口底部 -->
     <div class="monitor-footer" v-show="!minimized">
       <el-text size="small" type="info">
-        监控 {{ watchList.length }} 个表达式
+        Monitoring {{ watchList.length }} expressions
       </el-text>
     </div>
 
@@ -389,7 +389,7 @@ export default {
             watch.value = value
             watch.error = null
           } else {
-            watch.error = `变量 ${variableName} 在节点 ${nodeId} 中未找到`
+            watch.error = `Variable ${variableName} was not found in node ${nodeId}`
             watch.value = null
             watch.changed = false
           }
@@ -402,7 +402,7 @@ export default {
             watch.value = newValue.value
             watch.error = null
           } else {
-            watch.value = '未找到变量'
+            watch.value = 'Variable not found'
             watch.error = null
             watch.changed = false
           }

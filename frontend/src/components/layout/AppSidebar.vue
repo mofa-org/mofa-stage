@@ -30,6 +30,10 @@
           <el-icon><Monitor /></el-icon>
           <span v-if="!isCollapsed">{{ $t('sidebar.webSSH') }}</span>
         </el-menu-item> -->
+        <el-menu-item index="/local-terminal" v-if="showDesktopTerminal" class="menu-item">
+          <el-icon><Monitor /></el-icon>
+          <span v-if="!isCollapsed">{{ $t('sidebar.desktopTerminal') || 'Desktop Terminal' }}</span>
+        </el-menu-item>
         <el-menu-item index="/ttyd" v-if="showTtyd" class="menu-item">
           <el-icon><Monitor /></el-icon>
           <span v-if="!isCollapsed">{{ $t('sidebar.ttyd') || 'ttyd Terminal' }}</span>
@@ -106,9 +110,14 @@ export default {
       return mode === 'both' || mode === 'webssh'
     })
     
+    const showDesktopTerminal = computed(() => {
+      const mode = settingsStore.settings.terminal_display_mode || 'both'
+      return mode === 'both' || mode === 'local' || mode === 'all'
+    })
+    
     const showTtyd = computed(() => {
       const mode = settingsStore.settings.terminal_display_mode || 'both'
-      return mode === 'both' || mode === 'ttyd'
+      return mode === 'both' || mode === 'ttyd' || mode === 'all'
     })
     
     // Watch for terminal display mode changes
@@ -127,6 +136,7 @@ export default {
       computedTheme,
       showTerminal,
       showWebSSH,
+      showDesktopTerminal,
       showTtyd,
       isCollapsed,
       toggleCollapse,

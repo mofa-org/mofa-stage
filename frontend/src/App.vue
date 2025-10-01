@@ -4,9 +4,10 @@
       <!-- 始终加载TtydTerminal和WebSSH组件，但根据路由显示或隐藏 -->
       <TtydTerminal v-if="isTtydRoute || alwaysLoadTerminals" v-show="isTtydRoute" class="persistent-view" />
       <WebSSH v-if="isWebSSHRoute || alwaysLoadTerminals" v-show="isWebSSHRoute" class="persistent-view" />
+      <ElectronTerminal v-if="isElectronTerminalRoute || alwaysLoadTerminals" v-show="isElectronTerminalRoute" class="persistent-view" />
       
       <!-- 其他路由使用常规的router-view处理 -->
-      <router-view v-slot="{ Component, route }" v-if="!isTtydRoute && !isWebSSHRoute">
+      <router-view v-slot="{ Component, route }" v-if="!isTtydRoute && !isWebSSHRoute && !isElectronTerminalRoute">
         <keep-alive>
           <component :is="Component" v-if="route.meta.keepAlive" />
         </keep-alive>
@@ -25,13 +26,15 @@ import AppLayout from './components/layout/AppLayout.vue'
 import { setLanguage } from './utils/i18n'
 import TtydTerminal from './views/TtydTerminal.vue'
 import WebSSH from './views/WebSSH.vue'
+import ElectronTerminal from './views/ElectronTerminal.vue'
 
 export default {
   name: 'App',
   components: {
     AppLayout,
     TtydTerminal,
-    WebSSH
+    WebSSH,
+    ElectronTerminal
   },
   setup() {
     const agentStore = useAgentStore()
@@ -50,6 +53,10 @@ export default {
     const isWebSSHRoute = computed(() => {
       return route.path === '/webssh'
     })
+
+    const isElectronTerminalRoute = computed(() => {
+      return route.path === '/local-terminal'
+    })
     
     // 应用主题设置
     const applyTheme = () => {
@@ -59,7 +66,7 @@ export default {
     
     // 应用语言设置
     const applyLanguage = () => {
-      const lang = settingsStore.settings.language || 'zh'
+      const lang = settingsStore.settings.language || 'en'
       setLanguage(lang)
     }
     
@@ -76,7 +83,8 @@ export default {
     return {
       alwaysLoadTerminals,
       isTtydRoute,
-      isWebSSHRoute
+      isWebSSHRoute,
+      isElectronTerminalRoute
     }
   }
 }

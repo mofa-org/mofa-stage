@@ -63,8 +63,10 @@ DEFAULT_SETTINGS = {
         "password": "",
         "auto_connect": True  # 是否自动连接
     },
-    "terminal_display_mode": "both",  # 终端显示模式: both, terminal, webssh
+    "terminal_display_mode": "both",  # 终端显示模式: both, ttyd, local, webssh
     "ttyd_port": 7681,  # 默认ttyd端口
+    "local_terminal_shell": "",  # Electron 桌面终端自定义 shell
+    "local_terminal_cwd": "",  # Electron 桌面终端默认工作目录
     # ---- AI API Settings ----
     # OpenAI
     "openai_api_key": "",

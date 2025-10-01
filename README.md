@@ -7,7 +7,7 @@ MoFA Stage Desktop is an Electron-based desktop application for AI agent develop
 ## Features
 
 - **Agent Management** - Browse, create, edit, run and monitor agents
-- **Terminal Access** - Web terminal, SSH connections, ttyd integration  
+- **Terminal Access** - Desktop terminal (Electron), web terminal, SSH connections, ttyd integration  
 - **Code Editing** - Text editor, file browser, optional VSCode Server
 - **Cross-platform** - Windows, macOS, Linux with embedded Python backend
 
@@ -86,6 +86,11 @@ npm run version:patch  # or minor/major
 **Port conflicts:**
 ```bash
 npm run kill-ports  # Automatically kills conflicting ports
+```
+
+**Electron native module mismatch (e.g. `node-pty` ABI errors):**
+```bash
+npm run rebuild:native  # Rebuild native Node modules against the bundled Electron version
 ```
 
 **Reset dependencies:**

@@ -489,7 +489,7 @@ export default {
           if (data.success) {
             dataflowFile = data.dataflow_file;
             examplesPath = data.agent_path;
-            console.log(`检测到 dataflow 文件: ${dataflowFile}`);
+            console.log(`Detected dataflow file: ${dataflowFile}`);
           }
         }
         
@@ -577,7 +577,7 @@ export default {
           const data = await response.json();
           if (data.success) {
             dataflowFile = data.dataflow_file;
-            console.log(`检测到 dataflow 文件: ${dataflowFile}`);
+            console.log(`Detected dataflow file: ${dataflowFile}`);
           }
         }
         

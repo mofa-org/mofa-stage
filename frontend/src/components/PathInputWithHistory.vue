@@ -18,7 +18,7 @@
             <Document v-else />
           </el-icon>
           <span class="suggestion-path">{{ item.value }}</span>
-          <span v-if="isRecentPath(item.value)" class="suggestion-tag">最近使用</span>
+          <span v-if="isRecentPath(item.value)" class="suggestion-tag">Recently used</span>
         </div>
       </template>
       
@@ -31,11 +31,11 @@
             <el-dropdown-menu>
               <el-dropdown-item command="browse">
                 <el-icon><Folder /></el-icon>
-                {{ $t('settings.inputPath') || '输入路径' }}
+                {{ $t('settings.inputPath') || 'Enter path' }}
               </el-dropdown-item>
               <el-dropdown-item command="clear-history" v-if="pathHistory.length > 0">
                 <el-icon><Delete /></el-icon>
-                清除历史记录
+                Clear history
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -45,7 +45,7 @@
     
     <!-- 历史记录快捷选择 -->
     <div v-if="showQuickHistory && pathHistory.length > 0" class="quick-history">
-      <span class="quick-history-label">最近使用:</span>
+      <span class="quick-history-label">Recently used:</span>
       <el-tag
         v-for="(path, index) in pathHistory.slice(0, 3)"
         :key="index"
@@ -186,17 +186,17 @@ export default {
             if (selectedPath) {
               inputValue.value = selectedPath
               addToHistory(selectedPath)
-              ElMessage.success('路径设置成功')
+              ElMessage.success('Path selected successfully')
             }
           } catch (error) {
             console.error('Path selection error:', error)
-            ElMessage.error('路径选择失败，请手动输入')
+            ElMessage.error('Path selection failed. Please enter it manually')
           }
           break
         case 'clear-history':
           PathHistory.clearHistory(props.pathType)
           loadHistory()
-          ElMessage.success('历史记录已清除')
+          ElMessage.success('History cleared')
           break
       }
     }

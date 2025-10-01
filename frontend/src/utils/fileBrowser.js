@@ -7,9 +7,9 @@
  * @returns {Promise<string|null>} 返回选择的目录路径，如果取消则返回null
  */
 export async function selectDirectory() {
-  // 由于浏览器安全限制，无法获取真实的文件系统路径
-  // 直接提示用户手动输入路径
-  return await promptForPath('', '请输入目录的完整路径\n（例如：/Users/username/Documents/project 或 C:\\Users\\username\\Documents\\project）')
+  // Due to browser security restrictions, we cannot access real filesystem paths directly.
+  // Prompt the user to enter the path manually instead.
+  return await promptForPath('', 'Enter the full directory path\n(e.g., /Users/username/Documents/project or C:\\Users\\username\\Documents\\project)')
 }
 
 /**
@@ -65,7 +65,7 @@ export async function selectFile(accept = '*/*') {
  * @param {string} title - 对话框标题
  * @returns {Promise<string|null>} 返回输入的路径，如果取消则返回null
  */
-export async function promptForPath(currentPath = '', title = '请输入路径') {
+export async function promptForPath(currentPath = '', title = 'Enter a path') {
   return new Promise((resolve) => {
     try {
       const path = prompt(title, currentPath)
@@ -85,14 +85,14 @@ export async function promptForPath(currentPath = '', title = '请输入路径')
  */
 export async function smartSelectPath(currentPath = '', pathType = 'directory') {
   const pathTypeNames = {
-    mofa_dir: 'MoFA 根目录',
-    mofa_env_path: 'MoFA 虚拟环境路径',
-    custom_agent_hub_path: 'Agent Hub 目录',
-    custom_examples_path: 'Examples 目录'
+    mofa_dir: 'MoFA root directory',
+    mofa_env_path: 'MoFA virtual environment path',
+    custom_agent_hub_path: 'Agent Hub directory',
+    custom_examples_path: 'Examples directory'
   }
   
-  const pathTypeName = pathTypeNames[pathType] || '目录'
-  const title = `请输入${pathTypeName}的完整路径\n\n示例格式：\n• Linux/Mac: /Users/username/path/to/directory\n• Windows: C:\\Users\\username\\path\\to\\directory\n\n当前路径: ${currentPath || '（未设置）'}`
+  const pathTypeName = pathTypeNames[pathType] || 'directory'
+  const title = `Enter the full path for ${pathTypeName}\n\nExamples:\n• Linux/Mac: /Users/username/path/to/directory\n• Windows: C:\\Users\\username\\path\\to\\directory\n\nCurrent path: ${currentPath || '(not set)'}`
   
   return await promptForPath(currentPath, title)
 }

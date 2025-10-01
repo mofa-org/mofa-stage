@@ -402,18 +402,18 @@ export default {
         if (!data.installed) {
           try {
             await ElMessageBox.confirm(
-              '检测到本机尚未安装 ttyd，是否现在安装？\n我们将尝试通过系统包管理器自动安装（macOS 会调用 Homebrew）。',
-              '缺少依赖',
+              'ttyd is not installed on this machine. Install it now?\nWe will attempt to install it via the system package manager (Homebrew on macOS).',
+              'Missing Dependency',
               {
-                confirmButtonText: '立即安装',
-                cancelButtonText: '稍后处理',
+                confirmButtonText: 'Install Now',
+                cancelButtonText: 'Maybe Later',
                 type: 'warning'
               }
             )
             await installTtyd()
           } catch (confirmError) {
             console.info('User cancelled ttyd installation prompt.', confirmError)
-            ElMessage.info('可前往“设置 > 依赖管理”手动安装 ttyd。')
+            ElMessage.info('Open "Settings > Dependency Management" to install ttyd manually.')
           }
           return
         }
@@ -430,9 +430,9 @@ export default {
             if (startResponse.status === 400) {
               const errorPayload = await startResponse.json().catch(() => ({}))
               if (errorPayload?.needs_install) {
-                ElMessage.warning('ttyd 未安装，请先完成安装后再启动。')
+                ElMessage.warning('ttyd is not installed. Please finish the installation before starting.')
               } else {
-                ElMessage.error(errorPayload?.message || '启动 ttyd 失败')
+                ElMessage.error(errorPayload?.message || 'Failed to start ttyd')
               }
               return
             }
@@ -503,7 +503,7 @@ export default {
         const data = await response.json().catch(() => ({}))
 
         if (response.status === 400 && data?.needs_install) {
-          ElMessage.warning('ttyd 未安装，请先完成安装。');
+          ElMessage.warning('ttyd is not installed. Please complete the installation first.');
           return;
         }
 
@@ -533,7 +533,7 @@ export default {
         const data = await response.json().catch(() => ({}))
 
         if (response.status === 400 && data?.needs_install) {
-          ElMessage.warning('ttyd 未安装，请先完成安装。');
+          ElMessage.warning('ttyd is not installed. Please complete the installation first.');
           return;
         }
 
@@ -746,7 +746,7 @@ export default {
           if (data.success) {
             dataflowFile = data.dataflow_file;
             examplesPath = data.agent_path;
-            console.log(`检测到 dataflow 文件: ${dataflowFile}`);
+            console.log(`Detected dataflow file: ${dataflowFile}`);
           }
         }
         

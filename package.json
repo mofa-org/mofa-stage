@@ -20,12 +20,14 @@
     "electron:pack": "electron-builder",
     "dist": "npm run build && electron-builder --publish=never",
     "release": "npm run build && electron-builder --publish=always",
-    "start": "electron ."
+    "start": "electron .",
+    "rebuild:native": "node scripts/rebuild-native.js",
+    "postinstall": "npm run rebuild:native"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1",
-    "concurrently": "^8.2.2",
     "wait-on": "^7.2.0"
   },
   "build": {
@@ -129,5 +131,9 @@
     },
     "compression": "maximum",
     "generateUpdatesFilesForAllChannels": false
+  },
+  "dependencies": {
+    "nan": "^2.23.0",
+    "node-pty": "^1.1.0-beta35"
   }
 }

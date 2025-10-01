@@ -19,7 +19,7 @@
         创建 Agent
       </el-button>
       -->
-      <el-tooltip content="应用设置" placement="bottom">
+      <el-tooltip content="App Settings" placement="bottom">
         <el-button circle @click="goToSettings" class="settings-btn">
           <el-icon><Setting /></el-icon>
         </el-button>

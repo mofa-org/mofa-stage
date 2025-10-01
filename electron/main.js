@@ -1,14 +1,18 @@
 const { app, BrowserWindow, Menu, shell, dialog, session } = require('electron');
 const path = require('path');
-const { spawn, exec } = require('child_process');
+const { spawn, exec, execSync } = require('child_process');
 const fs = require('fs');
 const net = require('net');
+const { registerTerminalHandlers } = require('./terminalManager');
 
 // 保持对窗口对象的全局引用
 let mainWindow;
 let splashWindow;
 let backendProcess = null;
 let backendPort = 5002;
+const DEFAULT_PORTS = [3000, 5000, 5001, 5002, 7681];
+let backendStopRequested = false;
+let shutdownInProgress = false;
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -112,29 +116,86 @@ function registerTtydCorsInterceptor() {
 }
 
 // 暴力杀掉指定端口的进程
-function killPortsForce(ports = [3000, 5000, 5001, 5002]) {
-  return new Promise((resolve) => {
-    const portList = ports.join(',');
-    
-    // 根据平台选择命令
-    let killCommand;
-    if (process.platform === 'win32') {
-      // Windows: 使用netstat和taskkill
-      killCommand = `for /f "tokens=5" %a in ('netstat -aon ^| findstr ":${ports.join(' :')}"') do taskkill /f /pid %a 2>nul`;
-    } else {
-      // Unix/Linux/macOS: 使用lsof和kill
-      killCommand = `lsof -ti:${portList} | xargs -r kill -9 2>/dev/null || true`;
-    }
-    
-    console.log(`Force killing processes on ports: ${portList}`);
-    exec(killCommand, (error, stdout, stderr) => {
-      if (error) {
-        console.log(`Port kill command completed with some errors (this is normal): ${error.message}`);
-      }
-      console.log(`Ports ${portList} have been cleared`);
-      resolve();
+async function killPortsForce(ports = DEFAULT_PORTS) {
+  const uniquePorts = [...new Set(ports)].filter((port) => Number.isInteger(port));
+  if (!uniquePorts.length) {
+    return;
+  }
+
+  console.log(`Force killing processes on ports: ${uniquePorts.join(', ')}`);
+
+  if (process.platform === 'win32') {
+    const findTargets = uniquePorts.map((port) => `:${port}`).join(' ');
+    const killCommand = `for /f "tokens=5" %a in ('netstat -aon ^| findstr "${findTargets}"') do taskkill /f /pid %a 2>nul`;
+    await new Promise((resolve) => {
+      exec(killCommand, (error) => {
+        if (error) {
+          console.log(`Port kill command completed with some errors (this is normal): ${error.message}`);
+        }
+        resolve();
+      });
     });
+    console.log(`Ports ${uniquePorts.join(', ')} have been cleared.`);
+    return;
+  }
+
+  const seenPids = new Set();
+  uniquePorts.forEach((port) => {
+    try {
+      const output = execSync(`lsof -ti:${port}`, { encoding: 'utf8' });
+      const pids = output
+        .split(/\s+/)
+        .map((pid) => pid.trim())
+        .filter(Boolean);
+
+      pids.forEach((pid) => {
+        if (seenPids.has(pid)) {
+          return;
+        }
+        const numericPid = Number(pid);
+        if (!Number.isInteger(numericPid)) {
+          return;
+        }
+
+        try {
+          process.kill(numericPid, 'SIGKILL');
+          seenPids.add(pid);
+          console.log(`Killed pid ${pid} listening on port ${port}`);
+        } catch (error) {
+          if (error.code !== 'ESRCH') {
+            console.warn(`Failed to kill pid ${pid} on port ${port}: ${error.message}`);
+          }
+        }
+      });
+    } catch (error) {
+      if (error.status === 1 || error.code === 1) {
+        console.log(`No processes found on port ${port}`);
+      } else {
+        console.warn(`Failed to inspect port ${port}: ${error.message}`);
+      }
+    }
   });
+
+  console.log(`Ports ${uniquePorts.join(', ')} have been cleared.`);
+}
+
+async function shutdownManagedProcesses(reason = 'unspecified') {
+  if (shutdownInProgress) {
+    console.log(`Shutdown already in progress (${reason})`);
+    return;
+  }
+
+  shutdownInProgress = true;
+  console.log(`Shutting down managed processes (${reason})`);
+
+  try {
+    stopBackend();
+    await killPortsForce(DEFAULT_PORTS);
+  } catch (error) {
+    console.error(`Failed to shutdown managed processes (${reason}):`, error);
+  } finally {
+    shutdownInProgress = false;
+  }
 }
 
 // 检查端口是否可用
@@ -213,6 +274,8 @@ async function startBackend() {
       });
     }
 
+    backendStopRequested = false;
+
     // 处理后端输出
     backendProcess.stdout.on('data', (data) => {
       console.log(`Backend stdout: ${data}`);
@@ -223,8 +286,10 @@ async function startBackend() {
     });
 
     backendProcess.on('close', (code) => {
-      console.log(`Backend process exited with code ${code}`);
-      if (code !== 0 && mainWindow) {
+      const wasRequested = backendStopRequested;
+      backendStopRequested = false;
+      console.log(`Backend process exited with code ${code}${wasRequested ? ' (requested)' : ''}`);
+      if (!wasRequested && code !== 0 && mainWindow) {
         dialog.showErrorBox('Backend Error', 'Backend process crashed. Please restart the application.');
       }
     });
@@ -281,6 +346,7 @@ function waitForBackend(maxAttempts = 30) {
 function stopBackend() {
   if (backendProcess) {
     console.log('Stopping backend process...');
+    backendStopRequested = true;
     backendProcess.kill();
     backendProcess = null;
   }
@@ -344,6 +410,14 @@ function createWindow() {
   });
 
   // 当窗口关闭时发出事件
+  mainWindow.on('close', () => {
+    if (process.platform === 'darwin') {
+      shutdownManagedProcesses('main-window-close').catch((error) => {
+        console.error('Failed to shutdown managed processes on window close:', error);
+      });
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -435,6 +509,7 @@ function createMenu() {
 
 // 应用事件处理
 app.whenReady().then(async () => {
+  registerTerminalHandlers();
   console.log('Electron app is ready');
 
   registerTtydCorsInterceptor();
@@ -444,7 +519,7 @@ app.whenReady().then(async () => {
     console.log('Killing conflicting ports before startup...');
     createSplashWindow();
     try {
-      await killPortsForce([3000, 5000, 5001, 5002]);
+      await killPortsForce(DEFAULT_PORTS);
       await startBackend();
 
       try {
@@ -471,14 +546,18 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  stopBackend();
+  shutdownManagedProcesses('window-all-closed').catch((error) => {
+    console.error('Failed to shutdown managed processes on window-all-closed:', error);
+  });
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
 app.on('before-quit', () => {
-  stopBackend();
+  shutdownManagedProcesses('before-quit').catch((error) => {
+    console.error('Failed to shutdown managed processes before quit:', error);
+  });
 });
 
 // 处理未捕获的异常

@@ -31,9 +31,9 @@
             <el-radio-group v-model="settingsForm.mofa_mode">
               <el-radio label="system">{{ $t('settings.useSystemMofa') }}</el-radio>
               <el-radio label="venv">{{ $t('settings.useVirtualEnv') }}</el-radio>
-              <el-radio label="docker">{{ $t('settings.useDocker') || 'Docker 容器' }}</el-radio>
+              <el-radio label="docker">{{ $t('settings.useDocker') || 'Docker Container' }}</el-radio>
             </el-radio-group>
-            <div class="form-help">{{ $t('settings.mofaCommandSourceHelp') || '选择MoFA来源：系统安装、虚拟环境或Docker容器' }}</div>
+            <div class="form-help">{{ $t('settings.mofaCommandSourceHelp') || 'Choose the MoFA source: system install, virtual environment, or Docker container' }}</div>
           </el-form-item>
 
           <el-form-item :label="$t('settings.mofaEnvPath')" v-if="settingsForm.mofa_mode === 'venv'">
@@ -46,21 +46,21 @@
             <div class="form-help">{{ $t('settings.mofaEnvPathHelp') }}</div>
           </el-form-item>
 
-          <el-form-item :label="$t('settings.dockerContainer') || 'Docker 容器名称'" v-if="settingsForm.mofa_mode === 'docker'">
+          <el-form-item :label="$t('settings.dockerContainer') || 'Docker Container Name'" v-if="settingsForm.mofa_mode === 'docker'">
             <el-input 
               v-model="settingsForm.docker_container_name" 
               placeholder="mofa_container"
             />
-            <div class="form-help">{{ $t('settings.dockerContainerHelp') || '已运行的含 MoFA 的容器名称或ID' }}</div>
+            <div class="form-help">{{ $t('settings.dockerContainerHelp') || 'Name or ID of the running container that includes MoFA' }}</div>
           </el-form-item>
 
           <!-- 项目类型选择 -->
-          <el-form-item :label="$t('settings.projectType') || '项目类型'">
+          <el-form-item :label="$t('settings.projectType') || 'Project Type'">
             <el-radio-group v-model="settingsForm.project_type">
-              <el-radio label="mofa">{{ $t('settings.mofaProject') || 'MoFA 项目' }}</el-radio>
-              <el-radio label="dora">{{ $t('settings.doraProject') || 'Dora 项目' }}</el-radio>
+              <el-radio label="mofa">{{ $t('settings.mofaProject') || 'MoFA Project' }}</el-radio>
+              <el-radio label="dora">{{ $t('settings.doraProject') || 'Dora Project' }}</el-radio>
             </el-radio-group>
-            <div class="form-help">{{ $t('settings.projectTypeHelp') || '选择项目类型：MoFA（标准结构）或 Dora（兼容模式）' }}</div>
+            <div class="form-help">{{ $t('settings.projectTypeHelp') || 'Choose the project type: MoFA (standard structure) or Dora (compatibility mode)' }}</div>
           </el-form-item>
 
           <!-- MoFA 模式的配置 -->
@@ -192,17 +192,17 @@
 
           <!-- Dora 模式的配置 -->
           <template v-if="settingsForm.project_type === 'dora'">
-            <el-form-item :label="$t('settings.doraRootDir') || 'Dora 根目录'">
+            <el-form-item :label="$t('settings.doraRootDir') || 'Dora Root Directory'">
               <PathInputWithHistory
                 v-model="settingsForm.mofa_dir"
                 path-type="mofa_dir"
                 placeholder="/path/to/dora"
                 @browse="selectMofaDir"
               />
-              <div class="form-help">{{ $t('settings.doraRootDirHelp') || '指定 Dora 项目根目录' }}</div>
+              <div class="form-help">{{ $t('settings.doraRootDirHelp') || 'Specify the root directory of the Dora project' }}</div>
             </el-form-item>
 
-            <el-form-item :label="$t('settings.doraNodeHubPath') || 'Node Hub 路径'">
+            <el-form-item :label="$t('settings.doraNodeHubPath') || 'Node Hub Path'">
               <PathInputWithHistory
                 v-model="settingsForm.custom_agent_hub_path"
                 path-type="custom_agent_hub_path"
@@ -210,10 +210,10 @@
                 :context="{ mofa_dir: settingsForm.mofa_dir }"
                 @browse="selectCustomAgentHubPath"
               />
-              <div class="form-help">{{ $t('settings.doraNodeHubPathHelp') || '指定 Dora 的 node-hub 目录路径（对应 MoFA 的 agent-hub）' }}</div>
+              <div class="form-help">{{ $t('settings.doraNodeHubPathHelp') || 'Specify the Dora node-hub directory path (equivalent to MoFA\'s agent-hub)' }}</div>
             </el-form-item>
 
-            <el-form-item :label="$t('settings.doraExamplesPath') || 'Examples 路径'">
+            <el-form-item :label="$t('settings.doraExamplesPath') || 'Examples Path'">
               <PathInputWithHistory
                 v-model="settingsForm.custom_examples_path"
                 path-type="custom_examples_path"
@@ -221,7 +221,7 @@
                 :context="{ mofa_dir: settingsForm.mofa_dir }"
                 @browse="selectCustomExamplesPath"
               />
-              <div class="form-help">{{ $t('settings.doraExamplesPathHelp') || '指定 Dora 的 examples 目录路径' }}</div>
+              <div class="form-help">{{ $t('settings.doraExamplesPathHelp') || 'Specify the Dora examples directory path' }}</div>
             </el-form-item>
           </template>
         </el-form>
@@ -230,10 +230,10 @@
       <el-card class="settings-card">
         <template #header>
           <div class="card-header">
-            <h3>依赖管理</h3>
+            <h3>Dependency Management</h3>
             <div class="card-actions">
               <el-button size="small" @click="loadDependencies" :loading="depsLoading">
-                重新检测
+                Recheck
               </el-button>
             </div>
           </div>
@@ -253,14 +253,14 @@
                 <div class="dependency-title">
                   <span class="name">{{ dep.name }}</span>
                   <el-tag :type="dep.installed ? 'success' : 'warning'" size="small">
-                    {{ dep.installed ? '已安装' : '未安装' }}
+                    {{ dep.installed ? 'Installed' : 'Not Installed' }}
                   </el-tag>
                   <el-tag
                     v-if="dep.installed && dep.running !== undefined"
                     :type="dep.running ? 'success' : 'info'"
                     size="small"
                   >
-                    {{ dep.running ? '运行中' : '未运行' }}
+                    {{ dep.running ? 'Running' : 'Not Running' }}
                   </el-tag>
                 </div>
                 <div class="dependency-actions">
@@ -271,7 +271,7 @@
                     :loading="installingDeps[dep.id]"
                     @click="handleInstallDependency(dep.id)"
                   >
-                    {{ dep.installed ? '重新安装' : '一键安装' }}
+                    {{ dep.installed ? 'Reinstall' : 'Install Now' }}
                   </el-button>
                 </div>
               </div>
@@ -280,7 +280,7 @@
             </div>
           </div>
           <div v-if="!dependencies.length" class="dependency-empty">
-            <el-empty description="暂无依赖信息" :image-size="100" />
+            <el-empty description="No dependency information" :image-size="100" />
           </div>
         </div>
       </el-card>
@@ -350,11 +350,11 @@
           </div>
 
           <!-- AI 模型选择 -->
-          <el-form-item label="AI 模型">
+          <el-form-item label="AI Model">
             <el-select 
               v-model="settingsForm.ai_model" 
               style="width: 100%" 
-              placeholder="选择或输入AI模型名称"
+              placeholder="Select or enter an AI model name"
               filterable
               allow-create
               default-first-option
@@ -364,7 +364,7 @@
               <el-option label="Gemini 2.5 Pro" value="gemini-1.5-pro" />
             </el-select>
             <div class="form-help">
-              选择预设模型或输入自定义模型名称（如：gemini-2.0-flash、gemini-1.5-flash-latest 等）
+              Select a preset model or enter a custom model name (for example: gemini-2.0-flash, gemini-1.5-flash-latest)
               <br/>
               <small style="color: #909399;">
               </small>
@@ -373,12 +373,12 @@
 
           <el-form-item label="Gemini API Key">
             <el-input v-model="settingsForm.gemini_api_key" type="password" show-password placeholder="GEMINI_API_KEY" />
-            <div class="form-help">在 <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #409eff;">Google AI Studio</a> 获取您的 API Key</div>
+            <div class="form-help">Get your API key from <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #409eff;">Google AI Studio</a></div>
           </el-form-item>
 
           <el-form-item label="Gemini Endpoint">
             <el-input v-model="settingsForm.gemini_api_endpoint" placeholder="https://generativelanguage.googleapis.com/v1beta" />
-            <div class="form-help">通常无需修改，保持默认值即可</div>
+            <div class="form-help">Usually no changes are required—keep the default value</div>
           </el-form-item>
         </el-form>
       </el-card>
@@ -391,14 +391,20 @@
         </template>
 
         <el-form :model="settingsForm" label-position="top">
-          <el-form-item :label="$t('settings.terminalDisplayMode') || '终端显示模式'">
+          <el-form-item :label="$t('settings.terminalDisplayMode') || 'Terminal Display Mode'">
             <el-select v-model="settingsForm.terminal_display_mode" style="width: 100%">
               <!-- <el-option 
-                :label="$t('settings.showBothTerminals') || '显示两种终端'" 
+                :label="$t('settings.showBothTerminals') || 'Show both terminals'" 
                 value="both" /> -->
               <!-- <el-option 
-                :label="$t('settings.showOnlyTerminal') || '仅显示旧命令行'" 
+                :label="$t('settings.showOnlyTerminal') || 'Show legacy terminal only'" 
                 value="terminal" /> -->
+              <el-option 
+                :label="$t('settings.showTtydAndDesktop') || 'Show ttyd + Desktop Terminal'" 
+                value="both" />
+              <el-option 
+                :label="$t('settings.showOnlyDesktopTerminal') || 'Show Only Desktop Terminal'" 
+                value="local" />
               <el-option 
                 :label="$t('settings.showOnlyWebSSH')" 
                 value="webssh" />
@@ -407,20 +413,42 @@
                 value="ttyd" />
             </el-select>
             <div class="form-help">
-              {{ $t('settings.terminalDisplayModeHelp') || '选择在侧边栏显示哪种终端。修改后需要刷新页面生效。' }}
+              {{ $t('settings.terminalDisplayModeHelp') || 'Choose which terminal to show in the sidebar. Refresh the page after changing this setting.' }}
             </div>
           </el-form-item>
 
-          <el-form-item :label="$t('settings.ttydPort') || 'ttyd 端口'" v-if="settingsForm.terminal_display_mode === 'ttyd'">
+          <el-form-item :label="$t('settings.localTerminalShell') || 'Desktop Shell'">
+            <el-input v-model="settingsForm.local_terminal_shell" placeholder="/bin/bash">
+              <template #append>
+                <el-button size="small" @click="settingsForm.local_terminal_shell = ''">
+                  {{ $t('settings.useSystemDefault') || 'System Default' }}
+                </el-button>
+              </template>
+            </el-input>
+            <div class="form-help">{{ $t('settings.localTerminalShellHelp') || 'Leave empty to auto-detect the best shell for your platform.' }}</div>
+          </el-form-item>
+
+          <el-form-item :label="$t('settings.localTerminalCwd') || 'Desktop Working Directory'">
+            <el-input v-model="settingsForm.local_terminal_cwd" placeholder="/path/to/workspace">
+              <template #append>
+                <el-button size="small" @click="settingsForm.local_terminal_cwd = settingsForm.mofa_dir || ''">
+                  {{ $t('settings.useMofaDir') || 'Use MoFA Dir' }}
+                </el-button>
+              </template>
+            </el-input>
+            <div class="form-help">{{ $t('settings.localTerminalCwdHelp') || 'Defaults to your MoFA directory. ~ resolves to your home directory.' }}</div>
+          </el-form-item>
+
+          <el-form-item :label="$t('settings.ttydPort') || 'ttyd Port'" v-if="['ttyd', 'both', 'all'].includes(settingsForm.terminal_display_mode)">
             <el-input-number v-model="settingsForm.ttyd_port" :min="1024" :max="65535" style="width: 100%" />
             <div class="form-help">
-              {{ $t('settings.ttydPortHelp') || 'ttyd服务将运行在此端口上。默认为7681。修改后需重启服务生效。' }}
+              {{ $t('settings.ttydPortHelp') || 'ttyd runs on this port. Default is 7681. Restart the service after updating.' }}
             </div>
           </el-form-item>
 
           <el-form-item :label="$t('settings.language')">
             <el-select v-model="settingsForm.language" style="width: 100%" @change="handleLanguageChange">
-              <el-option label="简体中文" value="zh" />
+              <el-option label="Simplified Chinese" value="zh" />
               <el-option label="English" value="en" />
             </el-select>
           </el-form-item>
@@ -465,34 +493,34 @@
       <el-card class="settings-card">
         <template #header>
           <div class="card-header">
-            <h3>{{ $t('settings.appSubtitleSettings') || '应用标语设置' }}</h3>
+            <h3>{{ $t('settings.appSubtitleSettings') || 'App Subtitle Settings' }}</h3>
           </div>
         </template>
 
         <el-form :model="settingsForm" label-position="top">
-          <el-form-item :label="$t('settings.subtitleMode') || '标语模式'">
+          <el-form-item :label="$t('settings.subtitleMode') || 'Subtitle Mode'">
             <el-radio-group v-model="settingsForm.app_subtitle_mode">
-              <el-radio label="default">{{ $t('settings.defaultSubtitle') || '默认标语' }}</el-radio>
-              <el-radio label="random">{{ $t('settings.randomSubtitle') || '随机标语' }}</el-radio>
-              <el-radio label="custom">{{ $t('settings.customSubtitle') || '自定义标语' }}</el-radio>
+              <el-radio label="default">{{ $t('settings.defaultSubtitle') || 'Default Subtitle' }}</el-radio>
+              <el-radio label="random">{{ $t('settings.randomSubtitle') || 'Random Subtitle' }}</el-radio>
+              <el-radio label="custom">{{ $t('settings.customSubtitle') || 'Custom Subtitle' }}</el-radio>
             </el-radio-group>
-            <div class="form-help">{{ $t('settings.subtitleModeHelp') || '选择标语显示模式：默认、随机选择或自定义' }}</div>
+            <div class="form-help">{{ $t('settings.subtitleModeHelp') || 'Choose how the subtitle is displayed: default, random selection, or custom text' }}</div>
           </el-form-item>
 
           <el-form-item 
-            :label="$t('settings.customSubtitleText') || '自定义标语文本'" 
+            :label="$t('settings.customSubtitleText') || 'Custom Subtitle Text'" 
             v-if="settingsForm.app_subtitle_mode === 'custom'"
           >
             <el-input 
               v-model="settingsForm.app_subtitle_custom" 
-              :placeholder="$t('settings.customSubtitlePlaceholder') || '输入您的自定义标语'"
+              :placeholder="$t('settings.customSubtitlePlaceholder') || 'Enter your custom subtitle'"
               maxlength="50"
               show-word-limit
             />
-            <div class="form-help">{{ $t('settings.customSubtitleHelp') || '输入您想要显示的自定义标语，最多50个字符' }}</div>
+            <div class="form-help">{{ $t('settings.customSubtitleHelp') || 'Provide a custom subtitle to display (maximum 50 characters)' }}</div>
           </el-form-item>
 
-          <el-form-item :label="$t('settings.presetSubtitles') || '预设标语列表'">
+          <el-form-item :label="$t('settings.presetSubtitles') || 'Preset Subtitle List'">
             <div class="preset-subtitles">
               <div 
                 v-for="(preset, index) in settingsForm.app_subtitle_presets" 
@@ -501,7 +529,7 @@
               >
                 <el-input 
                   v-model="settingsForm.app_subtitle_presets[index]"
-                  :placeholder="$t('settings.presetSubtitlePlaceholder') || '预设标语'"
+                  :placeholder="$t('settings.presetSubtitlePlaceholder') || 'Preset subtitle'"
                   maxlength="50"
                 />
                 <el-button 
@@ -510,7 +538,7 @@
                   @click="removePresetSubtitle(index)"
                   :disabled="settingsForm.app_subtitle_presets.length <= 1"
                 >
-                  {{ $t('common.delete') || '删除' }}
+                  {{ $t('common.delete') || 'Delete' }}
                 </el-button>
               </div>
               <el-button 
@@ -519,13 +547,13 @@
                 @click="addPresetSubtitle"
                 :disabled="settingsForm.app_subtitle_presets.length >= 10"
               >
-                {{ $t('settings.addPreset') || '添加预设' }}
+                {{ $t('settings.addPreset') || 'Add Preset' }}
               </el-button>
             </div>
-            <div class="form-help" style="display: none">{{ $t('settings.presetSubtitlesHelp') || '管理预设标语列表，用于随机模式。最多10个预设。' }}</div>
+            <div class="form-help" style="display: none">{{ $t('settings.presetSubtitlesHelp') || 'Manage the preset subtitle list for random mode (up to 10 presets).' }}</div>
           </el-form-item>
 
-          <el-form-item :label="$t('settings.currentSubtitle') || '当前标语预览'">
+          <el-form-item :label="$t('settings.currentSubtitle') || 'Current Subtitle Preview'">
             <div class="subtitle-preview">
               "{{ getCurrentSubtitlePreview() }}"
             </div>
@@ -565,6 +593,8 @@ export default {
       examples_path: '',
       custom_agent_hub_path: '',
       custom_examples_path: '',
+      local_terminal_shell: '',
+      local_terminal_cwd: '',
       theme: 'light',
       editor_font_size: 14,
       editor_tab_size: 4,
@@ -618,11 +648,11 @@ export default {
         if (data?.success) {
           dependencies.value = data.dependencies || []
         } else {
-          ElMessage.error(data?.message || '依赖状态获取失败')
+          ElMessage.error(data?.message || 'Failed to load dependency status')
         }
       } catch (error) {
         console.error('Failed to load dependencies:', error)
-        ElMessage.error('依赖状态获取失败，请稍后重试')
+        ElMessage.error('Failed to load dependency status, please try again later')
       } finally {
         depsLoading.value = false
       }
@@ -637,13 +667,13 @@ export default {
       try {
         const { data } = await installDependency(depId)
         if (data?.success) {
-          ElMessage.success(data.message || '依赖安装完成')
+          ElMessage.success(data.message || 'Dependencies installed successfully')
         } else {
-          ElMessage.error(data?.message || '依赖安装失败')
+          ElMessage.error(data?.message || 'Dependency installation failed')
         }
       } catch (error) {
         console.error('Failed to install dependency:', error)
-        ElMessage.error('依赖安装失败，请检查日志或手动安装')
+        ElMessage.error('Dependency installation failed. Check the logs or install manually')
       } finally {
         installingDeps[depId] = false
         loadDependencies()
@@ -773,10 +803,10 @@ export default {
         const selectedPath = await smartSelectPath(settingsForm.mofa_env_path, 'mofa_env_path')
         if (selectedPath) {
           settingsForm.mofa_env_path = selectedPath
-          ElMessage.success('MoFA 环境路径选择成功')
+          ElMessage.success('MoFA environment path selected')
         }
       } catch (error) {
-        ElMessage.error('路径选择失败，请手动输入')
+        ElMessage.error('Path selection failed, please enter it manually')
       }
     }
     
@@ -785,10 +815,10 @@ export default {
         const selectedPath = await smartSelectPath(settingsForm.mofa_dir, 'mofa_dir')
         if (selectedPath) {
           settingsForm.mofa_dir = selectedPath
-          ElMessage.success('MoFA 根目录选择成功')
+          ElMessage.success('MoFA root directory selected')
         }
       } catch (error) {
-        ElMessage.error('路径选择失败，请手动输入')
+        ElMessage.error('Path selection failed, please enter it manually')
       }
     }
     
@@ -797,10 +827,10 @@ export default {
         const selectedPath = await smartSelectPath(settingsForm.custom_agent_hub_path, 'custom_agent_hub_path')
         if (selectedPath) {
           settingsForm.custom_agent_hub_path = selectedPath
-          ElMessage.success('Agent Hub 路径选择成功')
+          ElMessage.success('Agent Hub path selected')
         }
       } catch (error) {
-        ElMessage.error('路径选择失败，请手动输入')
+        ElMessage.error('Path selection failed, please enter it manually')
       }
     }
     
@@ -809,10 +839,10 @@ export default {
         const selectedPath = await smartSelectPath(settingsForm.custom_examples_path, 'custom_examples_path')
         if (selectedPath) {
           settingsForm.custom_examples_path = selectedPath
-          ElMessage.success('Examples 路径选择成功')
+          ElMessage.success('Examples path selected')
         }
       } catch (error) {
-        ElMessage.error('路径选择失败，请手动输入')
+        ElMessage.error('Path selection failed, please enter it manually')
       }
     }
 
@@ -1031,25 +1061,31 @@ export default {
 .page-container {
   padding: 24px;
   background: var(--background-color);
+  max-width: 1040px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .page-header {
   margin-bottom: 32px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 24px;
   padding: 32px 24px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 254, 0.8) 100%);
   border-radius: 0;
   border: 1px solid var(--border-color);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  flex-wrap: wrap;
 }
 
 .header-content {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1 1 320px;
+  min-width: 240px;
 }
 
 .page-title {
@@ -1073,6 +1109,9 @@ export default {
 .page-actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .page-actions .el-button {
@@ -1099,10 +1138,14 @@ export default {
 .settings-container {
   max-width: 900px;
   margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .settings-card {
-  margin-bottom: 24px;
+  margin-bottom: 0;
   position: relative;
   overflow: hidden;
 }
@@ -1153,8 +1196,9 @@ export default {
 .dependency-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .dependency-title {
@@ -1163,6 +1207,8 @@ export default {
   gap: 8px;
   font-weight: 600;
   font-size: 15px;
+  flex-wrap: wrap;
+  row-gap: 4px;
 }
 
 .dependency-title .name {
@@ -1173,6 +1219,8 @@ export default {
 .dependency-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .dependency-desc {
@@ -1221,10 +1269,10 @@ export default {
 .form-help {
   font-size: 13px;
   color: var(--text-color-secondary);
-  margin-top: 3px;
-  margin-bottom: 3px;
-  margin-left: 1px;
-  line-height: 0.7;
+  margin-top: 4px;
+  margin-bottom: 0;
+  margin-left: 0;
+  line-height: 1.5;
   padding: 8px 12px;
   background: rgba(107, 206, 210, 0.05);
   border-left: 6px solid var(--mofa-teal);
@@ -1335,6 +1383,7 @@ export default {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .preset-item .el-input {
@@ -1367,9 +1416,53 @@ export default {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .dir-item .path-input-with-history {
   flex: 1;
+}
+
+@media (max-width: 960px) {
+  .page-container {
+    padding: 16px;
+  }
+
+  .page-header {
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .page-actions .el-button {
+    width: 100%;
+  }
+
+  .dependency-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .dependency-actions .el-button {
+    width: 100%;
+  }
+
+  .dir-item {
+    align-items: flex-start;
+  }
+
+  .preset-item {
+    align-items: flex-start;
+  }
 }
 </style>

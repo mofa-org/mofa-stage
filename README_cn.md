@@ -7,7 +7,7 @@ MoFA Stage Desktop 是基于 Electron 的桌面应用程序，用于 AI 智能�
 ## 功能特性
 
 - **智能体管理** - 浏览、创建、编辑、运行和监控智能体
-- **终端访问** - Web 终端、SSH 连接、ttyd 集成
+- **终端访问** - 桌面终端（Electron）、Web 终端、SSH 连接、ttyd 集成
 - **代码编辑** - 文本编辑器、文件浏览器、可选 VSCode Server
 - **跨平台** - Windows、macOS、Linux，内嵌 Python 后端
 

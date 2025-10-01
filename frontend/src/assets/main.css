@@ -101,6 +101,41 @@
   }
 }
 
+@keyframes surface-rise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes card-fade-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes shimmer-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
 /* 动态渐变文字效果 */
 .dynamic-gradient-text {
   background: linear-gradient(
@@ -149,6 +184,9 @@ body {
 
 .page-container {
   padding: 24px;
+  position: relative;
+  opacity: 0;
+  animation: surface-rise 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) 0.08s both;
 }
 
 .card {
@@ -159,11 +197,26 @@ body {
   margin-bottom: 24px;
   border: 1px solid var(--border-color);
   transition: all 0.3s ease;
+  animation: card-fade-in 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  will-change: transform, opacity;
 }
 
 .card:hover {
   box-shadow: var(--card-shadow-hover);
   transform: translateY(-2px);
+}
+
+.el-card {
+  background-color: var(--card-background);
+  border-radius: 0;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--card-shadow);
+  animation: card-fade-in 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+.el-card + .el-card {
+  animation-delay: 0.05s;
 }
 
 .page-title {
@@ -181,7 +234,7 @@ body {
   border-radius: 0;
   box-shadow: var(--button-shadow);
   font-weight: 600;
-  transition: all 0.3s ease;
+  transition: box-shadow 0.25s ease, transform 0.25s ease, filter 0.25s ease;
 }
 
 .el-button--primary:hover {
@@ -195,12 +248,53 @@ body {
   border: none;
   border-radius: 0;
   box-shadow: 0 2px 8px rgba(107, 206, 210, 0.2);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .el-button--success:hover {
   background: linear-gradient(135deg, #5BC1C6 0%, var(--mofa-teal) 100%);
   box-shadow: 0 4px 16px rgba(107, 206, 210, 0.3);
   transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-container,
+  .card,
+  .el-card,
+  .el-dialog,
+  .el-drawer.rtl-enter-active,
+  .el-drawer__container {
+    animation: none !important;
+  }
+
+  .el-button,
+  .el-input .el-input__wrapper,
+  .el-textarea .el-textarea__inner {
+    transition: none !important;
+  }
+}
+
+.el-dialog {
+  animation: shimmer-in 0.28s ease-out both;
+  will-change: opacity, transform, filter;
+}
+
+.el-drawer.rtl-enter-active,
+.el-drawer__container {
+  animation: surface-rise 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+.el-input .el-input__wrapper,
+.el-textarea .el-textarea__inner {
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.el-input .el-input__wrapper:hover,
+.el-textarea .el-textarea__inner:hover,
+.el-input .el-input__wrapper:focus-within,
+.el-textarea .el-textarea__inner:focus {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
 }
 
 .el-button--warning {

@@ -12,19 +12,19 @@
         <el-tag size="small" type="info" v-if="nodeInfo.type">{{ nodeInfo.type }}</el-tag>
       </div>
       <div class="header-controls">
-        <el-button size="small" text @click="refreshVariables" :loading="isRefreshing" title="刷新">
+        <el-button size="small" text @click="refreshVariables" :loading="isRefreshing" title="Refresh">
           <el-icon><Refresh /></el-icon>
         </el-button>
-        <el-button size="small" text @click="clearWatch" title="清空">
+        <el-button size="small" text @click="clearWatch" title="Clear">
           <el-icon><Delete /></el-icon>
         </el-button>
-        <el-button size="small" text @click="showNodeStats" title="节点统计">
+        <el-button size="small" text @click="showNodeStats" title="Node stats">
           <el-icon><DataAnalysis /></el-icon>
         </el-button>
-        <el-button size="small" text @click="toggleMinimize" title="最小化">
+        <el-button size="small" text @click="toggleMinimize" title="Minimize">
           <el-icon><Minus /></el-icon>
         </el-button>
-        <el-button size="small" text @click="closeWindow" title="关闭">
+        <el-button size="small" text @click="closeWindow" title="Close">
           <el-icon><Close /></el-icon>
         </el-button>
       </div>
@@ -37,7 +37,7 @@
         <div class="info-section" v-if="nodeInfo.inputs && nodeInfo.inputs.length">
           <div class="section-title">
             <el-icon><Download /></el-icon>
-            <span>输入变量</span>
+            <span>Input Variables</span>
           </div>
           <div class="variable-tags">
             <el-tag 
@@ -56,7 +56,7 @@
         <div class="info-section" v-if="nodeInfo.outputs && nodeInfo.outputs.length">
           <div class="section-title">
             <el-icon><Upload /></el-icon>
-            <span>输出变量</span>
+            <span>Output Variables</span>
           </div>
           <div class="variable-tags">
             <el-tag 
@@ -77,7 +77,7 @@
       <div class="add-watch-section">
         <el-input
           v-model="newWatchExpression"
-          placeholder="添加监控表达式..."
+          placeholder="Add watch expression..."
           size="small"
           @keyup.enter="addWatch"
         >
@@ -92,9 +92,9 @@
       <!-- 监控变量列表 -->
       <div class="watch-list">
         <div v-if="watchList.length === 0" class="empty-state">
-          <el-empty description="点击上方变量标签或添加表达式开始监控" :image-size="50">
+          <el-empty description="Click a variable tag above or add an expression to start monitoring" :image-size="50">
             <el-button type="primary" size="small" @click="addNodeVariableWatches">
-              监控所有节点变量
+              Monitor all node variables
             </el-button>
           </el-empty>
         </div>
@@ -132,7 +132,7 @@
     <!-- 监控窗口底部 -->
     <div class="monitor-footer" v-show="!minimized">
       <el-text size="small" type="info">
-        节点: {{ nodeInfo.id }} | 监控 {{ watchList.length }} 个表达式
+        Node: {{ nodeInfo.id }} | Monitoring {{ watchList.length }} expressions
       </el-text>
     </div>
 
@@ -315,11 +315,11 @@ export default {
           if (data.success) {
             const variables = data.variables
             const varNames = Object.keys(variables)
-            const message = `节点 ${props.nodeInfo.id} 统计信息:\n` +
-                          `• 总变量数: ${varNames.length}\n` +
-                          `• 输入变量: ${varNames.filter(name => variables[name].type === 'input').length}\n` +
-                          `• 输出变量: ${varNames.filter(name => variables[name].type === 'output').length}\n` +
-                          `• 最后活动: ${Math.max(...varNames.map(name => variables[name].time))}`
+            const message = `Node ${props.nodeInfo.id} statistics:\n` +
+                          `• Total variables: ${varNames.length}\n` +
+                          `• Input variables: ${varNames.filter(name => variables[name].type === 'input').length}\n` +
+                          `• Output variables: ${varNames.filter(name => variables[name].type === 'output').length}\n` +
+                          `• Last activity: ${Math.max(...varNames.map(name => variables[name].time))}`
             
             // 使用Element Plus的消息提示
             ElMessage.info({
@@ -330,7 +330,7 @@ export default {
           }
         }
       } catch (error) {
-        ElMessage.error('获取节点统计信息失败')
+        ElMessage.error('Failed to retrieve node statistics')
       }
     }
 
@@ -439,7 +439,7 @@ export default {
             try {
               newValue = eval(watch.expression)
             } catch (evalError) {
-              newValue = '未定义'
+              newValue = 'Undefined'
             }
           }
         }
