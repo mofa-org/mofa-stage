@@ -19,6 +19,15 @@
     </el-card>
 
     <div v-else class="settings-container">
+      <el-alert
+        v-if="!settingsForm.first_launch_completed"
+        class="first-launch-alert"
+        type="warning"
+        :closable="false"
+        show-icon
+        :title="$t('terminal.configurationRequired')"
+      />
+
       <el-card class="settings-card">
         <template #header>
           <div class="card-header">
@@ -629,7 +638,8 @@ export default {
       ],
       // ---- Additional Directories ----
       additional_hub_dirs: [],
-      additional_example_dirs: []
+      additional_example_dirs: [],
+      first_launch_completed: false
     })
     
     const isLoading = computed(() => settingsStore.isLoading)
@@ -695,7 +705,11 @@ export default {
         
         // 合并设置
         Object.assign(settingsForm, settings)
-        
+
+        if (settingsForm.first_launch_completed === undefined) {
+          settingsForm.first_launch_completed = false
+        }
+
         // 如果后端返回的路径为空，但本地有值，则保留本地值
         if (!settingsForm.mofa_dir && currentPaths.mofa_dir) {
           settingsForm.mofa_dir = currentPaths.mofa_dir;
@@ -749,6 +763,8 @@ export default {
           // 在localStorage中备份路径
           localStorage.setItem('mofa_dir', settingsForm.mofa_dir);
         }
+
+        settingsForm.first_launch_completed = true
         
         // 备份所有路径字段
         localStorage.setItem('agent_hub_path', settingsForm.agent_hub_path || '');
@@ -1142,6 +1158,10 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.first-launch-alert {
+  margin-bottom: 16px;
 }
 
 .settings-card {

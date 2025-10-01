@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, dialog, session } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog, session, ipcMain } = require('electron');
 const path = require('path');
 const { spawn, exec, execSync } = require('child_process');
 const fs = require('fs');
@@ -21,6 +21,7 @@ app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');
 
 // Cache flag to avoid registering duplicate webRequest listeners
 let corsInterceptorRegistered = false;
+let dialogHandlersRegistered = false;
 
 function createSplashWindow() {
   if (splashWindow || isDev) {
@@ -113,6 +114,63 @@ function registerTtydCorsInterceptor() {
   });
 
   corsInterceptorRegistered = true;
+}
+
+function registerDialogHandlers() {
+  if (dialogHandlersRegistered) {
+    return;
+  }
+
+  ipcMain.handle('dialog:select-directory', async (event, options = {}) => {
+    const browserWindow = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+    const dialogOptions = {
+      title: options.title || 'Select Directory',
+      defaultPath: options.defaultPath || undefined,
+      properties: ['openDirectory', 'createDirectory'],
+    };
+
+    if (options.allowMultiple) {
+      dialogOptions.properties.push('multiSelections');
+    }
+
+    try {
+      const result = await dialog.showOpenDialog(browserWindow, dialogOptions);
+      if (result.canceled) {
+        return options.allowMultiple ? [] : null;
+      }
+      return options.allowMultiple ? result.filePaths : (result.filePaths[0] || null);
+    } catch (error) {
+      console.error('Failed to open directory dialog:', error);
+      return options.allowMultiple ? [] : null;
+    }
+  });
+
+  ipcMain.handle('dialog:select-file', async (event, options = {}) => {
+    const browserWindow = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+    const dialogOptions = {
+      title: options.title || 'Select File',
+      defaultPath: options.defaultPath || undefined,
+      properties: ['openFile'],
+      filters: Array.isArray(options.filters) ? options.filters : [],
+    };
+
+    if (options.allowMultiple) {
+      dialogOptions.properties.push('multiSelections');
+    }
+
+    try {
+      const result = await dialog.showOpenDialog(browserWindow, dialogOptions);
+      if (result.canceled) {
+        return options.allowMultiple ? [] : null;
+      }
+      return options.allowMultiple ? result.filePaths : (result.filePaths[0] || null);
+    } catch (error) {
+      console.error('Failed to open file dialog:', error);
+      return options.allowMultiple ? [] : null;
+    }
+  });
+
+  dialogHandlersRegistered = true;
 }
 
 // 暴力杀掉指定端口的进程
@@ -549,6 +607,7 @@ function createMenu() {
 
 // 应用事件处理
 app.whenReady().then(async () => {
+  registerDialogHandlers();
   registerTerminalHandlers();
   console.log('Electron app is ready');
 

@@ -37,6 +37,7 @@ export const useSettingsStore = defineStore('settings', {
         editor_tab_size: 4,
         editor_version: 'classic',
         language: localStorage.getItem('language') || 'zh',
+        first_launch_completed: false,
         ssh: {
           hostname: '127.0.0.1',
           port: 22,
@@ -189,6 +190,10 @@ export const useSettingsStore = defineStore('settings', {
             this.settings.docker_container_name = ''
           }
 
+          if (this.settings.first_launch_completed === undefined) {
+            this.settings.first_launch_completed = false
+          }
+
           // 确保标语设置有默认值
           if (this.settings.app_subtitle_mode === undefined) {
             this.settings.app_subtitle_mode = 'default'
@@ -228,30 +233,35 @@ export const useSettingsStore = defineStore('settings', {
       this.isLoading = true
       this.error = null
       try {
+        const payload = {
+          ...settings,
+          first_launch_completed: true
+        }
+
         // 保存所有路径到localStorage作为备份
-        localStorage.setItem('mofa_dir', settings.mofa_dir || '');
-        localStorage.setItem('agent_hub_path', settings.agent_hub_path || '');
-        localStorage.setItem('examples_path', settings.examples_path || '');
-        localStorage.setItem('custom_agent_hub_path', settings.custom_agent_hub_path || '');
-        localStorage.setItem('custom_examples_path', settings.custom_examples_path || '');
-        localStorage.setItem('local_terminal_shell', settings.local_terminal_shell || '');
-        localStorage.setItem('local_terminal_cwd', settings.local_terminal_cwd || '');
+        localStorage.setItem('mofa_dir', payload.mofa_dir || '');
+        localStorage.setItem('agent_hub_path', payload.agent_hub_path || '');
+        localStorage.setItem('examples_path', payload.examples_path || '');
+        localStorage.setItem('custom_agent_hub_path', payload.custom_agent_hub_path || '');
+        localStorage.setItem('custom_examples_path', payload.custom_examples_path || '');
+        localStorage.setItem('local_terminal_shell', payload.local_terminal_shell || '');
+        localStorage.setItem('local_terminal_cwd', payload.local_terminal_cwd || '');
         
         // 添加路径到历史记录
-        if (settings.mofa_dir) {
-          PathHistory.addToHistory('mofa_dir', settings.mofa_dir)
+        if (payload.mofa_dir) {
+          PathHistory.addToHistory('mofa_dir', payload.mofa_dir)
         }
-        if (settings.mofa_env_path) {
-          PathHistory.addToHistory('mofa_env_path', settings.mofa_env_path)
+        if (payload.mofa_env_path) {
+          PathHistory.addToHistory('mofa_env_path', payload.mofa_env_path)
         }
-        if (settings.custom_agent_hub_path) {
-          PathHistory.addToHistory('custom_agent_hub_path', settings.custom_agent_hub_path)
+        if (payload.custom_agent_hub_path) {
+          PathHistory.addToHistory('custom_agent_hub_path', payload.custom_agent_hub_path)
         }
-        if (settings.custom_examples_path) {
-          PathHistory.addToHistory('custom_examples_path', settings.custom_examples_path)
+        if (payload.custom_examples_path) {
+          PathHistory.addToHistory('custom_examples_path', payload.custom_examples_path)
         }
         
-        const response = await settingsApi.updateSettings(settings)
+        const response = await settingsApi.updateSettings(payload)
         if (response.data && response.data.success) {
           this.settings = response.data.settings
           return true

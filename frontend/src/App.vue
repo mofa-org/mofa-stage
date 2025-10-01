@@ -18,10 +18,11 @@
 </template>
 
 <script>
-import { onMounted, computed, ref, watch } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useAgentStore } from './store/agent'
 import { useSettingsStore } from './store/settings'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import AppLayout from './components/layout/AppLayout.vue'
 import { setLanguage } from './utils/i18n'
 import TtydTerminal from './views/TtydTerminal.vue'
@@ -40,6 +41,7 @@ export default {
     const agentStore = useAgentStore()
     const settingsStore = useSettingsStore()
     const route = useRoute()
+    const router = useRouter()
     
     // 控制是否始终加载终端组件
     const alwaysLoadTerminals = ref(true)
@@ -73,13 +75,24 @@ export default {
     onMounted(async () => {
       // 初始化应用时加载设置和 agent 列表
       await settingsStore.fetchSettings()
-      await agentStore.fetchAgents()
       
       // 应用主题和语言设置
       applyTheme()
       applyLanguage()
+
+      if (!settingsStore.settings.first_launch_completed) {
+        if (router.currentRoute.value.path !== '/settings') {
+          await router.push({ name: 'settings' })
+        }
+        const firstLaunchMessage = settingsStore.settings.language === 'zh'
+          ? '首次启动，请先在设置中配置 MoFA 目录'
+          : 'Please configure the MoFA environment in Settings before continuing.'
+        ElMessage.warning(firstLaunchMessage)
+      }
+
+      await agentStore.fetchAgents()
     })
-    
+
     return {
       alwaysLoadTerminals,
       isTtydRoute,

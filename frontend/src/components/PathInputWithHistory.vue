@@ -31,7 +31,7 @@
             <el-dropdown-menu>
               <el-dropdown-item command="browse">
                 <el-icon><Folder /></el-icon>
-                {{ $t('settings.inputPath') || 'Enter path' }}
+                {{ $t('settings.inputPath') || 'Browse...' }}
               </el-dropdown-item>
               <el-dropdown-item command="clear-history" v-if="pathHistory.length > 0">
                 <el-icon><Delete /></el-icon>

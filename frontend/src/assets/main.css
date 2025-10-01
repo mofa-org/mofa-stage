@@ -67,6 +67,55 @@
   color: var(--text-color);
 }
 
+.mofa-dialog.el-message-box {
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--card-shadow);
+  border-radius: 12px;
+  padding: 20px 24px 24px;
+}
+
+.mofa-dialog .el-message-box__title {
+  color: var(--text-color);
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.mofa-dialog .el-message-box__message p {
+  color: var(--text-color-secondary);
+  white-space: pre-line;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+
+.mofa-dialog .el-input__inner {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+}
+
+.mofa-dialog__confirm {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: #ffffff !important;
+  box-shadow: var(--button-shadow);
+}
+
+.mofa-dialog__confirm:hover,
+.mofa-dialog__confirm:focus {
+  background: var(--accent-color) !important;
+  border-color: var(--accent-color) !important;
+  box-shadow: var(--button-shadow-hover);
+}
+
+.mofa-dialog__cancel {
+  color: var(--text-color-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .mofa-dialog.el-message-box {
+  box-shadow: var(--card-shadow);
+}
+
 /* 流动渐变动画 */
 @keyframes flowing-gradient {
   0% {

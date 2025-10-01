@@ -55,6 +55,7 @@ DEFAULT_SETTINGS = {
     "theme": "light",
     "editor_font_size": 14,
     "editor_tab_size": 4,
+    "first_launch_completed": False,  # 标记是否已完成首次启动引导
     # SSH连接设置
     "ssh": {
         "hostname": "127.0.0.1",

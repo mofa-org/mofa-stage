@@ -39,6 +39,11 @@ const terminalAPI = {
   }
 };
 
+const dialogAPI = {
+  selectDirectory: (options = {}) => ipcRenderer.invoke('dialog:select-directory', options),
+  selectFile: (options = {}) => ipcRenderer.invoke('dialog:select-file', options)
+};
+
 // 暴露受保护的方法给渲染器进程
 contextBridge.exposeInMainWorld('electronAPI', {
   // 获取平台信息
@@ -62,6 +67,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   
   terminal: terminalAPI,
+  dialog: dialogAPI,
   
   // 剪贴板操作
   clipboard: {
