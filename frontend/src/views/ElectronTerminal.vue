@@ -624,6 +624,93 @@ export default {
         }
         terminalApi.value.write(session.id, chunk)
       })
+
+      // 添加键盘事件监听，支持 Ctrl+V 粘贴
+      term.attachCustomKeyEventHandler((event) => {
+        // 检查是否是粘贴快捷键
+        if (event.type === 'keydown' && (event.ctrlKey || event.metaKey) && event.key === 'v') {
+          event.preventDefault()
+          
+          // 使用 Electron API 读取剪贴板
+          if (window.electronAPI?.clipboard) {
+            try {
+              const text = window.electronAPI.clipboard.readText()
+              if (text) {
+                terminalApi.value.write(session.id, text)
+              }
+            } catch (error) {
+              console.warn('Failed to read clipboard:', error)
+            }
+          }
+          return false
+        }
+        return true
+      })
+
+      // 添加右键菜单支持
+      const terminalElement = term.element
+      if (terminalElement) {
+        terminalElement.addEventListener('contextmenu', (event) => {
+          event.preventDefault()
+          
+          // 创建临时的上下文菜单
+          const menu = document.createElement('div')
+          menu.style.cssText = `
+            position: fixed;
+            top: ${event.clientY}px;
+            left: ${event.clientX}px;
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 10000;
+            padding: 4px 0;
+            min-width: 120px;
+          `
+          
+          const pasteItem = document.createElement('div')
+          pasteItem.textContent = 'Paste'
+          pasteItem.style.cssText = `
+            padding: 8px 16px;
+            cursor: pointer;
+            color: var(--text-color);
+            font-size: 14px;
+          `
+          pasteItem.addEventListener('mouseenter', () => {
+            pasteItem.style.background = 'var(--primary-color)'
+            pasteItem.style.color = 'white'
+          })
+          pasteItem.addEventListener('mouseleave', () => {
+            pasteItem.style.background = 'transparent'
+            pasteItem.style.color = 'var(--text-color)'
+          })
+          pasteItem.addEventListener('click', () => {
+            if (window.electronAPI?.clipboard) {
+              try {
+                const text = window.electronAPI.clipboard.readText()
+                if (text) {
+                  terminalApi.value.write(session.id, text)
+                }
+              } catch (error) {
+                console.warn('Failed to paste:', error)
+              }
+            }
+            document.body.removeChild(menu)
+          })
+          
+          menu.appendChild(pasteItem)
+          document.body.appendChild(menu)
+          
+          // 点击其他地方关闭菜单
+          const closeMenu = (e) => {
+            if (!menu.contains(e.target)) {
+              document.body.removeChild(menu)
+              document.removeEventListener('click', closeMenu)
+            }
+          }
+          document.addEventListener('click', closeMenu)
+        })
+      }
     }
 
     const spawnSession = async (options = {}) => {

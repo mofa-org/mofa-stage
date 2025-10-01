@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, clipboard } = require('electron');
 
 const terminalAPI = {
   isAvailable: async () => {
@@ -61,7 +61,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
       : 'http://localhost:5002'; // 生产模式下也是本地端口
   },
   
-  terminal: terminalAPI
+  terminal: terminalAPI,
+  
+  // 剪贴板操作
+  clipboard: {
+    readText: () => clipboard.readText(),
+    writeText: (text) => clipboard.writeText(text)
+  }
 });
 
 // 在页面加载完成时通知主进程

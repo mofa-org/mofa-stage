@@ -464,6 +464,18 @@ function createMenu() {
       ]
     },
     {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectall' }
+      ]
+    },
+    {
       label: 'View',
       submenu: [
         { role: 'reload' },
@@ -487,6 +499,7 @@ function createMenu() {
   ];
 
   if (process.platform === 'darwin') {
+    // macOS 应用菜单
     template.unshift({
       label: app.getName(),
       submenu: [
@@ -501,6 +514,33 @@ function createMenu() {
         { role: 'quit' }
       ]
     });
+    
+    // 在 macOS 上覆盖编辑菜单，确保包含正确的快捷键
+    const editMenuIndex = template.findIndex(item => item.label === 'Edit');
+    if (editMenuIndex !== -1) {
+      template[editMenuIndex] = {
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { role: 'pasteandmatchstyle' },
+          { role: 'delete' },
+          { role: 'selectall' },
+          { type: 'separator' },
+          {
+            label: 'Speech',
+            submenu: [
+              { role: 'startspeaking' },
+              { role: 'stopspeaking' }
+            ]
+          }
+        ]
+      };
+    }
   }
 
   const menu = Menu.buildFromTemplate(template);
