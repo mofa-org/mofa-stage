@@ -1,6 +1,6 @@
 {
   "mofa_env_path": "",
-  "mofa_dir": "/Users/liyao/Code",
+  "mofa_dir": "/Users/liyao/Code/mofa-org/mofa",
   "project_type": "mofa",
   "theme": "light",
   "editor_font_size": 14,
@@ -9,11 +9,11 @@
   "use_default_agent_hub_path": false,
   "use_default_examples_path": false,
   "use_relative_paths": false,
-  "agent_hub_path": "/Users/liyao/code/bak_files/mofa/python/agent-hub",
-  "examples_path": "/Users/liyao/code/bak_files/mofa/python/examples",
-  "custom_agent_hub_path": "/Users/liyao/code/bak_files/mofa/python/agent-hub",
-  "custom_examples_path": "/Users/liyao/code/bak_files/mofa/python/examples",
-  "language": "en",
+  "agent_hub_path": "/Users/liyao/Code/mofa-org/mofa/agent-hub",
+  "examples_path": "/Users/liyao/Code/mofa-org/mofa/dataflows",
+  "custom_agent_hub_path": "/Users/liyao/Code/mofa-org/mofa/agent-hub",
+  "custom_examples_path": "/Users/liyao/Code/mofa-org/mofa/dataflows",
+  "language": "zh",
   "ssh": {
     "auto_connect": true,
     "hostname": "127.0.0.1",
@@ -21,7 +21,7 @@
     "port": 22,
     "username": "test"
   },
-  "terminal_display_mode": "ttyd",
+  "terminal_display_mode": "local",
   "ttyd_port": 7681,
   "mofa_mode": "system",
   "docker_container_name": "0bfdf2580246",
@@ -42,5 +42,12 @@
     "Mission Control for MoFA",
     "Enjoy the show",
     "Control Panel for MoFA"
-  ]
+  ],
+  "additional_hub_dirs": [
+    "/Users/liyao/Code/mofa-org/mofa/node-hub"
+  ],
+  "additional_example_dirs": [],
+  "first_launch_completed": true,
+  "local_terminal_shell": "",
+  "local_terminal_cwd": "/Users/liyao/Code/mofa-org/mofa"
 }
