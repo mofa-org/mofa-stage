@@ -13,7 +13,7 @@
   "examples_path": "/Users/liyao/Code/mofa-org/mofa/dataflows",
   "custom_agent_hub_path": "/Users/liyao/Code/mofa-org/mofa/agent-hub",
   "custom_examples_path": "/Users/liyao/Code/mofa-org/mofa/dataflows",
-  "language": "zh",
+  "language": "en",
   "ssh": {
     "auto_connect": true,
     "hostname": "127.0.0.1",
