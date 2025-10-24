@@ -13,19 +13,20 @@
     "version:minor": "npm version minor && git push --follow-tags",
     "version:major": "npm version major && git push --follow-tags",
     "frontend:dev": "cd frontend && npm run dev",
-    "backend:dev": "cd backend && ${PYTHON_CMD:-python3} app.py",
+    "backend:dev": "cd backend && ${PYTHON_CMD:-/opt/homebrew/bin/python3.11} app.py",
     "frontend:build": "cd frontend && npm run build",
-    "backend:build": "python3 scripts/build_backend.py",
+    "backend:build": "/opt/homebrew/bin/python3.11 scripts/build_backend.py",
     "build": "npm run frontend:build && npm run backend:build",
     "electron:pack": "electron-builder",
-    "dist": "npm run build && electron-builder --publish=never",
-    "release": "npm run build && electron-builder --publish=always",
+    "dist": "npm run build && node -r dotenv/config node_modules/.bin/electron-builder --publish=never",
+    "release": "npm run build && node -r dotenv/config node_modules/.bin/electron-builder --publish=always",
     "start": "electron .",
     "rebuild:native": "node scripts/rebuild-native.js",
     "postinstall": "npm run rebuild:native"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
+    "dotenv": "^17.2.3",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1",
     "wait-on": "^7.2.0"
@@ -33,6 +34,9 @@
   "build": {
     "appId": "com.mofa.stage.desktop",
     "productName": "MoFA Stage",
+    "asarUnpack": [
+      "**/node_modules/node-pty/**/*"
+    ],
     "directories": {
       "output": "dist",
       "buildResources": "assets"
@@ -53,12 +57,16 @@
       "README_cn.md",
       "LICENSE",
       "package.json",
+      "node_modules/node-pty/**/*",
+      "node_modules/nan/**/*",
       "!frontend/node_modules/**/*",
       "!backend/backend_venv/**/*",
       "!backend/__pycache__/**/*",
       "!backend/temp/**/*",
       "!backend/logs.duckdb",
-      "!node_modules/**/*",
+      "!node_modules/*",
+      "node_modules/node-pty",
+      "node_modules/nan",
       "!dist/**/*"
     ],
     "extraResources": [
@@ -72,6 +80,12 @@
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
+      "identity": "Yao Li (SX7GH8L8YB)",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "notarize": false,
+      "entitlements": "scripts/entitlements.mac.plist",
+      "entitlementsInherit": "scripts/entitlements.mac.plist",
       "target": [
         {
           "target": "dmg",

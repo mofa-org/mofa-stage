@@ -15,12 +15,28 @@ function loadPty() {
   }
 
   try {
+    // Try direct require first (works in development)
     ptyModule = require('node-pty');
     return ptyModule;
   } catch (error) {
-    ptyLoadError = error;
-    console.error('Failed to load node-pty:', error);
-    return null;
+    // In production builds, node-pty is unpacked from asar
+    // Try loading from app.asar.unpacked
+    try {
+      const unpackedPath = path.join(
+        __dirname.replace('app.asar', 'app.asar.unpacked'),
+        '..',
+        'node_modules',
+        'node-pty'
+      );
+      ptyModule = require(unpackedPath);
+      console.log('Loaded node-pty from unpacked path:', unpackedPath);
+      return ptyModule;
+    } catch (unpackedError) {
+      ptyLoadError = error;
+      console.error('Failed to load node-pty from normal path:', error);
+      console.error('Failed to load node-pty from unpacked path:', unpackedError);
+      return null;
+    }
   }
 }
 

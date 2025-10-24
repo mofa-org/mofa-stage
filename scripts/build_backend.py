@@ -67,6 +67,8 @@ def main():
         "--hidden-import=chardet",
         "--hidden-import=idna",
         "--hidden-import=toml",
+        # 复制包元数据
+        "--copy-metadata", "duckdb",
         # 添加数据文件
         "--add-data", f"{backend_dir}/config.py:.",
         "--add-data", f"{backend_dir}/settings.json:.",
